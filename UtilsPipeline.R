@@ -86,6 +86,29 @@ salvar_csv <- function(df, caminho) {
 }
 
 # ----------------------------------------------------------------------------
+# SMOTE (smotefamily) como funcao de subamostragem do caret
+# Aplicado DENTRO de cada fold da validacao cruzada (apenas na particao de
+# treino do fold), evitando que amostras sinteticas correlacionadas caiam nas
+# particoes de validacao e inflem as metricas da CV.
+# ----------------------------------------------------------------------------
+aplicar_smote <- function(x, y, K = 5) {
+  positiva <- levels(y)[2]
+  alvo <- ifelse(y == positiva, 1, 0)
+  res  <- suppressWarnings(smotefamily::SMOTE(X = as.data.frame(x), target = alvo,
+                                              K = K, dup_size = 0))
+  dados <- res$data
+  classe <- factor(ifelse(dados$class == 1, positiva, levels(y)[1]), levels = levels(y))
+  dados$class <- NULL
+  list(x = dados, y = classe, n_sinteticas = nrow(res$syn_data))
+}
+
+smote_caret <- list(
+  name  = "SMOTE (smotefamily)",
+  func  = function(x, y) { r <- aplicar_smote(x, y); list(x = r$x, y = r$y) },
+  first = TRUE   # sampling antes do pre-processamento interno do caret
+)
+
+# ----------------------------------------------------------------------------
 # Modelo customizado LightGBM para o caret
 # (caret nao possui metodo nativo; este wrapper permite usar a mesma
 #  validacao cruzada, tuning e comparacao via resamples dos demais modelos)
@@ -100,11 +123,20 @@ lightgbm_caret <- list(
     label     = c("Num. folhas", "Taxa de aprendizado", "Iteracoes", "Fracao de atributos", "Min. obs. por folha")
   ),
   grid = function(x, y, len = NULL, search = "grid") {
-    expand.grid(num_leaves       = c(7, 15, 31),
-                learning_rate    = c(0.03, 0.1),
-                nrounds          = c(100, 300),
-                feature_fraction = c(0.7, 1.0),
-                min_data_in_leaf = 20)
+    if (search == "random") {
+      n <- if (is.null(len)) 30 else len
+      data.frame(num_leaves       = sample(c(4, 7, 15, 31, 63), n, replace = TRUE),
+                 learning_rate    = round(10^runif(n, -2, -0.5), 4),
+                 nrounds          = sample(seq(50, 500, by = 50), n, replace = TRUE),
+                 feature_fraction = round(runif(n, 0.5, 1.0), 2),
+                 min_data_in_leaf = sample(c(5, 10, 20, 40), n, replace = TRUE))
+    } else {
+      expand.grid(num_leaves       = c(7, 15, 31),
+                  learning_rate    = c(0.03, 0.1),
+                  nrounds          = c(100, 300),
+                  feature_fraction = c(0.7, 1.0),
+                  min_data_in_leaf = 20)
+    }
   },
   fit = function(x, y, wts, param, lev, last, classProbs, ...) {
     label  <- as.integer(y == lev[2])   # lev[2] = classe positiva

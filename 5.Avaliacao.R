@@ -2,7 +2,8 @@
 # 5.Avaliacao.R
 # Avalia os modelos no conjunto de teste (distribuicao real, sem SMOTE):
 # matriz de confusao, metricas, IC 95% da AUC (DeLong), curvas ROC e
-# Precision-Recall, e analise do limiar de decisao.
+# Precision-Recall, analise do limiar de decisao com foco em Recall (para
+# todos os modelos) e analise de desempenho estratificada por sexo (vies).
 # =============================================================================
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
@@ -20,12 +21,33 @@ modelos <- list(
   "XGBoost"             = readRDS("models/modelo_xgb.rds"),
   "LightGBM"            = readRDS("models/modelo_lgb.rds")
 )
-teste <- readRDS("data/teste.rds")
+teste  <- readRDS("data/teste.rds")
+genero <- readRDS("data/teste_genero.rds")
 xgboost::xgb.set.config(verbosity = 0)
+
+RECALL_ALVO <- 0.90   # sensibilidade minima desejada em cenario de triagem clinica
 
 log_info("Conjunto de teste: %d observacoes (nunca vistas no treino nem no SMOTE)", nrow(teste))
 log_kv(paste0("Classe ", levels(teste$Dataset)),
        sprintf("%d (%.1f%%)", table(teste$Dataset), 100 * prop.table(table(teste$Dataset))))
+log_kv(paste0("Sexo ", levels(genero)),
+       sprintf("%d (%.1f%%)", table(genero), 100 * prop.table(table(genero))))
+
+# Menor limiar que garante sensibilidade >= alvo (prioriza reduzir falsos negativos)
+limiar_recall <- function(roc_o, alvo) {
+  co <- coords(roc_o, "all", ret = c("threshold", "sensitivity", "specificity", "precision"))
+  co <- co[is.finite(co$threshold) & co$sensitivity >= alvo, ]
+  co[which.max(co$threshold), ]
+}
+
+metricas_no_limiar <- function(prob, real, limiar) {
+  pred <- factor(ifelse(prob >= limiar, "doente", "saudavel"), levels = c("saudavel", "doente"))
+  cm <- confusionMatrix(pred, real, positive = "doente")
+  c(Sensibilidade = unname(cm$byClass["Sensitivity"]), Especificidade = unname(cm$byClass["Specificity"]),
+    Precisao = unname(cm$byClass["Precision"]), F1 = unname(cm$byClass["F1"]),
+    Acuracia_Bal = unname(cm$byClass["Balanced Accuracy"]),
+    FN = unname(cm$table["saudavel", "doente"]), FP = unname(cm$table["doente", "saudavel"]))
+}
 
 # --- Avaliacao individual -----------------------------------------------------
 avaliar <- function(modelo, nome) {
@@ -64,9 +86,17 @@ avaliar <- function(modelo, nome) {
   log_info("Limiar otimo (Youden): %.3f -> Sens = %.3f | Spec = %.3f",
            yj$threshold[1], yj$sensitivity[1], yj$specificity[1])
 
+  # Limiar clinico: menor sacrificio de especificidade que garante Recall >= alvo
+  lr <- limiar_recall(roc_o, RECALL_ALVO)
+  log_info("Limiar clinico (Recall >= %.0f%%): %.3f -> Sens = %.3f | Spec = %.3f | Precisao = %.3f",
+           100 * RECALL_ALVO, lr$threshold, lr$sensitivity, lr$specificity, lr$precision)
+
   list(nome = nome, prob = prob, roc = roc_o,
        metricas = c(Modelo = nome, round(metricas, 4), AUC_IC_inf = round(ic[1], 4), AUC_IC_sup = round(ic[3], 4),
-                    Limiar_Youden = round(yj$threshold[1], 3)))
+                    Limiar_Youden = round(yj$threshold[1], 3),
+                    Limiar_Recall90 = round(lr$threshold, 3),
+                    Spec_Recall90 = round(lr$specificity, 4),
+                    Precisao_Recall90 = round(lr$precision, 4)))
 }
 
 resultados <- imap(modelos, ~avaliar(.x, .y))
@@ -77,10 +107,13 @@ tabela <- map_dfr(resultados, ~as.data.frame(t(.x$metricas), stringsAsFactors = 
   mutate(across(-Modelo, as.numeric)) %>%
   arrange(desc(AUC))
 log_table(tabela %>% select(Modelo, AUC, Sensibilidade, Especificidade, F1, Acuracia_Bal, Kappa), digits = 4)
+log_info("Foco em Recall: especificidade obtida por cada modelo quando o limiar garante Sens >= %.0f%%:", 100 * RECALL_ALVO)
+log_table(tabela %>% select(Modelo, Limiar_Recall90, Spec_Recall90, Precisao_Recall90), digits = 4)
 salvar_csv(tabela, "results/metricas_teste.csv")
 
 melhor <- tabela$Modelo[1]
 log_ok("Melhor modelo pela AUC no teste: %s (AUC = %.4f)", melhor, tabela$AUC[1])
+salvar_rds(melhor, "results/melhor_modelo.rds")
 
 # --- Comparacao estatistica das curvas ROC (DeLong) --------------------------
 log_subsection("Comparacao pareada das AUCs (teste de DeLong)")
@@ -137,21 +170,110 @@ p_met <- tabela %>%
   theme_minimal() + theme(legend.position = "bottom")
 salvar_plot(p_met, "plots/metricas_teste.png", width = 11, height = 6)
 
-# --- Sensibilidade ao limiar (melhor modelo) ---------------------------------
-log_subsection(sprintf("Analise de limiar de decisao - %s", melhor))
-r_melhor <- resultados[[melhor]]
+# --- Sensibilidade ao limiar (todos os modelos) -------------------------------
+log_subsection("Analise de limiar de decisao - todos os modelos")
 limiares <- seq(0.1, 0.9, by = 0.1)
-sens_lim <- map_dfr(limiares, function(l) {
-  pred <- factor(ifelse(r_melhor$prob >= l, "doente", "saudavel"), levels = c("saudavel", "doente"))
-  cm <- confusionMatrix(pred, teste$Dataset, positive = "doente")
-  data.frame(Limiar = l,
-             Sensibilidade = round(cm$byClass["Sensitivity"], 3),
-             Especificidade = round(cm$byClass["Specificity"], 3),
-             F1 = round(cm$byClass["F1"], 3),
+sens_lim <- map_dfr(resultados, function(r) {
+  map_dfr(limiares, function(l) {
+    m <- metricas_no_limiar(r$prob, teste$Dataset, l)
+    data.frame(Modelo = r$nome, Limiar = l, Sensibilidade = round(m["Sensibilidade"], 3),
+               Especificidade = round(m["Especificidade"], 3), F1 = round(m["F1"], 3),
+               FN = m["FN"], FP = m["FP"], row.names = NULL)
+  })
+})
+for (nm in names(resultados)) {
+  log_info("%s:", nm)
+  log_table(sens_lim %>% filter(Modelo == nm) %>% select(-Modelo), digits = 3)
+}
+log_info("Em triagem clinica, limiares menores priorizam sensibilidade (menos falsos negativos).")
+salvar_csv(sens_lim, "results/analise_limiar_modelos.csv")
+
+p_lim <- sens_lim %>%
+  pivot_longer(c(Sensibilidade, Especificidade), names_to = "Metrica", values_to = "Valor") %>%
+  ggplot(aes(Limiar, Valor, colour = Metrica)) +
+  geom_line(linewidth = 0.9) + geom_point(size = 1.5) +
+  geom_vline(xintercept = 0.5, linetype = "dotted", colour = "grey50") +
+  facet_wrap(~Modelo, ncol = 2) +
+  labs(title = "Trade-off Sensibilidade x Especificidade por limiar de decisao",
+       subtitle = "Conjunto de teste; linha pontilhada = limiar padrao 0.5", x = "Limiar", y = NULL) +
+  theme_minimal() + theme(legend.position = "bottom")
+salvar_plot(p_lim, "plots/limiar_sens_spec_modelos.png", width = 9, height = 6)
+
+# --- Analise estratificada por sexo (vies diagnostico) ------------------------
+log_subsection("Desempenho estratificado por sexo (Straw & Wu, 2022)")
+log_info("Prevalencia de 'doente' por sexo no teste:")
+log_table(prop.table(table(Sexo = genero, Classe = teste$Dataset), 1), digits = 3)
+
+por_sexo <- map_dfr(resultados, function(r) {
+  map_dfr(levels(genero), function(g) {
+    idx  <- genero == g
+    real <- teste$Dataset[idx]; prob <- r$prob[idx]
+    roc_g <- roc(real, prob, levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
+    ic_g  <- ci.auc(roc_g, method = "delong")
+    m05   <- metricas_no_limiar(prob, real, 0.5)
+    m90   <- metricas_no_limiar(prob, real, tabela$Limiar_Recall90[tabela$Modelo == r$nome])
+    data.frame(Modelo = r$nome, Sexo = g, n = sum(idx), n_doentes = sum(real == "doente"),
+               AUC = round(as.numeric(auc(roc_g)), 4),
+               AUC_IC_inf = round(ic_g[1], 4), AUC_IC_sup = round(ic_g[3], 4),
+               Sensibilidade = round(m05["Sensibilidade"], 4),
+               Especificidade = round(m05["Especificidade"], 4),
+               F1 = round(m05["F1"], 4),
+               Taxa_FN = round(1 - m05["Sensibilidade"], 4),
+               Sens_LimiarRecall90 = round(m90["Sensibilidade"], 4),
+               Spec_LimiarRecall90 = round(m90["Especificidade"], 4),
+               row.names = NULL)
+  })
+})
+log_table(por_sexo %>% select(Modelo, Sexo, n, n_doentes, AUC, Sensibilidade, Especificidade, Taxa_FN), digits = 4)
+salvar_csv(por_sexo, "results/metricas_por_sexo.csv")
+
+# Diferenca de AUC entre sexos (DeLong, amostras independentes) e gap de metricas
+gap_sexo <- map_dfr(resultados, function(r) {
+  idx_f <- genero == "Feminino"; idx_m <- genero == "Masculino"
+  roc_f <- roc(teste$Dataset[idx_f], r$prob[idx_f], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
+  roc_m <- roc(teste$Dataset[idx_m], r$prob[idx_m], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
+  tt <- roc.test(roc_f, roc_m, method = "delong", paired = FALSE)
+  ps <- por_sexo %>% filter(Modelo == r$nome)
+  data.frame(Modelo = r$nome,
+             AUC_Feminino = round(as.numeric(auc(roc_f)), 4), AUC_Masculino = round(as.numeric(auc(roc_m)), 4),
+             Dif_AUC = round(as.numeric(auc(roc_m)) - as.numeric(auc(roc_f)), 4),
+             p_valor_DeLong = round(tt$p.value, 4),
+             Dif_Sensibilidade = round(diff(ps$Sensibilidade), 4),   # Masculino - Feminino
+             Dif_Especificidade = round(diff(ps$Especificidade), 4),
              row.names = NULL)
 })
-log_table(sens_lim, digits = 3)
-log_info("Em triagem clinica, limiares menores priorizam sensibilidade (menos falsos negativos).")
-salvar_csv(sens_lim, "results/analise_limiar_melhor_modelo.csv")
+gap_sexo$Significativo_5pct <- ifelse(gap_sexo$p_valor_DeLong < 0.05, "sim", "nao")
+log_table(gap_sexo, digits = 4)
+log_info("Dif_* = Masculino - Feminino. Diferencas sistematicas de Sensibilidade indicam risco desigual de falso negativo.")
+log_warn("Amostras por sexo sao pequenas (especialmente feminino); interpretar gaps com cautela (ver ICs).")
+salvar_csv(gap_sexo, "results/gap_desempenho_sexo.csv")
+
+p_sexo <- por_sexo %>%
+  select(Modelo, Sexo, AUC, Sensibilidade, Especificidade) %>%
+  pivot_longer(c(AUC, Sensibilidade, Especificidade), names_to = "Metrica", values_to = "Valor") %>%
+  ggplot(aes(Modelo, Valor, fill = Sexo)) +
+  geom_col(position = position_dodge(0.8), width = 0.7) +
+  facet_wrap(~Metrica, ncol = 1) +
+  ylim(0, 1) +
+  labs(title = "Desempenho no teste estratificado por sexo", x = NULL, y = NULL) +
+  theme_minimal() + theme(legend.position = "bottom")
+salvar_plot(p_sexo, "plots/metricas_por_sexo.png", width = 8, height = 8)
+
+p_roc_sexo <- map_dfr(resultados, function(r) {
+  map_dfr(levels(genero), function(g) {
+    idx <- genero == g
+    roc_g <- roc(teste$Dataset[idx], r$prob[idx], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
+    data.frame(Modelo = r$nome, Sexo = sprintf("%s (AUC = %.3f)", g, as.numeric(auc(roc_g))),
+               FPR = 1 - roc_g$specificities, TPR = roc_g$sensitivities)
+  })
+}) %>%
+  ggplot(aes(FPR, TPR, colour = Sexo)) +
+  geom_abline(linetype = "dashed", colour = "grey60") +
+  geom_line(linewidth = 0.9) +
+  facet_wrap(~Modelo, ncol = 2) + coord_equal() +
+  labs(title = "Curvas ROC por sexo no conjunto de teste", x = "1 - Especificidade", y = "Sensibilidade") +
+  theme_minimal() + theme(legend.position = "bottom", legend.text = element_text(size = 7)) +
+  guides(colour = guide_legend(ncol = 2))
+salvar_plot(p_roc_sexo, "plots/roc_por_sexo.png", width = 8, height = 9)
 
 timer_end(t0, "Etapa 5")

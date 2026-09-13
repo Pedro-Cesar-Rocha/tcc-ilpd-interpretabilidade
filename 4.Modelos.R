@@ -1,7 +1,8 @@
 # =============================================================================
 # 4.Modelos.R
 # Treina quatro classificadores com validacao cruzada repetida (5 folds x 3),
-# otimizando hiperparametros pela AUC-ROC:
+# aplicando SMOTE dentro de cada fold (apenas na particao de treino) e
+# otimizando hiperparametros por Random Search com selecao pela AUC-ROC:
 #   - Regressao Logistica (baseline linear e interpretavel)
 #   - Random Forest (bagging de arvores)
 #   - XGBoost (gradient boosting)
@@ -11,29 +12,34 @@ source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
   library(tidyverse)
   library(caret)
+  library(smotefamily)
 }))
 
 log_section("ETAPA 4 - TREINAMENTO DOS MODELOS")
 t0 <- timer_start()
 ensure_dirs(c("models", "results"))
 
-treino <- readRDS("data/df_balanceado.rds")
-log_info("Treino balanceado carregado: %d obs x %d preditores", nrow(treino), ncol(treino) - 1)
+treino <- readRDS("data/df_proc.rds")
+log_info("Treino (distribuicao real) carregado: %d obs x %d preditores", nrow(treino), ncol(treino) - 1)
 log_kv(paste0("Classe ", levels(treino$Dataset)), as.vector(table(treino$Dataset)))
+log_info("O SMOTE sera aplicado dentro de cada fold da CV e no ajuste final (caret::trainControl(sampling)).")
 
 # --- Configuracao da validacao cruzada --------------------------------------
 log_subsection("Configuracao da validacao cruzada")
+N_RANDOM <- 30   # combinacoes de hiperparametros sorteadas por modelo (Random Search)
 ctrl <- trainControl(
   method          = "repeatedcv",
   number          = 5,
   repeats         = 3,
   classProbs      = TRUE,
   summaryFunction = twoClassSummary,   # ROC, Sens, Spec
+  sampling        = smote_caret,       # SMOTE por fold (sem vazamento para a validacao)
+  search          = "random",          # Random Search de hiperparametros
   savePredictions = "final",
   verboseIter     = FALSE
 )
-log_kv(c("Metodo", "Folds", "Repeticoes", "Metrica de selecao", "Classe positiva"),
-       c("repeatedcv", "5", "3", "ROC (AUC)", "doente"))
+log_kv(c("Metodo", "Folds", "Repeticoes", "Balanceamento", "Busca de hiperparametros", "Metrica de selecao", "Classe positiva"),
+       c("repeatedcv", "5", "3", "SMOTE dentro de cada fold", sprintf("Random Search (%d combinacoes)", N_RANDOM), "ROC (AUC)", "doente"))
 
 # Silencia o aviso deprecated `ntree_limit` do xgboost 1.7 (interno do caret)
 xgboost::xgb.set.config(verbosity = 0)
@@ -62,9 +68,9 @@ treinar <- function(nome, ...) {
 }
 
 modelo_lr  <- treinar("Regressao Logistica", method = "glm", family = "binomial")
-modelo_rf  <- treinar("Random Forest",       method = "rf", tuneLength = 5, ntree = 500, importance = TRUE)
-modelo_xgb <- treinar("XGBoost",             method = "xgbTree", tuneLength = 5, verbosity = 0)
-modelo_lgb <- treinar("LightGBM",            method = lightgbm_caret)
+modelo_rf  <- treinar("Random Forest",       method = "rf", tuneLength = N_RANDOM, ntree = 500, importance = TRUE)
+modelo_xgb <- treinar("XGBoost",             method = "xgbTree", tuneLength = N_RANDOM, verbosity = 0)
+modelo_lgb <- treinar("LightGBM",            method = lightgbm_caret, tuneLength = N_RANDOM)
 
 # --- Coeficientes da regressao logistica (interpretacao direta) -------------
 log_subsection("Coeficientes da Regressao Logistica (odds ratio)")
@@ -91,8 +97,14 @@ rs <- resamples(modelos)
 resumo_cv <- summary(rs)$statistics$ROC[, c("Min.", "Mean", "Max.")]
 log_info("AUC-ROC por modelo ao longo dos %d folds:", nrow(rs$values))
 log_table(resumo_cv, digits = 4)
+resumo_sens <- summary(rs)$statistics$Sens[, c("Min.", "Mean", "Max.")]
+log_info("Sensibilidade (Recall, limiar 0.5) por modelo na CV:")
+log_table(resumo_sens, digits = 4)
 
-cv_df <- as.data.frame(resumo_cv) %>% rownames_to_column("Modelo")
+cv_df <- as.data.frame(resumo_cv) %>% rownames_to_column("Modelo") %>%
+  rename(AUC_Min = Min., AUC_Media = Mean, AUC_Max = Max.) %>%
+  mutate(Sens_Media = as.data.frame(resumo_sens)$Mean,
+         Spec_Media = as.data.frame(summary(rs)$statistics$Spec)$Mean)
 salvar_csv(cv_df, "results/cv_auc_por_modelo.csv")
 
 png("plots/cv_comparacao_modelos.png", width = 1000, height = 600, res = 130)
