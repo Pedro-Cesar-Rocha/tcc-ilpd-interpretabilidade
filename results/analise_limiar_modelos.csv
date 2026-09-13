@@ -1,0 +1,37 @@
+"Modelo","Limiar","Sensibilidade","Especificidade","F1","FN","FP"
+"Regressao Logistica",0.1,0.988,0,0.829,1,32
+"Regressao Logistica",0.2,0.963,0.062,0.825,3,30
+"Regressao Logistica",0.3,0.901,0.094,0.798,8,29
+"Regressao Logistica",0.4,0.802,0.344,0.778,16,21
+"Regressao Logistica",0.5,0.728,0.562,0.766,22,14
+"Regressao Logistica",0.6,0.617,0.781,0.725,31,7
+"Regressao Logistica",0.7,0.568,0.875,0.702,35,4
+"Regressao Logistica",0.8,0.481,0.906,0.634,42,3
+"Regressao Logistica",0.9,0.358,0.938,0.518,52,2
+"Random Forest",0.1,1,0,0.835,0,32
+"Random Forest",0.2,1,0.031,0.839,0,31
+"Random Forest",0.3,0.926,0.125,0.815,6,28
+"Random Forest",0.4,0.877,0.406,0.83,10,19
+"Random Forest",0.5,0.765,0.625,0.8,19,12
+"Random Forest",0.6,0.642,0.781,0.743,29,7
+"Random Forest",0.7,0.58,0.844,0.707,34,5
+"Random Forest",0.8,0.494,0.906,0.645,41,3
+"Random Forest",0.9,0.296,1,0.457,57,0
+"XGBoost",0.1,1,0,0.835,0,32
+"XGBoost",0.2,1,0,0.835,0,32
+"XGBoost",0.3,0.975,0.094,0.836,2,29
+"XGBoost",0.4,0.765,0.469,0.775,19,17
+"XGBoost",0.5,0.716,0.719,0.784,23,9
+"XGBoost",0.6,0.605,0.875,0.731,32,4
+"XGBoost",0.7,0.444,0.938,0.605,45,2
+"XGBoost",0.8,0.346,0.938,0.505,53,2
+"XGBoost",0.9,0,1,NA,81,0
+"LightGBM",0.1,1,0,0.835,0,32
+"LightGBM",0.2,1,0,0.835,0,32
+"LightGBM",0.3,1,0.031,0.839,0,31
+"LightGBM",0.4,0.815,0.469,0.805,15,17
+"LightGBM",0.5,0.691,0.656,0.757,25,11
+"LightGBM",0.6,0.617,0.781,0.725,31,7
+"LightGBM",0.7,0.568,0.938,0.713,35,2
+"LightGBM",0.8,0.457,0.938,0.617,44,2
+"LightGBM",0.9,0.086,1,0.159,74,0

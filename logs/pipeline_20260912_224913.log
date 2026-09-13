@@ -1,0 +1,752 @@
+
+==========================================================================================
+  PIPELINE - CLASSIFICACAO DE DOENCA HEPATICA (ILPD)
+==========================================================================================
+[2026-09-12 22:49:13] [INFO ] Diretorio de trabalho: C:/Users/Pedro/AppData/Roaming/JetBrains/DataSpell2026.1/projects/workspace
+[2026-09-12 22:49:13] [INFO ] Log completo em: logs/pipeline_20260912_224913.log
+[2026-09-12 22:49:13] [INFO ] Inicio: 12/09/2026 22:49:13
+
+==========================================================================================
+  ETAPA 0 - INSTALACAO E VERIFICACAO DE PACOTES
+==========================================================================================
+[2026-09-12 22:49:14] [INFO ] Verificando 10 pacotes base...
+[2026-09-12 22:49:16] [OK   ] tidyverse      ja instalado
+[2026-09-12 22:49:16] [OK   ] caret          ja instalado
+[2026-09-12 22:49:16] [OK   ] randomForest   ja instalado
+[2026-09-12 22:49:16] [OK   ] lightgbm       ja instalado
+[2026-09-12 22:49:16] [OK   ] e1071          ja instalado
+[2026-09-12 22:49:16] [OK   ] smotefamily    ja instalado
+[2026-09-12 22:49:16] [OK   ] pROC           ja instalado
+[2026-09-12 22:49:16] [OK   ] shapviz        ja instalado
+[2026-09-12 22:49:16] [OK   ] ggplot2        ja instalado
+[2026-09-12 22:49:16] [OK   ] corrplot       ja instalado
+[2026-09-12 22:49:16] [OK   ] Todos os pacotes base ja estao instalados.
+
+--- xgboost (versao fixada 1.7.8.1) -----------------------------------------------------
+[2026-09-12 22:49:16] [OK   ] xgboost 1.7.8.1
+
+--- fastshap (archive CRAN 0.1.1) -------------------------------------------------------
+[2026-09-12 22:49:16] [OK   ] fastshap 0.1.1
+
+--- Ambiente ----------------------------------------------------------------------------
+    R           : R version 4.5.0 (2025-04-11 ucrt)
+    Plataforma  : x86_64-w64-mingw32
+    Seed global : 42
+[2026-09-12 22:49:16] [OK   ] Etapa 0 finalizada em 3.0 segundos.
+
+==========================================================================================
+  ETAPA 1 - CARREGAMENTO DE DADOS E ANALISE EXPLORATORIA
+==========================================================================================
+[2026-09-12 22:49:17] [INFO ] Lendo arquivo: data/Indian Liver Patient Dataset (ILPD).csv
+[2026-09-12 22:49:17] [OK   ] Dataset carregado: 583 observacoes x 11 variaveis
+
+--- Estrutura das variaveis -------------------------------------------------------------
+                         Variavel      Tipo
+    1                         Age   integer
+    2                      Gender character
+    3             Total_Bilirubin   numeric
+    4            Direct_Bilirubin   numeric
+    5        Alkaline_Phosphotase   integer
+    6    Alamine_Aminotransferase   integer
+    7  Aspartate_Aminotransferase   integer
+    8              Total_Proteins   numeric
+    9                     Albumin   numeric
+    10                   AG_Ratio   numeric
+    11                    Dataset   integer 
+
+--- Valores ausentes --------------------------------------------------------------------
+[2026-09-12 22:49:17] [WARN ] AG_Ratio                     4 ausentes (0.69%)
+[2026-09-12 22:49:17] [WARN ] 13 linhas duplicadas detectadas (mantidas nesta etapa).
+
+--- Distribuicao da variavel alvo (Dataset: 1 = doente, 2 = saudavel) -------------------
+    Classe 1 : 416 (71.4%)
+    Classe 2 : 167 (28.6%)
+[2026-09-12 22:49:17] [INFO ] Razao de desbalanceamento: 2.49 : 1
+
+--- Distribuicao por genero -------------------------------------------------------------
+            Dataset
+    Gender     1   2
+      Female  92  50
+      Male   324 117 
+
+--- Estatisticas descritivas das variaveis numericas ------------------------------------
+                        Variavel   Media      DP  Min Mediana    Max Assimetria
+    1                   AG_Ratio   0.947   0.320  0.3    0.93    2.8     0.9872
+    2                        Age  44.746  16.190  4.0   45.00   90.0    -0.0292
+    3   Alamine_Aminotransferase  80.714 182.620 10.0   35.00 2000.0     6.5155
+    4                    Albumin   3.142   0.796  0.9    3.10    5.5    -0.0435
+    5       Alkaline_Phosphotase 290.576 242.938 63.0  208.00 2110.0     3.7458
+    6 Aspartate_Aminotransferase 109.911 288.919 10.0   42.00 4929.0    10.4920
+    7           Direct_Bilirubin   1.486   2.808  0.1    0.30   19.7     3.1959
+    8            Total_Bilirubin   3.299   6.210  0.4    1.00   75.0     4.8823
+    9             Total_Proteins   6.483   1.085  2.7    6.60    9.6    -0.2842 
+[2026-09-12 22:49:17] [OK   ] CSV salvo: results/estatisticas_descritivas.csv (9 linhas)
+[2026-09-12 22:49:17] [WARN ] Variaveis com forte assimetria (|skew| > 2): Alamine_Aminotransferase, Alkaline_Phosphotase, Aspartate_Aminotransferase, Direct_Bilirubin, Total_Bilirubin
+[2026-09-12 22:49:17] [INFO ] Sera aplicada transformacao log1p nessas variaveis na etapa 2.
+
+--- Media das variaveis por classe (teste t de Welch) -----------------------------------
+                        Variavel Media_Doente Media_Saudavel  p_valor Significativo
+    1                        Age       46.154         41.240 1.40e-03           sim
+    2            Total_Bilirubin        4.164          1.143 4.91e-16           sim
+    3           Direct_Bilirubin        1.924          0.396 2.27e-19           sim
+    4       Alkaline_Phosphotase      319.007        219.754 1.08e-08           sim
+    5   Alamine_Aminotransferase       99.606         33.653 1.18e-09           sim
+    6 Aspartate_Aminotransferase      137.700         40.689 1.41e-08           sim
+    7             Total_Proteins        6.459          6.543 3.93e-01           nao
+    8                    Albumin        3.061          3.344 9.77e-05           sim
+    9                   AG_Ratio        0.914          1.030 3.50e-05           sim 
+[2026-09-12 22:49:17] [OK   ] CSV salvo: results/comparacao_medias_por_classe.csv (9 linhas)
+
+--- Matriz de correlacao (Pearson) ------------------------------------------------------
+[2026-09-12 22:49:17] [WARN ] Alta correlacao: Total_Bilirubin x Direct_Bilirubin = 0.874
+[2026-09-12 22:49:17] [WARN ] Alta correlacao: Alamine_Aminotransferase x Aspartate_Aminotransferase = 0.792
+[2026-09-12 22:49:17] [WARN ] Alta correlacao: Total_Proteins x Albumin = 0.783
+[2026-09-12 22:49:17] [OK   ] Grafico salvo: plots/eda_correlacao.png
+[2026-09-12 22:49:18] [OK   ] Grafico salvo: plots/eda_distribuicao_alvo.png
+[2026-09-12 22:49:20] [OK   ] Grafico salvo: plots/eda_boxplots_por_classe.png
+[2026-09-12 22:49:20] [OK   ] Salvo: data/df_raw.rds (8.4 KB)
+[2026-09-12 22:49:20] [OK   ] Etapa 1 finalizada em 3.0 segundos.
+
+==========================================================================================
+  ETAPA 2 - PRE-PROCESSAMENTO
+==========================================================================================
+[2026-09-12 22:49:20] [INFO ] Dados brutos carregados: 583 x 11
+
+--- Remocao de duplicatas ---------------------------------------------------------------
+[2026-09-12 22:49:20] [INFO ] Removidas 13 linhas duplicadas (583 -> 570).
+
+--- Codificacao de variaveis categoricas ------------------------------------------------
+[2026-09-12 22:49:20] [INFO ] Gender  -> Male = 1, Female = 0  (430 homens, 140 mulheres)
+[2026-09-12 22:49:20] [INFO ] Dataset -> 'doente' (classe positiva) / 'saudavel'
+    Classe saudavel : 164
+    Classe doente   : 406
+
+--- Transformacao log1p em variaveis com forte assimetria -------------------------------
+[2026-09-12 22:49:20] [INFO ] Total_Bilirubin              assimetria   4.84 ->  1.72
+[2026-09-12 22:49:20] [INFO ] Direct_Bilirubin             assimetria   3.17 ->  1.68
+[2026-09-12 22:49:20] [INFO ] Alkaline_Phosphotase         assimetria   3.71 ->  1.32
+[2026-09-12 22:49:20] [INFO ] Alamine_Aminotransferase     assimetria   6.66 ->  1.46
+[2026-09-12 22:49:20] [INFO ] Aspartate_Aminotransferase   assimetria  10.50 ->  1.24
+
+--- Divisao treino / teste (80/20, estratificada pela classe) ---------------------------
+[2026-09-12 22:49:20] [INFO ] Treino: 457 obs  |  Teste: 113 obs
+[2026-09-12 22:49:20] [INFO ] Proporcao 'doente' - treino: 71.1%  |  teste: 71.7%
+
+--- Imputacao de valores ausentes (mediana do treino aplicada a treino e teste) ---------
+[2026-09-12 22:49:20] [INFO ] AG_Ratio: mediana do treino = 1.00 | imputados: 4 no treino, 0 no teste.
+[2026-09-12 22:49:20] [OK   ] Total de NAs restantes: treino = 0 | teste = 0
+
+--- Normalizacao (center + scale) ajustada no conjunto de treino ------------------------
+[2026-09-12 22:49:20] [INFO ] Parametros (media / desvio) estimados em 10 variaveis do treino e aplicados ao teste.
+                         Variavel Media_Treino DP_Treino Media_Teste
+    1                         Age            0         1      -0.127
+    2                      Gender            0         1      -0.110
+    3             Total_Bilirubin            0         1       0.203
+    4            Direct_Bilirubin            0         1       0.198
+    5        Alkaline_Phosphotase            0         1       0.095
+    6    Alamine_Aminotransferase            0         1       0.148
+    7  Aspartate_Aminotransferase            0         1       0.185
+    8              Total_Proteins            0         1      -0.210
+    9                     Albumin            0         1      -0.169
+    10                   AG_Ratio            0         1       0.025 
+
+--- Salvando artefatos ------------------------------------------------------------------
+[2026-09-12 22:49:20] [OK   ] Salvo: data/df_proc.rds (13.6 KB)
+[2026-09-12 22:49:20] [OK   ] Salvo: data/teste.rds (5.1 KB)
+[2026-09-12 22:49:20] [OK   ] Salvo: data/preproc.rds (0.7 KB)
+[2026-09-12 22:49:20] [OK   ] Salvo: data/teste_genero.rds (0.1 KB)
+    Teste - Feminino  : 32
+    Teste - Masculino : 81
+[2026-09-12 22:49:20] [OK   ] Etapa 2 finalizada em 0.1 segundos.
+
+==========================================================================================
+  ETAPA 3 - BALANCEAMENTO DE CLASSES (SMOTE - DIAGNOSTICO NO TREINO)
+==========================================================================================
+[2026-09-12 22:49:20] [INFO ] Conjunto de treino carregado: 457 x 11
+
+--- Distribuicao antes do SMOTE ---------------------------------------------------------
+    Classe saudavel : 132 (28.9%)
+    Classe doente   : 325 (71.1%)
+[2026-09-12 22:49:20] [INFO ] Razao majoritaria/minoritaria: 2.46 : 1
+
+--- Executando SMOTE (K = 5, dup_size = 0 -> balanceamento automatico) ------------------
+[2026-09-12 22:49:20] [OK   ] SMOTE concluido: 132 amostras sinteticas geradas para a classe minoritaria.
+
+--- Distribuicao apos o SMOTE -----------------------------------------------------------
+    Classe saudavel : 264 (44.8%)
+    Classe doente   : 325 (55.2%)
+[2026-09-12 22:49:20] [INFO ] Razao majoritaria/minoritaria: 1.23 : 1
+[2026-09-12 22:49:20] [INFO ] Tamanho do treino: 457 -> 589 observacoes
+
+--- Verificacao das amostras sinteticas -------------------------------------------------
+                         Variavel Media_Minoritaria_Original Media_Sintetica
+    1                         Age                     -0.228           0.182
+    2                      Gender                     -0.050           0.057
+    3             Total_Bilirubin                     -0.447           0.261
+    4            Direct_Bilirubin                     -0.452           0.259
+    5        Alkaline_Phosphotase                     -0.390          -0.032
+    6    Alamine_Aminotransferase                     -0.424           0.159
+    7  Aspartate_Aminotransferase                     -0.465           0.225
+    8              Total_Proteins                      0.051           0.086
+    9                     Albumin                      0.269          -0.159
+    10                   AG_Ratio                      0.296          -0.245 
+[2026-09-12 22:49:20] [INFO ] Amostras sinteticas devem ter medias proximas as da classe minoritaria original ('saudavel').
+[2026-09-12 22:49:20] [OK   ] Grafico salvo: plots/smote_antes_depois.png
+[2026-09-12 22:49:20] [OK   ] Salvo: data/df_balanceado.rds (20.8 KB)
+[2026-09-12 22:49:20] [INFO ] Nota: a etapa 4 NAO usa este arquivo diretamente; o SMOTE e reaplicado dentro de cada fold da CV.
+[2026-09-12 22:49:20] [OK   ] Etapa 3 finalizada em 0.5 segundos.
+
+==========================================================================================
+  ETAPA 4 - TREINAMENTO DOS MODELOS
+==========================================================================================
+[2026-09-12 22:49:20] [INFO ] Treino (distribuicao real) carregado: 457 obs x 10 preditores
+    Classe saudavel : 132
+    Classe doente   : 325
+[2026-09-12 22:49:20] [INFO ] O SMOTE sera aplicado dentro de cada fold da CV e no ajuste final (caret::trainControl(sampling)).
+
+--- Configuracao da validacao cruzada ---------------------------------------------------
+    Metodo                   : repeatedcv
+    Folds                    : 5
+    Repeticoes               : 3
+    Balanceamento            : SMOTE dentro de cada fold
+    Busca de hiperparametros : Random Search (30 combinacoes)
+    Metrica de selecao       : ROC (AUC)
+    Classe positiva          : doente
+
+--- Treinando: Regressao Logistica ------------------------------------------------------
+[2026-09-12 22:49:21] [INFO ] Modelo sem hiperparametros a otimizar.
+[2026-09-12 22:49:21] [INFO ] Desempenho na validacao cruzada (media +- desvio):
+    AUC-ROC        : 0.7528 +- 0.0537
+    Sensibilidade  : 0.6968 +- 0.0862
+    Especificidade : 0.6667 +- 0.0766
+[2026-09-12 22:49:21] [OK   ] Regressao Logistica finalizada em 1.0 segundos.
+
+--- Treinando: Random Forest ------------------------------------------------------------
+[2026-09-12 22:50:19] [INFO ] Combinacoes testadas: 10
+[2026-09-12 22:50:19] [INFO ] Melhores hiperparametros:
+    mtry : 1
+[2026-09-12 22:50:19] [INFO ] Desempenho na validacao cruzada (media +- desvio):
+    AUC-ROC        : 0.7232 +- 0.0740
+    Sensibilidade  : 0.5073 +- 0.1441
+    Especificidade : 0.7426 +- 0.0669
+[2026-09-12 22:50:19] [OK   ] Random Forest finalizada em 57.1 segundos.
+
+--- Treinando: XGBoost ------------------------------------------------------------------
+[2026-09-12 22:55:13] [INFO ] Combinacoes testadas: 30
+[2026-09-12 22:55:13] [INFO ] Melhores hiperparametros:
+    nrounds          : 24
+    max_depth        : 4
+    eta              : 0.225918488804717
+    gamma            : 7.3324590572156
+    colsample_bytree : 0.345487443637103
+    min_child_weight : 16
+    subsample        : 0.485262866539415
+[2026-09-12 22:55:13] [INFO ] Desempenho na validacao cruzada (media +- desvio):
+    AUC-ROC        : 0.7245 +- 0.0642
+    Sensibilidade  : 0.6390 +- 0.0976
+    Especificidade : 0.7005 +- 0.0733
+[2026-09-12 22:55:13] [OK   ] XGBoost finalizada em 295.0 segundos.
+
+--- Treinando: LightGBM -----------------------------------------------------------------
+[2026-09-12 22:56:30] [INFO ] Combinacoes testadas: 30
+[2026-09-12 22:56:30] [INFO ] Melhores hiperparametros:
+    num_leaves       : 4
+    learning_rate    : 0.0116
+    nrounds          : 200
+    feature_fraction : 0.57
+    min_data_in_leaf : 40
+[2026-09-12 22:56:30] [INFO ] Desempenho na validacao cruzada (media +- desvio):
+    AUC-ROC        : 0.7202 +- 0.0642
+    Sensibilidade  : 0.6594 +- 0.1006
+    Especificidade : 0.6851 +- 0.0771
+[2026-09-12 22:56:30] [OK   ] LightGBM finalizada em 76.2 segundos.
+
+--- Coeficientes da Regressao Logistica (odds ratio) ------------------------------------
+                         Variavel Coeficiente Odds_Ratio p_valor Significativo
+    1                 (Intercept)      0.8229     2.2770  0.0000           sim
+    2                         Age      0.3174     1.3736  0.0015           sim
+    3                      Gender     -0.2105     0.8102  0.0363           sim
+    4             Total_Bilirubin      0.2782     1.3208  0.6462           nao
+    5            Direct_Bilirubin      0.3769     1.4578  0.5247           nao
+    6        Alkaline_Phosphotase      0.4282     1.5345  0.0042           sim
+    7    Alamine_Aminotransferase      0.5825     1.7905  0.0093           sim
+    8  Aspartate_Aminotransferase      0.2796     1.3226  0.2018           nao
+    9              Total_Proteins      2.0592     7.8395  0.0001           sim
+    10                    Albumin     -2.8495     0.0579  0.0002           sim
+    11                   AG_Ratio      1.3368     3.8068  0.0022           sim 
+[2026-09-12 22:56:30] [INFO ] OR > 1: aumento de 1 DP na variavel eleva a chance de 'doente'; OR < 1: reduz.
+[2026-09-12 22:56:30] [OK   ] CSV salvo: results/coeficientes_regressao_logistica.csv (11 linhas)
+
+--- Comparacao dos modelos na validacao cruzada (resamples) -----------------------------
+[2026-09-12 22:56:30] [INFO ] AUC-ROC por modelo ao longo dos 15 folds:
+                          Min.   Mean   Max.
+    Regressao Logistica 0.6562 0.7528 0.8359
+    Random Forest       0.5725 0.7232 0.8107
+    XGBoost             0.6160 0.7245 0.8271
+    LightGBM            0.6071 0.7202 0.7917 
+[2026-09-12 22:56:30] [INFO ] Sensibilidade (Recall, limiar 0.5) por modelo na CV:
+                          Min.   Mean   Max.
+    Regressao Logistica 0.5556 0.6968 0.8148
+    Random Forest       0.3333 0.5073 0.8148
+    XGBoost             0.5000 0.6390 0.8462
+    LightGBM            0.5000 0.6594 0.8148 
+[2026-09-12 22:56:30] [OK   ] CSV salvo: results/cv_auc_por_modelo.csv (4 linhas)
+[2026-09-12 22:56:30] [OK   ] Grafico salvo: plots/cv_comparacao_modelos.png
+
+--- Diferencas de AUC entre modelos (teste t pareado, Bonferroni) -----------------------
+                        Regressao Logistica Random Forest XGBoost     LightGBM   
+    Regressao Logistica ""                  " 0.029562"   " 0.028247" " 0.032538"
+    Random Forest       "0.060399"          ""            "-0.001316" " 0.002975"
+    XGBoost             "0.007359"          "1.000000"    ""          " 0.004291"
+    LightGBM            "0.008220"          "1.000000"    "1.000000"  ""          
+[2026-09-12 22:56:30] [INFO ] Triangulo superior: diferenca media de AUC | triangulo inferior: p-valor ajustado.
+
+--- Salvando modelos --------------------------------------------------------------------
+[2026-09-12 22:56:30] [OK   ] Salvo: models/modelo_lr.rds (1274.2 KB)
+[2026-09-12 22:56:30] [OK   ] Salvo: models/modelo_rf.rds (1160.4 KB)
+[2026-09-12 22:56:30] [OK   ] Salvo: models/modelo_xgb.rds (119.4 KB)
+[2026-09-12 22:56:30] [OK   ] Salvo: models/modelo_lgb.rds (163.8 KB)
+[2026-09-12 22:56:30] [OK   ] Etapa 4 finalizada em 429.8 segundos.
+
+==========================================================================================
+  ETAPA 5 - AVALIACAO NO CONJUNTO DE TESTE
+==========================================================================================
+[2026-09-12 22:56:30] [INFO ] Conjunto de teste: 113 observacoes (nunca vistas no treino nem no SMOTE)
+    Classe saudavel : 32 (28.3%)
+    Classe doente   : 81 (71.7%)
+    Sexo Feminino  : 32 (28.3%)
+    Sexo Masculino : 81 (71.7%)
+
+--- Modelo: Regressao Logistica ---------------------------------------------------------
+[2026-09-12 22:56:30] [INFO ] Matriz de confusao (linhas = predito, colunas = real):
+              Reference
+    Prediction saudavel doente
+      saudavel       18     22
+      doente         14     59 
+[2026-09-12 22:56:30] [INFO ] VP = 59 | FP = 14 | FN = 22 | VN = 18
+[2026-09-12 22:56:30] [INFO ] Falsos negativos (doentes classificados como saudaveis) sao o erro mais critico no contexto clinico.
+[2026-09-12 22:56:30] [INFO ] Metricas (limiar = 0.5):
+    Acuracia       : 0.6814
+    Acuracia_Bal   : 0.6454
+    Sensibilidade  : 0.7284
+    Especificidade : 0.5625
+    Precisao       : 0.8082
+    F1             : 0.7662
+    Kappa          : 0.2704
+    AUC            : 0.7369
+[2026-09-12 22:56:30] [INFO ] IC 95% da AUC (DeLong): [0.6444 ; 0.8294]
+[2026-09-12 22:56:30] [INFO ] Limiar otimo (Youden): 0.722 -> Sens = 0.568 | Spec = 0.906
+[2026-09-12 22:56:30] [INFO ] Limiar clinico (Recall >= 90%): 0.319 -> Sens = 0.901 | Spec = 0.188 | Precisao = 0.737
+
+--- Modelo: Random Forest ---------------------------------------------------------------
+[2026-09-12 22:56:30] [INFO ] Matriz de confusao (linhas = predito, colunas = real):
+              Reference
+    Prediction saudavel doente
+      saudavel       20     20
+      doente         12     61 
+[2026-09-12 22:56:30] [INFO ] VP = 61 | FP = 12 | FN = 20 | VN = 20
+[2026-09-12 22:56:30] [INFO ] Falsos negativos (doentes classificados como saudaveis) sao o erro mais critico no contexto clinico.
+[2026-09-12 22:56:30] [INFO ] Metricas (limiar = 0.5):
+    Acuracia       : 0.7168
+    Acuracia_Bal   : 0.6890
+    Sensibilidade  : 0.7531
+    Especificidade : 0.6250
+    Precisao       : 0.8356
+    F1             : 0.7922
+    Kappa          : 0.3515
+    AUC            : 0.7811
+[2026-09-12 22:56:30] [INFO ] IC 95% da AUC (DeLong): [0.6944 ; 0.8677]
+[2026-09-12 22:56:30] [INFO ] Limiar otimo (Youden): 0.572 -> Sens = 0.704 | Spec = 0.781
+[2026-09-12 22:56:30] [INFO ] Limiar clinico (Recall >= 90%): 0.369 -> Sens = 0.901 | Spec = 0.312 | Precisao = 0.768
+
+--- Modelo: XGBoost ---------------------------------------------------------------------
+[2026-09-12 22:56:30] [INFO ] Matriz de confusao (linhas = predito, colunas = real):
+              Reference
+    Prediction saudavel doente
+      saudavel       23     23
+      doente          9     58 
+[2026-09-12 22:56:30] [INFO ] VP = 58 | FP = 9 | FN = 23 | VN = 23
+[2026-09-12 22:56:30] [INFO ] Falsos negativos (doentes classificados como saudaveis) sao o erro mais critico no contexto clinico.
+[2026-09-12 22:56:30] [INFO ] Metricas (limiar = 0.5):
+    Acuracia       : 0.7168
+    Acuracia_Bal   : 0.7174
+    Sensibilidade  : 0.7160
+    Especificidade : 0.7188
+    Precisao       : 0.8657
+    F1             : 0.7838
+    Kappa          : 0.3840
+    AUC            : 0.7448
+[2026-09-12 22:56:30] [INFO ] IC 95% da AUC (DeLong): [0.6497 ; 0.8399]
+[2026-09-12 22:56:30] [INFO ] Limiar otimo (Youden): 0.512 -> Sens = 0.716 | Spec = 0.781
+[2026-09-12 22:56:30] [INFO ] Limiar clinico (Recall >= 90%): 0.342 -> Sens = 0.901 | Spec = 0.188 | Precisao = 0.737
+
+--- Modelo: LightGBM --------------------------------------------------------------------
+[2026-09-12 22:56:30] [INFO ] Matriz de confusao (linhas = predito, colunas = real):
+              Reference
+    Prediction saudavel doente
+      saudavel       21     25
+      doente         11     56 
+[2026-09-12 22:56:30] [INFO ] VP = 56 | FP = 11 | FN = 25 | VN = 21
+[2026-09-12 22:56:30] [INFO ] Falsos negativos (doentes classificados como saudaveis) sao o erro mais critico no contexto clinico.
+[2026-09-12 22:56:30] [INFO ] Metricas (limiar = 0.5):
+    Acuracia       : 0.6814
+    Acuracia_Bal   : 0.6738
+    Sensibilidade  : 0.6914
+    Especificidade : 0.6562
+    Precisao       : 0.8358
+    F1             : 0.7568
+    Kappa          : 0.3070
+    AUC            : 0.7608
+[2026-09-12 22:56:30] [INFO ] IC 95% da AUC (DeLong): [0.6709 ; 0.8508]
+[2026-09-12 22:56:30] [INFO ] Limiar otimo (Youden): 0.702 -> Sens = 0.568 | Spec = 0.938
+[2026-09-12 22:56:30] [INFO ] Limiar clinico (Recall >= 90%): 0.358 -> Sens = 0.901 | Spec = 0.281 | Precisao = 0.760
+
+--- Tabela comparativa no conjunto de teste ---------------------------------------------
+                   Modelo    AUC Sensibilidade Especificidade     F1 Acuracia_Bal
+    1       Random Forest 0.7811        0.7531         0.6250 0.7922       0.6890
+    2            LightGBM 0.7608        0.6914         0.6562 0.7568       0.6738
+    3             XGBoost 0.7448        0.7160         0.7188 0.7838       0.7174
+    4 Regressao Logistica 0.7369        0.7284         0.5625 0.7662       0.6454
+       Kappa
+    1 0.3515
+    2 0.3070
+    3 0.3840
+    4 0.2704 
+[2026-09-12 22:56:30] [INFO ] Foco em Recall: especificidade obtida por cada modelo quando o limiar garante Sens >= 90%:
+                   Modelo Limiar_Recall90 Spec_Recall90 Precisao_Recall90
+    1       Random Forest           0.369        0.3125            0.7684
+    2            LightGBM           0.358        0.2812            0.7604
+    3             XGBoost           0.342        0.1875            0.7374
+    4 Regressao Logistica           0.319        0.1875            0.7374 
+[2026-09-12 22:56:30] [OK   ] CSV salvo: results/metricas_teste.csv (4 linhas)
+[2026-09-12 22:56:30] [OK   ] Melhor modelo pela AUC no teste: Random Forest (AUC = 0.7811)
+[2026-09-12 22:56:30] [OK   ] Salvo: results/melhor_modelo.rds (0.1 KB)
+
+--- Comparacao pareada das AUCs (teste de DeLong) ---------------------------------------
+                 Modelo_A      Modelo_B  AUC_A  AUC_B p_valor Significativo_5pct
+    1 Regressao Logistica Random Forest 0.7369 0.7811  0.1588                nao
+    2 Regressao Logistica       XGBoost 0.7369 0.7448  0.7845                nao
+    3 Regressao Logistica      LightGBM 0.7369 0.7608  0.4329                nao
+    4       Random Forest       XGBoost 0.7811 0.7448  0.2229                nao
+    5       Random Forest      LightGBM 0.7811 0.7608  0.3597                nao
+    6             XGBoost      LightGBM 0.7448 0.7608  0.5562                nao 
+[2026-09-12 22:56:31] [OK   ] CSV salvo: results/delong_pareado.csv (6 linhas)
+
+--- Gerando graficos --------------------------------------------------------------------
+[2026-09-12 22:56:31] [OK   ] Grafico salvo: plots/roc_teste.png
+[2026-09-12 22:56:32] [OK   ] Grafico salvo: plots/precision_recall_teste.png
+[2026-09-12 22:56:32] [OK   ] Grafico salvo: plots/metricas_teste.png
+
+--- Analise de limiar de decisao - todos os modelos -------------------------------------
+[2026-09-12 22:56:32] [INFO ] Regressao Logistica:
+      Limiar Sensibilidade Especificidade    F1 FN FP
+    1    0.1         0.988          0.000 0.829  1 32
+    2    0.2         0.963          0.062 0.825  3 30
+    3    0.3         0.901          0.094 0.798  8 29
+    4    0.4         0.802          0.344 0.778 16 21
+    5    0.5         0.728          0.562 0.766 22 14
+    6    0.6         0.617          0.781 0.725 31  7
+    7    0.7         0.568          0.875 0.702 35  4
+    8    0.8         0.481          0.906 0.634 42  3
+    9    0.9         0.358          0.938 0.518 52  2 
+[2026-09-12 22:56:32] [INFO ] Random Forest:
+      Limiar Sensibilidade Especificidade    F1 FN FP
+    1    0.1         1.000          0.000 0.835  0 32
+    2    0.2         1.000          0.031 0.839  0 31
+    3    0.3         0.926          0.125 0.815  6 28
+    4    0.4         0.877          0.406 0.830 10 19
+    5    0.5         0.765          0.625 0.800 19 12
+    6    0.6         0.642          0.781 0.743 29  7
+    7    0.7         0.580          0.844 0.707 34  5
+    8    0.8         0.494          0.906 0.645 41  3
+    9    0.9         0.296          1.000 0.457 57  0 
+[2026-09-12 22:56:32] [INFO ] XGBoost:
+      Limiar Sensibilidade Especificidade    F1 FN FP
+    1    0.1         1.000          0.000 0.835  0 32
+    2    0.2         1.000          0.000 0.835  0 32
+    3    0.3         0.975          0.094 0.836  2 29
+    4    0.4         0.765          0.469 0.775 19 17
+    5    0.5         0.716          0.719 0.784 23  9
+    6    0.6         0.605          0.875 0.731 32  4
+    7    0.7         0.444          0.938 0.605 45  2
+    8    0.8         0.346          0.938 0.505 53  2
+    9    0.9         0.000          1.000    NA 81  0 
+[2026-09-12 22:56:32] [INFO ] LightGBM:
+      Limiar Sensibilidade Especificidade    F1 FN FP
+    1    0.1         1.000          0.000 0.835  0 32
+    2    0.2         1.000          0.000 0.835  0 32
+    3    0.3         1.000          0.031 0.839  0 31
+    4    0.4         0.815          0.469 0.805 15 17
+    5    0.5         0.691          0.656 0.757 25 11
+    6    0.6         0.617          0.781 0.725 31  7
+    7    0.7         0.568          0.938 0.713 35  2
+    8    0.8         0.457          0.938 0.617 44  2
+    9    0.9         0.086          1.000 0.159 74  0 
+[2026-09-12 22:56:32] [INFO ] Em triagem clinica, limiares menores priorizam sensibilidade (menos falsos negativos).
+[2026-09-12 22:56:32] [OK   ] CSV salvo: results/analise_limiar_modelos.csv (36 linhas)
+[2026-09-12 22:56:32] [OK   ] Grafico salvo: plots/limiar_sens_spec_modelos.png
+
+--- Desempenho estratificado por sexo (Straw & Wu, 2022) --------------------------------
+[2026-09-12 22:56:32] [INFO ] Prevalencia de 'doente' por sexo no teste:
+               Classe
+    Sexo        saudavel doente
+      Feminino     0.469  0.531
+      Masculino    0.210  0.790 
+                   Modelo      Sexo  n n_doentes    AUC Sensibilidade
+    1 Regressao Logistica  Feminino 32        17 0.7294        0.7647
+    2 Regressao Logistica Masculino 81        64 0.7482        0.7188
+    3       Random Forest  Feminino 32        17 0.7824        0.7647
+    4       Random Forest Masculino 81        64 0.7744        0.7656
+    5             XGBoost  Feminino 32        17 0.7333        0.6471
+    6             XGBoost Masculino 81        64 0.7426        0.7344
+    7            LightGBM  Feminino 32        17 0.7804        0.7059
+    8            LightGBM Masculino 81        64 0.7371        0.6875
+      Especificidade Taxa_FN
+    1         0.4667  0.2353
+    2         0.6471  0.2812
+    3         0.6667  0.2353
+    4         0.5882  0.2344
+    5         0.7333  0.3529
+    6         0.7059  0.2656
+    7         0.8000  0.2941
+    8         0.5294  0.3125 
+[2026-09-12 22:56:33] [OK   ] CSV salvo: results/metricas_por_sexo.csv (8 linhas)
+                   Modelo AUC_Feminino AUC_Masculino Dif_AUC p_valor_DeLong
+    1 Regressao Logistica       0.7294        0.7482  0.0188         0.8676
+    2       Random Forest       0.7824        0.7744 -0.0080         0.9394
+    3             XGBoost       0.7333        0.7426  0.0093         0.9349
+    4            LightGBM       0.7804        0.7371 -0.0433         0.6773
+      Dif_Sensibilidade Dif_Especificidade Significativo_5pct
+    1           -0.0459             0.1804                nao
+    2            0.0009            -0.0785                nao
+    3            0.0873            -0.0274                nao
+    4           -0.0184            -0.2706                nao 
+[2026-09-12 22:56:33] [INFO ] Dif_* = Masculino - Feminino. Diferencas sistematicas de Sensibilidade indicam risco desigual de falso negativo.
+[2026-09-12 22:56:33] [WARN ] Amostras por sexo sao pequenas (especialmente feminino); interpretar gaps com cautela (ver ICs).
+[2026-09-12 22:56:33] [OK   ] CSV salvo: results/gap_desempenho_sexo.csv (4 linhas)
+[2026-09-12 22:56:33] [OK   ] Grafico salvo: plots/metricas_por_sexo.png
+[2026-09-12 22:56:34] [OK   ] Grafico salvo: plots/roc_por_sexo.png
+[2026-09-12 22:56:34] [OK   ] Etapa 5 finalizada em 3.3 segundos.
+
+==========================================================================================
+  ETAPA 6 - EXPLICABILIDADE (SHAP)
+==========================================================================================
+[2026-09-12 22:56:34] [INFO ] Melhor modelo no teste (etapa 5): Random Forest
+[2026-09-12 22:56:34] [INFO ] Modelos a explicar: XGBoost, Random Forest | 113 observacoes de teste | 10 preditores
+[2026-09-12 22:56:34] [INFO ] SHAP decompoe cada previsao em contribuicoes aditivas de cada variavel.
+[2026-09-12 22:56:34] [INFO ] Valor > 0 empurra a previsao para 'doente'; valor < 0 empurra para 'saudavel'.
+
+--- SHAP - XGBoost ----------------------------------------------------------------------
+[2026-09-12 22:56:34] [INFO ] Metodo: TreeSHAP exato (xgboost predcontrib) - escala log-odds.
+[2026-09-12 22:56:34] [OK   ] Calculo SHAP (XGBoost) finalizada em 0.0 segundos.
+[2026-09-12 22:56:34] [INFO ] Valor base (media das previsoes na escala log-odds): 0.1669
+[2026-09-12 22:56:34] [INFO ] Importancia global (media de |SHAP|):
+                         Variavel Importancia_SHAP Percentual Acumulado
+    1             Total_Bilirubin           0.5151       37.6      37.6
+    2        Alkaline_Phosphotase           0.3616       26.4      64.0
+    3              Total_Proteins           0.1170        8.5      72.5
+    4  Aspartate_Aminotransferase           0.1112        8.1      80.6
+    5                         Age           0.1078        7.9      88.5
+    6                    AG_Ratio           0.0800        5.8      94.3
+    7    Alamine_Aminotransferase           0.0760        5.6      99.9
+    8                      Gender           0.0000        0.0      99.9
+    9            Direct_Bilirubin           0.0000        0.0      99.9
+    10                    Albumin           0.0000        0.0      99.9 
+[2026-09-12 22:56:34] [INFO ] As 4 variaveis mais importantes respondem por ~80% do impacto total nas previsoes.
+[2026-09-12 22:56:34] [OK   ] CSV salvo: results/shap_importancia_xgb.csv (10 linhas)
+[2026-09-12 22:56:34] [INFO ] Direcao do efeito (correlacao valor da variavel x SHAP):
+                         Variavel Correlacao                          Interpretacao
+    1                         Age      0.860 valores altos -> maior risco de doenca
+    2        Alkaline_Phosphotase      0.810 valores altos -> maior risco de doenca
+    3             Total_Bilirubin      0.807 valores altos -> maior risco de doenca
+    4  Aspartate_Aminotransferase      0.717 valores altos -> maior risco de doenca
+    5                    AG_Ratio     -0.669 valores altos -> menor risco de doenca
+    6    Alamine_Aminotransferase      0.531 valores altos -> maior risco de doenca
+    7              Total_Proteins      0.360 valores altos -> maior risco de doenca
+    8                      Gender         NA                           sem variacao
+    9            Direct_Bilirubin         NA                           sem variacao
+    10                    Albumin         NA                           sem variacao 
+[2026-09-12 22:56:34] [OK   ] CSV salvo: results/shap_direcao_efeito_xgb.csv (10 linhas)
+[2026-09-12 22:56:34] [OK   ] Grafico salvo: plots/shap_importancia_xgb.png
+[2026-09-12 22:56:34] [OK   ] Grafico salvo: plots/shap_beeswarm_xgb.png
+[2026-09-12 22:56:34] [OK   ] Grafico salvo: plots/shap_dependencia_xgb_Total_Bilirubin.png
+[2026-09-12 22:56:34] [OK   ] Grafico salvo: plots/shap_dependencia_xgb_Alkaline_Phosphotase.png
+[2026-09-12 22:56:35] [OK   ] Grafico salvo: plots/shap_dependencia_xgb_Total_Proteins.png
+[2026-09-12 22:56:35] [OK   ] Grafico salvo: plots/shap_dependencia_xgb_Aspartate_Aminotransferase.png
+[2026-09-12 22:56:35] [INFO ] Explicacoes locais (waterfall):
+[2026-09-12 22:56:35] [INFO ]   VP_maior_confianca   paciente #17 | real = doente   | sexo = Masculino | prob(doente) = 0.881
+[2026-09-12 22:56:35] [INFO ]       maior contribuicao p/ doente: Total_Bilirubin (+0.855) | p/ saudavel: Albumin (-0.000)
+[2026-09-12 22:56:35] [OK   ] Grafico salvo: plots/shap_waterfall_xgb_VP_maior_confianca.png
+[2026-09-12 22:56:35] [INFO ]   VN_maior_confianca   paciente #57 | real = saudavel | sexo = Feminino  | prob(doente) = 0.260
+[2026-09-12 22:56:35] [INFO ]       maior contribuicao p/ doente: Gender (-0.000) | p/ saudavel: Alkaline_Phosphotase (-0.372)
+[2026-09-12 22:56:36] [OK   ] Grafico salvo: plots/shap_waterfall_xgb_VN_maior_confianca.png
+[2026-09-12 22:56:36] [INFO ]   FN_pior_erro         paciente #78 | real = doente   | sexo = Masculino | prob(doente) = 0.224
+[2026-09-12 22:56:36] [INFO ]       maior contribuicao p/ doente: Gender (-0.000) | p/ saudavel: Total_Bilirubin (-0.455)
+[2026-09-12 22:56:36] [OK   ] Grafico salvo: plots/shap_waterfall_xgb_FN_pior_erro.png
+[2026-09-12 22:56:36] [INFO ] Importancia SHAP estratificada por sexo:
+    # A tibble: 10 × 5
+       Variavel              Imp_Feminino Imp_Masculino Rank_Feminino Rank_Masculino
+       <chr>                        <dbl>         <dbl>         <dbl>          <dbl>
+     1 Total_Bilirubin             0.413         0.555              1              1
+     2 Alkaline_Phosphotase        0.346         0.368              2              2
+     3 Total_Proteins              0.118         0.117              3              3
+     4 Aspartate_Aminotrans…       0.102         0.115              5              4
+     5 Age                         0.106         0.108              4              5
+     6 AG_Ratio                    0.0805        0.0798             6              6
+     7 Alamine_Aminotransfe…       0.0798        0.0744             7              7
+     8 Gender                      0             0                  9              9
+     9 Direct_Bilirubin            0             0                  9              9
+    10 Albumin                     0             0                  9              9 
+[2026-09-12 22:56:36] [INFO ] Concordancia dos rankings entre sexos (Spearman): 0.988
+[2026-09-12 22:56:36] [INFO ] Contribuicao media da variavel Gender: Feminino = +0.0000 | Masculino = +0.0000 (escala log-odds)
+[2026-09-12 22:56:36] [INFO ] Valores de sinal oposto indicam que o sexo, por si so, desloca a previsao de risco entre os grupos.
+[2026-09-12 22:56:36] [OK   ] CSV salvo: results/shap_importancia_por_sexo_xgb.csv (20 linhas)
+[2026-09-12 22:56:36] [OK   ] Grafico salvo: plots/shap_importancia_por_sexo_xgb.png
+[2026-09-12 22:56:36] [OK   ] Grafico salvo: plots/shap_gender_por_sexo_xgb.png
+
+--- SHAP - Random Forest ----------------------------------------------------------------
+[2026-09-12 22:56:37] [INFO ] Metodo: SHAP amostral (fastshap, Monte Carlo, nsim = 100) - escala de probabilidade.
+[2026-09-12 22:57:07] [OK   ] Calculo SHAP (Random Forest) finalizada em 30.6 segundos.
+[2026-09-12 22:57:07] [INFO ] Valor base (media das previsoes na escala probabilidade): 0.6479
+[2026-09-12 22:57:07] [INFO ] Importancia global (media de |SHAP|):
+                         Variavel Importancia_SHAP Percentual Acumulado
+    1        Alkaline_Phosphotase           0.0589       17.8      17.8
+    2            Direct_Bilirubin           0.0555       16.8      34.6
+    3             Total_Bilirubin           0.0454       13.7      48.3
+    4  Aspartate_Aminotransferase           0.0414       12.5      60.8
+    5    Alamine_Aminotransferase           0.0370       11.2      72.0
+    6                    AG_Ratio           0.0247        7.5      79.5
+    7                         Age           0.0241        7.3      86.8
+    8                     Albumin           0.0187        5.6      92.4
+    9              Total_Proteins           0.0162        4.9      97.3
+    10                     Gender           0.0092        2.8     100.1 
+[2026-09-12 22:57:07] [INFO ] As 7 variaveis mais importantes respondem por ~80% do impacto total nas previsoes.
+[2026-09-12 22:57:07] [OK   ] CSV salvo: results/shap_importancia_rf.csv (10 linhas)
+[2026-09-12 22:57:07] [INFO ] Direcao do efeito (correlacao valor da variavel x SHAP):
+                         Variavel Correlacao                          Interpretacao
+    1                         Age      0.867 valores altos -> maior risco de doenca
+    2             Total_Bilirubin      0.845 valores altos -> maior risco de doenca
+    3            Direct_Bilirubin      0.830 valores altos -> maior risco de doenca
+    4  Aspartate_Aminotransferase      0.825 valores altos -> maior risco de doenca
+    5    Alamine_Aminotransferase      0.819 valores altos -> maior risco de doenca
+    6        Alkaline_Phosphotase      0.766 valores altos -> maior risco de doenca
+    7                     Albumin     -0.708 valores altos -> menor risco de doenca
+    8                    AG_Ratio     -0.582 valores altos -> menor risco de doenca
+    9              Total_Proteins      0.399 valores altos -> maior risco de doenca
+    10                     Gender     -0.174          efeito nao monotonico / fraco 
+[2026-09-12 22:57:07] [OK   ] CSV salvo: results/shap_direcao_efeito_rf.csv (10 linhas)
+[2026-09-12 22:57:07] [OK   ] Grafico salvo: plots/shap_importancia_rf.png
+[2026-09-12 22:57:07] [OK   ] Grafico salvo: plots/shap_beeswarm_rf.png
+[2026-09-12 22:57:08] [OK   ] Grafico salvo: plots/shap_dependencia_rf_Alkaline_Phosphotase.png
+[2026-09-12 22:57:08] [OK   ] Grafico salvo: plots/shap_dependencia_rf_Direct_Bilirubin.png
+[2026-09-12 22:57:08] [OK   ] Grafico salvo: plots/shap_dependencia_rf_Total_Bilirubin.png
+[2026-09-12 22:57:08] [OK   ] Grafico salvo: plots/shap_dependencia_rf_Aspartate_Aminotransferase.png
+[2026-09-12 22:57:08] [INFO ] Explicacoes locais (waterfall):
+[2026-09-12 22:57:08] [INFO ]   VP_maior_confianca   paciente #17 | real = doente   | sexo = Masculino | prob(doente) = 0.978
+[2026-09-12 22:57:08] [INFO ]       maior contribuicao p/ doente: Direct_Bilirubin (+0.065) | p/ saudavel: Gender (+0.004)
+[2026-09-12 22:57:09] [OK   ] Grafico salvo: plots/shap_waterfall_rf_VP_maior_confianca.png
+[2026-09-12 22:57:09] [INFO ]   VN_maior_confianca   paciente #103 | real = saudavel | sexo = Masculino | prob(doente) = 0.176
+[2026-09-12 22:57:09] [INFO ]       maior contribuicao p/ doente: Albumin (+0.014) | p/ saudavel: Alkaline_Phosphotase (-0.121)
+[2026-09-12 22:57:09] [OK   ] Grafico salvo: plots/shap_waterfall_rf_VN_maior_confianca.png
+[2026-09-12 22:57:09] [INFO ]   FN_pior_erro         paciente #51 | real = doente   | sexo = Masculino | prob(doente) = 0.256
+[2026-09-12 22:57:09] [INFO ]       maior contribuicao p/ doente: Age (+0.021) | p/ saudavel: Alkaline_Phosphotase (-0.085)
+[2026-09-12 22:57:09] [OK   ] Grafico salvo: plots/shap_waterfall_rf_FN_pior_erro.png
+[2026-09-12 22:57:09] [INFO ] Importancia SHAP estratificada por sexo:
+    # A tibble: 10 × 5
+       Variavel              Imp_Feminino Imp_Masculino Rank_Feminino Rank_Masculino
+       <chr>                        <dbl>         <dbl>         <dbl>          <dbl>
+     1 Alkaline_Phosphotase        0.0541        0.0609             1              1
+     2 Direct_Bilirubin            0.0513        0.0571             2              2
+     3 Total_Bilirubin             0.0415        0.0469             3              3
+     4 Aspartate_Aminotrans…       0.0379        0.0428             4              4
+     5 Alamine_Aminotransfe…       0.0335        0.0384             5              5
+     6 Age                         0.0203        0.0255             7              6
+     7 AG_Ratio                    0.0275        0.0237             6              7
+     8 Albumin                     0.019         0.0185             8              8
+     9 Total_Proteins              0.0173        0.0158             9              9
+    10 Gender                      0.0155        0.0068            10             10 
+[2026-09-12 22:57:09] [INFO ] Concordancia dos rankings entre sexos (Spearman): 0.988
+[2026-09-12 22:57:09] [INFO ] Contribuicao media da variavel Gender: Feminino = +0.0035 | Masculino = -0.0018 (escala probabilidade)
+[2026-09-12 22:57:09] [INFO ] Valores de sinal oposto indicam que o sexo, por si so, desloca a previsao de risco entre os grupos.
+[2026-09-12 22:57:09] [OK   ] CSV salvo: results/shap_importancia_por_sexo_rf.csv (20 linhas)
+[2026-09-12 22:57:10] [OK   ] Grafico salvo: plots/shap_importancia_por_sexo_rf.png
+[2026-09-12 22:57:10] [OK   ] Grafico salvo: plots/shap_gender_por_sexo_rf.png
+
+--- Comparacao dos rankings de importancia entre modelos --------------------------------
+                         Variavel Importancia_SHAP_SHAP_xgb Rank_SHAP_xgb
+    1             Total_Bilirubin                    0.5151             1
+    2        Alkaline_Phosphotase                    0.3616             2
+    3              Total_Proteins                    0.1170             3
+    4  Aspartate_Aminotransferase                    0.1112             4
+    5                         Age                    0.1078             5
+    6                    AG_Ratio                    0.0800             6
+    7    Alamine_Aminotransferase                    0.0760             7
+    8                      Gender                    0.0000             8
+    9            Direct_Bilirubin                    0.0000             9
+    10                    Albumin                    0.0000            10
+       Importancia_SHAP_SHAP_rf Rank_SHAP_rf Imp_nativa_rf Rank_nativa_rf
+    1                    0.0454            3         53.87              5
+    2                    0.0589            1        100.00              1
+    3                    0.0162            9          0.00             10
+    4                    0.0414            4         67.34              2
+    5                    0.0241            7         42.54              6
+    6                    0.0247            6         29.86              7
+    7                    0.0370            5         59.09              4
+    8                    0.0092           10          3.75              9
+    9                    0.0555            2         63.75              3
+    10                   0.0187            8         21.29              8
+       Imp_nativa_lgb Rank_nativa_lgb Coef_abs_lr Rank_lr
+    1           79.41               3      0.2782       9
+    2           93.28               2      0.4282       5
+    3            0.00               9      2.0592       2
+    4           71.02               4      0.2796       8
+    5           37.05               5      0.3174       7
+    6           13.96               7      1.3368       3
+    7           31.75               6      0.5825       4
+    8            0.00               0      0.2105      10
+    9          100.00               1      0.3769       6
+    10           6.74               8      2.8495       1 
+[2026-09-12 22:57:10] [INFO ] Concordancia entre rankings (correlacao de Spearman):
+                    Rank_SHAP_xgb Rank_SHAP_rf Rank_nativa_rf Rank_nativa_lgb
+    Rank_SHAP_xgb           1.000        0.358          0.261           0.006
+    Rank_SHAP_rf            0.358        1.000          0.915           0.406
+    Rank_nativa_rf          0.261        0.915          1.000           0.455
+    Rank_nativa_lgb         0.006        0.406          0.455           1.000
+    Rank_lr                -0.248       -0.164         -0.261          -0.806
+                    Rank_lr
+    Rank_SHAP_xgb    -0.248
+    Rank_SHAP_rf     -0.164
+    Rank_nativa_rf   -0.261
+    Rank_nativa_lgb  -0.806
+    Rank_lr           1.000 
+[2026-09-12 22:57:10] [OK   ] CSV salvo: results/comparacao_importancia_modelos.csv (10 linhas)
+[2026-09-12 22:57:10] [OK   ] CSV salvo: results/concordancia_rankings_spearman.csv (5 linhas)
+
+--- Como ler os resultados --------------------------------------------------------------
+[2026-09-12 22:57:10] [INFO ] shap_importancia_<m>.png          : quais variaveis mais pesam nas decisoes do modelo <m>, em media.
+[2026-09-12 22:57:10] [INFO ] shap_beeswarm_<m>.png             : direcao do efeito - pontos a direita aumentam a chance de 'doente'.
+[2026-09-12 22:57:10] [INFO ] shap_dependencia_<m>_<var>.png    : como o SHAP muda conforme o valor de cada variavel.
+[2026-09-12 22:57:10] [INFO ] shap_waterfall_<m>_<caso>.png     : porque o modelo deu determinada previsao para UM paciente.
+[2026-09-12 22:57:10] [INFO ] shap_importancia_por_sexo_<m>.png : se o modelo usa as variaveis de forma diferente para homens e mulheres.
+[2026-09-12 22:57:10] [INFO ] shap_gender_por_sexo_<m>.png      : quanto o sexo, isoladamente, desloca a previsao de risco.
+[2026-09-12 22:57:10] [INFO ] <m> = xgb (TreeSHAP exato), rf (fastshap), lgb (TreeSHAP exato).
+[2026-09-12 22:57:10] [OK   ] Etapa 6 finalizada em 36.7 segundos.
+
+==========================================================================================
+  RESUMO DA EXECUCAO
+==========================================================================================
+[2026-09-12 22:57:10] [INFO ] Tempo por etapa:
+    0.InstalarPacotes.R     :    3.0 s
+    1.CarregamentoDeDados.R :    3.4 s
+    2.PreProcessamento.R    :    0.1 s
+    3.Balanceamento.R       :    0.5 s
+    4.Modelos.R             :  429.8 s
+    5.Avaliacao.R           :    3.3 s
+    6.SHAP.R                :   36.7 s
+[2026-09-12 22:57:10] [INFO ] Tempo total: 476.7 s
+[2026-09-12 22:57:10] [INFO ] Artefatos gerados:
+[2026-09-12 22:57:10] [INFO ]   data/ (7 arquivos): df_balanceado.rds, df_proc.rds, df_raw.rds, Indian Liver Patient Dataset (ILPD).csv, preproc.rds, teste.rds, teste_genero.rds
+[2026-09-12 22:57:10] [INFO ]   models/ (4 arquivos): modelo_lgb.rds, modelo_lr.rds, modelo_rf.rds, modelo_xgb.rds
+[2026-09-12 22:57:10] [INFO ]   results/ (22 arquivos): analise_limiar_melhor_modelo.csv, analise_limiar_modelos.csv, coeficientes_regressao_logistica.csv, comparacao_importancia_modelos.csv, comparacao_importancia_shap_rf_lgb.csv, comparacao_medias_por_classe.csv, concordancia_rankings_spearman.csv, cv_auc_por_modelo.csv, delong_pareado.csv, estatisticas_descritivas.csv, gap_desempenho_sexo.csv, melhor_modelo.rds, metricas_por_sexo.csv, metricas_teste.csv, shap_direcao_efeito.csv, shap_direcao_efeito_rf.csv, shap_direcao_efeito_xgb.csv, shap_importancia.csv, shap_importancia_por_sexo_rf.csv, shap_importancia_por_sexo_xgb.csv, shap_importancia_rf.csv, shap_importancia_xgb.csv
+[2026-09-12 22:57:10] [INFO ]   plots/ (42 arquivos): cv_comparacao_modelos.png, eda_boxplots_por_classe.png, eda_correlacao.png, eda_distribuicao_alvo.png, limiar_sens_spec_modelos.png, metricas_por_sexo.png, metricas_teste.png, precision_recall_teste.png, roc_por_sexo.png, roc_teste.png, shap_beeswarm.png, shap_beeswarm_rf.png, shap_beeswarm_xgb.png, shap_dependencia_Alamine_Aminotransferase.png, shap_dependencia_Albumin.png, shap_dependencia_Alkaline_Phosphotase.png, shap_dependencia_rf_Alkaline_Phosphotase.png, shap_dependencia_rf_Aspartate_Aminotransferase.png, shap_dependencia_rf_Direct_Bilirubin.png, shap_dependencia_rf_Total_Bilirubin.png, shap_dependencia_Total_Proteins.png, shap_dependencia_xgb_Alkaline_Phosphotase.png, shap_dependencia_xgb_Aspartate_Aminotransferase.png, shap_dependencia_xgb_Total_Bilirubin.png, shap_dependencia_xgb_Total_Proteins.png, shap_gender_por_sexo_rf.png, shap_gender_por_sexo_xgb.png, shap_importancia.png, shap_importancia_por_sexo_rf.png, shap_importancia_por_sexo_xgb.png, shap_importancia_rf.png, shap_importancia_xgb.png, shap_waterfall_FN_pior_erro.png, shap_waterfall_rf_FN_pior_erro.png, shap_waterfall_rf_VN_maior_confianca.png, shap_waterfall_rf_VP_maior_confianca.png, shap_waterfall_VN_maior_confianca.png, shap_waterfall_VP_maior_confianca.png, shap_waterfall_xgb_FN_pior_erro.png, shap_waterfall_xgb_VN_maior_confianca.png, shap_waterfall_xgb_VP_maior_confianca.png, smote_antes_depois.png
+[2026-09-12 22:57:10] [OK   ] PIPELINE CONCLUIDA COM SUCESSO

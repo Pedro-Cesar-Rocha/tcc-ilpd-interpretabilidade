@@ -1,0 +1,11 @@
+"Variavel","Importancia_SHAP","Percentual","Acumulado"
+"Total_Bilirubin",0.5151,37.6,37.6
+"Alkaline_Phosphotase",0.3616,26.4,64
+"Total_Proteins",0.117,8.5,72.5
+"Aspartate_Aminotransferase",0.1112,8.1,80.6
+"Age",0.1078,7.9,88.5
+"AG_Ratio",0.08,5.8,94.3
+"Alamine_Aminotransferase",0.076,5.6,99.9
+"Gender",0,0,99.9
+"Direct_Bilirubin",0,0,99.9
+"Albumin",0,0,99.9

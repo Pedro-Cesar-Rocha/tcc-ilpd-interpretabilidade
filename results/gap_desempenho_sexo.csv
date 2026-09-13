@@ -1,0 +1,5 @@
+"Modelo","AUC_Feminino","AUC_Masculino","Dif_AUC","p_valor_DeLong","Dif_Sensibilidade","Dif_Especificidade","Significativo_5pct"
+"Regressao Logistica",0.7294,0.7482,0.0188,0.8676,-0.0459,0.1804,"nao"
+"Random Forest",0.7824,0.7744,-0.008,0.9394,9e-04,-0.0785,"nao"
+"XGBoost",0.7333,0.7426,0.0093,0.9349,0.0873,-0.0274,"nao"
+"LightGBM",0.7804,0.7371,-0.0433,0.6773,-0.0184,-0.2706,"nao"
