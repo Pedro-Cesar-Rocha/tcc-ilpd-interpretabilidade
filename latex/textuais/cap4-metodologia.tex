@@ -354,31 +354,6 @@ muito assimétricas pode ter influenciado a magnitude dos coeficientes, uma vez 
 distribuições com caudas pesadas tendem a inflar o valor de $r$ 
 \cite{Bishara2015Reducing}.
 
-\subsection{Síntese}
-
-O Quadro~\ref{tab:sintese_aed} resume os principais achados da análise exploratória e 
-as decisões metodológicas que deles decorreram.
-
-\begin{table}[htbp]
-\centering
-\small
-\caption{Síntese dos achados da análise exploratória e decisões decorrentes.}
-\label{tab:sintese_aed}
-\begin{tabular}{p{6.2cm}p{7.3cm}}
-\hline
-\textbf{Achado} & \textbf{Decisão metodológica} \\
-\hline
-4 valores ausentes em \textit{AG\_Ratio} (0,69\%) & Imputação pela mediana, estimada apenas no treino \\[2pt]
-13 registros duplicados & Remoção antes da divisão treino/teste \\[2pt]
-Desbalanceamento de classes (2,5:1) & Divisão estratificada, balanceamento no treino e métricas como AUC \\[2pt]
-Predominância do sexo masculino ($\approx$76\%) & Avaliação e análise SHAP estratificadas por sexo \\[2pt]
-Forte assimetria em 5 variáveis ($|b_1| > 2$) & Transformação $\ln(1+x)$, sem remoção de \textit{outliers} \\[2pt]
-Correlações fortes entre pares de variáveis & Manutenção das variáveis e cautela na interpretação SHAP \\[2pt]
-Escalas heterogêneas entre exames & Padronização (\textit{z-score}) ajustada no treino \\
-\hline
-\end{tabular}
-\end{table}
-
 \section{Pré-processamento}
 
 \subsection{Remoção de Duplicatas}
