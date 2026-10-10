@@ -1,5 +1,5 @@
 \chapter{Metodologia} \label{cap4}
-Este capítulo apresenta as técnicas e o protocolo experimental utilizados para a construção e avaliação dos modelos preditivos. Sua organização segue as etapas do processo de descoberta de conhecimento em bases de dados (KDD), portanto, nas próximas seções serão discutidos: as características específicas do dataset Indian Liver Patient Dataset, o pré-processamento e balanceamento dos dados, o treinamento e otimização dos modelos, a avaliação de desempenho, e a análise de explicabilidade via SHapley Additive exPlanations (SHAP).
+Este capítulo apresenta as técnicas e o protocolo experimental utilizados para a construção e avaliação dos modelos preditivos. Sua organização segue as etapas do processo de descoberta de conhecimento em bases de dados.
 
 \section{Base de Dados}
 
@@ -144,7 +144,7 @@ a curva ROC (AUC), a sensibilidade e a especificidade \cite{FAWCETT2006861, imba
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[scale=0.6]{figuras/cap4-metodologia/eda_distribuicao_alvo.png}
+\includegraphics[width=0.7\textwidth]{figuras/cap4-metodologia/eda_distribuicao_alvo.png}
 \caption{Distribuição da variável-alvo (doentes \textit{vs.} saudáveis).}
 \label{fig:eda_distribuicao_alvo}
 \end{figure}
@@ -259,7 +259,7 @@ saudáveis, o que motiva o uso de modelos multivariados.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[scale=0.6]{figuras/cap4-metodologia/eda_boxplots_por_classe.png}
+\includegraphics[width=\textwidth]{figuras/cap4-metodologia/eda_boxplots_por_classe.png}
 \caption{Boxplots das variáveis numéricas, separados por classe (doente \textit{vs.} saudável).}
 \label{fig:eda_boxplots}
 \end{figure}
@@ -274,7 +274,7 @@ limiar de correlação forte \cite{Dormann2012Collinearity, Mukaka2012Statistics
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[scale=0.6]{figuras/cap4-metodologia/eda_correlacao.png}
+\includegraphics[width=0.8\textwidth]{figuras/cap4-metodologia/eda_correlacao.png}
 \caption{Matriz de correlação de Pearson entre as variáveis numéricas.}
 \label{fig:eda_correlacao}
 \end{figure}
