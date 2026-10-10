@@ -1,0 +1,308 @@
+\chapter{ESTADO DA ARTE}\label{cap3}
+
+Este capítulo discute os principais trabalhos acerca da \tema\ tratando em separado a detecção de cada um destes itens. Nas próximas seções são discutidos trabalhos relevantes em  localização e segmentação do disco óptico, e na segmentação dos vasos sanguíneos.
+
+
+\section{Segmentação do disco óptico}
+
+A identificação do disco óptico é de grande importância para qualquer método de análise automática em imagens de fundo do olho, seja para localizar outras estruturas, como a fóvea e os vasos sanguíneos, seja para diferenciá-lo de sinais patológicos, como os exsudatos. Além disso, em algumas patologias como o glaucoma, o disco óptico é o principal objeto de estudo.  
+
+
+
+O disco óptico possui um bom contraste em relação aos outros elementos da retina, teoricamente isso o torna um elemento de fácil segmentação favorecendo o uso de limiares. No entanto, a fisiologia do mesmo não é tão simples, o disco óptico sempre se apresenta encoberto pelos vasos centrais da retina, podem haver exsudatos próximos e a coloração no lado nasal é mais escura do que no lado temporal, isso ocorre em função da maior concentração de vasos capilares e feixe de fibras papilomaculares mais grossas neste local \cite{Dorion}. Além disso, há uma condição chamada  \sigla{PPA}{\textit{peripapillary atrophy}} que torna a borda do disco irregular, a maioria dos métodos apresenta problemas na presença desta anomalia. Sendo assim, diversas metodologias são aplicadas na detecção do disco óptico. Algumas contribuições se preocupam em apenas localizar este elemento, enquanto que outras chegam a particioná-lo, geralmente com o objetivo de detectar glaucoma.  Algo comum a muitos trabalhos é que a segmentação desta estrutura  é feita em duas etapas, a primeira é uma aproximação, apenas localiza o disco óptico, e a segunda é o refinamento, que delimita com precisão suas fronteiras. Informações como a forma, o tamanho e a intensidade são conhecidas e fornecem importantes indicativos para os métodos de segmentação. 
+
+\subsection{Localização do disco óptico}
+
+Métodos para localizar o disco devem ser rápidos e eficientes, pois quase sempre são uma pré-etapa de algoritmos mais complexos de segmentação, por exemplo, muitos algoritmos que fazem \textit{tracking} dos vasos sanguíneos adotam o disco como ponto de partida, tornando necessária a localização do mesmo \cite{Mookiah2013a}. 
+
+Uma técnica amplamente utililizada para resolver esta questão é  \sigla{PCA}{\textit{Principal Components Analysis}}.  \citeonline{Mittapalli2016} e \citeonline{Li2003} adotam esta metodologia, que também é conhecida como transformada Karhunen-Loève. Essa técnica busca a redução da variância a fim de minimizar o erro ocasionado pela redução de dimensionalidade. Além de \sig{PCA}, a transformada de Hough possui grande importância neste contexto, em muitos trabalhos a localização do disco óptico é feita por transformada de Hough circular que obtém formas geométricas a partir de uma análise de contornos gerados por filtros (Canny, Robert, Sobel etc), 
+\citeonline{Mary2015} e \citeonline{Chrastek2005} adotam esta abordagem. 
+
+
+Alguns métodos para localização do disco óptico podem ser bastante simples, como é o caso do método apresentado em \citeonline{Sinthanayothin1999} que considera o ponto com maior variância como sendo o centro do disco óptico e então delimitam uma área  que corresponde ao tamanho do disco em torno do ponto selecionado, a taxa de especificidade obtida é de 99.1\%. \citeonline{Pinao2011} considera informações conhecidas sobre posicionamento e dimensões do disco óptico e aplica o filtro Sobel para realizar a localização do mesmo. 
+
+Partindo em outra direção, \citeonline{Yang2011} utiliza um método baseado em \textit{matched filtering} com ajuste de contraste, operações morfológicas e informação tangente para localizar o disco óptico. O \textit{matched filtering} é usado para reduzir a influência dos vasos sanguíneos, enquanto que o ajuste de contraste e operações morfológicas amenizam problemas com ruído e iluminação, já a informação tangente é usada para localizar o disco óptico. Sua taxa de acerto é de  91.3 \% na base  STARE.
+\citeonline{Budai2012} também iniciam seu método eliminando a influência dos vasos sanguíneos com suavização gaussiana, após esta etapa são gerados dois mapas de probabilidades, sendo um para o brilho da imagem (obtido do modelo de cores \sig{HSV}) e outro para a imagem com os vasos  segmentados, a posição do disco óptico é obtida ao multiplicar os dois mapas. 
+
+\citeonline{Cheng2013} utilizam superpixels para realizar a localização inicial do disco óptico: medidas estatísticas são usadas para classificar o superpixel em  ``disco'' ou ``não disco'' usando  \textit{bootstrapping}. A abordagem traz mais rapidez quando se tem imagens em alta resolução. \citeonline{Fan2015} também fazem uso de superpixel, 
+inicialmente uma sub-imagem é gerada com o auxílio de mapa de saliência, feito isso, os superpixels são gerados com um algoritmo \sigla{SLIC}{\textit{simple linear iterative clustering}} e classificados com AdaBoost. 
+
+\citeonline{Harangi2015} apresentam uma combinação de vários algoritmos resultando em um \textit{framework} para localizar o disco óptico. São obtidos diversos candidatos que são ordenados pelo grau de confiança no algoritmo, por fim, aplica-se grafos e probabilidade no processo de determinação do disco.
+
+Em uma alternativa de método supervisionado para localização do disco óptico, \citeonline{Ramakanth2014} estendem o método chamado \textit{Approximate Nearest Neighbour Field maps} para análise em imagens médicas, este método realiza a busca de características semelhantes às características extraídas de uma imagem analisada a priori, são utilizados \textit{patches} e \textit{likelihood} na comparação ocasionando em uma taxa de acerto  de 99\%. Os testes são realizados  em um conjunto de mais de 1500 imagens retiradas de diversas bases conhecidas.
+
+Os métodos de localização do disco óptico apenas informam o local na imagem de fundo de olho em que o disco se encontra, alguns métodos podem informar o centro do disco. Assim, se o objetivo for uma segmentação mais robusta outros métodos podem ser utilizados.
+
+%Há ainda alguns trabalhos, como o de \citeonline{Agurto2012} e \citeonline{Agurto2015}  que obtêm  a localização do disco óptico por meio seleção manual da região de interesse.
+
+\subsection{Delimitação do disco óptico}
+
+Os principais métodos para se obter a efetiva segmentação do disco óptico são baseados em modelos deformáveis, classificação supervisionada de pixels,  conjuntos aproximativos e transformada de Hough circular.  \citeonline{Sekhar2008b} e \citeonline{Soman2014} utilizam a transformada de Hough circular para delimitar o disco óptico. Como essa transformada se baseia em equações paramétricas, o problema de \sig{PPA} não é bem resolvido, apenas os discos ópticos com bordas regulares geram bons resultados, assim, ajustes e métodos adicionais devem ser aplicados para resolver esta questão, por exemplo, \citeonline{Soman2014} utilizam fatiamento do plano de bits para obter uma aproximação mais robusta. Uma outra solução possível para este problema é definir um conjunto de treinamento e utilizar a transformada de Hough generalizada.
+ 
+Considerando trabalhos que fazem uso de modelos deformáveis, \citeonline{Mittapalli2016} apresentam um trabalho bastante relevante, em que \textit{active contour model} é usado para obter uma segmentação precisa do disco óptico. Inicialmente é aplicado  \textit{matched filter} com \textit{kernel} Gaussiano-Hermitiano para segmentar os vasos sanguíneos e assim realizar o \textit{inpainting} dos vasos no disco óptico, que é obtido a priori por meio de  \sig{PCA}. Para garantir precisão na delimitação do \sig{OD} este trabalho propõe um novo modelo de contorno ativo baseado em região implícita no qual informações de vários canais são adicionadas ao local de interesse, garantindo assim uma segmentação mais robusta. As informações utilizadas incluem intensidade, cor e textura. Além de \citeonline{Mittapalli2016}, outros trabalhos utilizam modelos deformáveis, tais como os métodos apresentados em \citeonline{Mary2015}, \citeonline{Li2003}, \citeonline{Novo2009}, \citeonline{Esmaeili2012}. \citeonline{Mary2015} utilizam \sigla{GVF}{\textit{gradient vector flow}}, \citeonline{Li2003} utilizam \sig{PCA} para inicializar o \sigla{ASM}{\textit{active shape model}}. \citeonline{Novo2009} usam modelos deformáveis que fazem a segmentação baseada em região e em borda ao mesmo tempo, o método é chamado de \sigla{TAN}{\textit{Topological Active Nets}}. Neste trabalho, algoritmos genéticos são empregados para prover a otimização do algoritmo de segmentação, ocasionando um bom desempenho até mesmo em imagens de fundo de olho com lesões. \citeonline{Esmaeili2012} utilizam transformada digital curvelet, modificando os coeficientes na imagem resultante da transformada sob o critério da esparsidade. Outros trabalhos que também fazem uso de modelos deformáveis incluem \citeonline{Cheng2013}, \citeonline{Hajer2008}. 
+
+\citeonline{Hsiao2012} utilizam um operador de correção de iluminação e \sig{GVF} supervisionado para obter um contorno mais preciso do disco,  informações estatísticas extraídas da imagem de treinamento são usadas na classificação dos pixels durante as iterações do \sig{GVF} supervisionado. O resultado é de 95\% de localização correta na base DRIVE e 91\% de bordas corretamente segmentadas.
+
+
+\citeonline{Budai2013} aplica a \textit{fast radial symmetry transform}, transformada de Hough e \textit{fast radial symmetry transform} adaptada para delimitar o disco óptico, obtendo melhores resultados em sua adaptação, o erro médio observado chega a ser 4 vezes menor que nos outros métodos.  
+
+Considerando os trabalhos que utilizam conjuntos aproximativos para identificar o disco óptico, pode-se destacar os trabalhos de  \citeonline{Mookiah2013c}, \citeonline{Mookiah2013b} e \citeonline{Karkuzhali2015}, que adotam \textit{Atanassov's Intuitionistic Fuzzy Set}  histon. Esta abordagem possui a vantagem de que o histograma e o histon gerados levam em consideração a relação espacial entre os pixels e também, o uso de função gaussiana de pertinência introduz significativa melhoria na detecção do disco óptico.
+
+%  A abordagem utii  \citeonline{Acharya2015}  \citeonline{Tavakoli2013}.  
+
+Métodos supervisionados de classificação de pixels também são bastante importantes na segmentação do disco  óptico. \citeonline{Muramatsu2011b} faz um comparativo entre \sigla{ANN}{\textit{Artificial Neural Network}}, \sigla{ACM}{\textit{Active Contour Model}}, e \sigla{FCM}{\textit{fuzzy c-mean}}, e os melhores resultados são verificados para \sig{ANN}. A métrica utilizada é obtida da comparação do resultado da segmentação com a demarcação feita por um oftalmologista.
+
+Também se encontra métodos baseados em descritores de textura, \citeonline{Rao2015} utilizam um descritor de textura - a energia, combinada com informações estruturais para segmentar o disco óptico. \citeonline{Acharya2015a} aplica a transformada de Gabor e extrai diversas características dos coeficientes, tais como média, curtose, energia, entropia, dentre outros.
+
+\citeonline{Dashtbozorg2015} utiliza \textit{multiresolution sliding band filter} para segmentar o disco óptico, seu algoritmo trabalha reduzindo a região de interesse a medida que respostas máximas do filtro são encontradas, 44\% dos resultados são excelentes quando comparados a segmentação manual, 47\% são bons e em 9\% ocorre falha.
+
+%\section{Segmentação dos exsudatos}
+%
+%
+%\section{Segmentação dos Microaneurismas}
+%
+%\section{Detecção de Retinopatia diabética}
+%
+%Face a importância da detecção precoce da retinopatia diabética, alguns trabalhos relevantes podem se encontrados na literatura.  
+%
+%%This method was built on the inverse segmentation method, which we suggested before to detect Age Related Macular Degeneration (ARMDs). Background image approach along with inverse segmentation is employed to measure and follow up the degenerations in retinal fundus images. Direct segmentation techniques generate unsatisfactory results in some cases. This is because of the fact that the texture of unhealthy areas such as \{DR\} is not homogenous. The inverse method is proposed to exploit the homogeneity of healthy areas rather than dealing with varying structure of unhealthy areas for segmenting bright lesions (hard exudates and cotton wool spots). On the other hand, the background image, dividing the retinal image into high and low intensity areas, is exploited in segmentation of hard exudates and cotton wool spots, and microaneurysms (MAs) and hemorrhages (HEMs), separately. Therefore, a complete segmentation system is developed for segmenting DR, including hard exudates, cotton wool spots, MAs, and HEMs. This application is able to measure total changes across the whole retinal image. Hence, retinal images that belong to the same patients are examined in order to monitor the trend of the illness. To make a comparison with other methods, a Naïve Bayes method is applied for segmentation of DR. The performance of the system, tested on different data sets including various qualities of retinal fundus images, is over 95% in detection of the optic disc (OD), and 90% in segmentation of the DR. "
+%
+%\citeonline{Kose2012}
+%
+%\section{Detecção de Glaucoma}
+%
+%
+%Alguns trabalhos relevantes que realizam a segmentação de imagens do fundo de olho buscam o diagnóstico e classificação do glaucoma. Um destes trabalhos é apresentado por \citeonline{Mittapalli2016}, \citeonline{Nayak2008},\cite{Acharya2011}. Embora o contexto seja restrito e aparentemente sem grandes dificuldades, isso não se verifica na prática uma vez que problemas de iluminação, presença de vasos sanguíneos e até a própria fisiologia do disco óptico interferem no resultado.
+%\citeonline{Haleem2013} apresenta um trabalho revisando importantes contribuições da literatura sobre detecção automática de glaucoma.
+%
+%\citeonline{Acharya2011} utiliza características de textura e espectro de alta ordem para diagnosticar glaucoma em imagens de fundo do olho com classificadores \sig{SVM}, otimização mínima sequencial, \textit{naive Bayesian} e \textit{random-forest}. Em outro trabalho,\citeonline{Acharya2015} faz uso de filtro gabor e medidas estatísticas, como a média, variância, curtose e entropia extraídas dos coeficientes da transformada de Gabor. Diversos tipos de entropia são utilizadas e algoritmo \textit{Bhattacharyya space}, \textit{t-test}, \textit{Wilcoxon test}, \sigla{ROC}{\textit{Receiver Operating Curve}} e entropia são utilizados para construir um \textit{ranking}. 
+%
+%Em uma nova abordagem, alguns trabalhos fazem detecção de glaucoma a partir das curvas nos vasos sanguíneos.  É o caso de \citeonline{Joshi2011}  e \cite{Harangi2015}.
+%
+%Para a correta identificação do problema é necessário ter uma perfeita segmentação do disco óptico e do cálice óptico, a relação entre estes dois determina a presença da enfermidade.  Algumas medidas são utilizadas para 
+%\citeonline{Nayak2008} 
+%\cite{Haleem2013} realiza um estudo sobre a detecção de glaucoma,
+%\citeonline{Rao2015} compara dois métodos para a classificação de imagens em uma base de dados de fundos de olho glautomatosos. 
+%
+%\citeonline{FuenteArriaga2014} detectam glaucoma a partir da medida dos vasos sanguíneos dentro do disco óptico que é particionado em partes (superior, inferior, nasal e temporal). Utilizando a métrica \textit{chessboard} chegam a 93.02\% de sensitividade e 91.66{\%} de especificidade. 
+
+
+\section{Segmentação dos vasos sanguíneos}
+
+A correta determinação da localização dos vasos sanguíneos diminui os falsos positivos para microaneurismas, assim, a segmentação dos mesmos é de grande importância em diagnóstico auxiliado por computador, principalmente nas doenças: degeneração macular relacionada a idade, retinopatia diabética e retinopatia da prematuridade. A principal dificuldade de separar os vasos sanguíneos do restante é que eles possuem um baixo contraste local inviabilizando o uso de métodos de detecção de bordas  \cite{Chaudhuri1989, MartinezPerez2007}. Por isso, existem\footnote{Diversas classificações podem ser encontradas na literatura,      \citeonline{Fraz2012b}, \citeonline{Mookiah2013a} e \citeonline{Zaki2016} apresentam dissonâncias quanto a esta questão, assim,  a classificação adotada por \citeonline{Mookiah2013a} foi adotada por apresentar nível adequado de detalhamento para este trabalho.} 5 diferentes classes de métodos para segmentação da estrutura vascular, que são: algoritmos baseados em rastreamento (\textit{tracking}), algoritmos baseados em modelos (\textit{matched filtering}), algoritmos baseados em classificação supervisionada de pixels, algoritmos baseados em modelos deformáveis e algoritmos baseados em morfologia matemática.  Cada uma destas classes serão discutidas a seguir. Ao final, a tabela \ref{tab:comparacaometricas} sintetiza um comparativo entre as medidas obtidas de diversos trabalhos, considerando a sensitividade, especificidade, precisão e área  sob a curva \sig{ROC}. 
+
+
+
+
+\subsection{Segmentação dos vasos sanguíneos por rastreamento}
+
+O \textbf{rastreamento} é semelhante ao que um oftalmologista faz ao examinar o fundo de olho de um paciente:  inicialmente é escolhido um ponto de partida, por exemplo o disco óptico, e então inspeciona-se a vascularização da retina. Algoritmos que usam esta abordagem costumam fazer uso da recursividade devido a natureza repetitiva dos vasos sanguíneos e suas bifurcações. O procedimento padrão consiste em determinar um pixel (\textit{seed}) de um vaso sanguíneo e realizar em seguida o crescimento de regiões, no qual os pixels mais próximos são agregados a cada etapa, ao término deste processo é  obtida uma aproximação da vascularização. 
+
+\citeonline{Vlachos2010} e \citeonline{Nayebifar2013} apresentam trabalhos seguindo esta abordagem. \citeonline{ Farokhian2014} utilizam um banco com 180 filtros de Gabor para encontrar os vasos sanguíneos facilitando o uso de \textit{thresholding}. \citeonline{Farnell2008} utiliza um operador de linha multiescala para encontrar os vasos sanguíneos. 
+
+Embora este tipo de algoritmo resolva o problema de uma maneira bastante natural, outras classes de algoritmos tem sido mais utilizadas. Possíveis desvantagens destes algoritmos são: a necessidade de se determinar \textit{thresholds} que separem os vasos do fundo restante e a necessidade de determinação do ponto inicial \cite{Wang2007}.
+
+
+\subsection{Segmentação dos vasos sanguíneos por modelos - \textit{matched filtering}}
+
+%http://users.ece.gatech.edu/~mrichard/SAR%20Tutorial%20Data%20Resources.htm
+
+Uma das abordagens mais utilizadas em segmentação de vasos sanguíneos é a aproximação por meio de modelos matemáticos. Assim, o objetivo dos algoritmos baseados em \textbf{modelos} é obter uma formulação matemática que aproxime a tortuosidade dos vasos, isso é feito por meio de propriedades ópticas e espaciais dos vasos sanguíneos e utiliza \textit{kernel} gaussiano 2D, filtro de Gabor 2D e \textit{templates} direcionais que realçam os vasos por meio da convolução do \textit{kernel} com a imagem. Este método, também chamado de \textit{matched filter response} (filtro adaptado), foi proposto por \citeonline{Chaudhuri1989} e tem sido muito utilizado e aprimorado ao longo dos anos, uma vez que em sua formulação original possui alto custo computacional e problemas com vasos muito finos ou muito grossos e ainda, os com muita tortuosidade. 
+
+Nesta classe de métodos, as principais tendências são: ajuste eficiente de parâmetros, uso de multi-escala e mudanças no \textit{kernel}. Alguns métodos adotam mais de uma destas medidas para garantir melhorias, por exemplo, \citeonline{Wang2007} apresentam uma análise da vascularização da retina por meio de modelo Hermitiano-Gaussiano multiresolução, em que um modelo polinomial de intensidade hermitiano-Gaussiano  é desenvolvido com perfis de  vasos sanguíneos em um estrutura \textit{quad-tree} contendo várias resoluções espaciais, com isso torna-se viável uma análise mais robusta. \citeonline{Sreejini2015} utilizam \textit{Particle Swarm} para ajustar parâmetros do \textit{matched filter} multi-escala visando supressão de ruído durante o processo de obtenção dos vasos sanguíneos;  \citeonline{Wang2013} utilizam um kernel \textit{multiwavelet} com decomposição  hierárquica multi-escala que reduz ruído ao passo que localiza os vasos, além disso, fazem a análise da condição necessária para atingir a decomposição ótima.
+
+ Em algumas situações as melhorias são providas no pré ou pós-processamento pois algoritmos baseados em modelos podem ter problemas com ruído e com o reflexo de luz nos vasos sanguíneos (figura \ref{fig:sinaisoculares}). Outras contribuições relevantes incluem: uso de método híbrido de \textit{matched filter} e colônia de formigas por \citeonline{Cinsdikici2009};  \citeonline{AlRawi2007} usam algoritmos genéticos para ajustar parâmetros; \textit{kernel fuzzy c-means} para melhorar o extração dos vasos sanguíneos, obtendo bons resultados por \citeonline{kar2016};  O resultado é de 72.46\% de verdadeiros positivos e 3.45\% de falsos positivos na base \sig{DRIVE} \cite{DRIVE}.   \citeonline{Kovacs2016} apresentam um método baseado em \textit{template matching} e reconstrução de contorno, em que uma função generalizada de Gabor é utilizado no \textit{template matching} extraindo-se o centro das linhas dos vasos. 
+
+Poucos trabalhos adotam \textit{kernel} com outras distribuições probabilísticas. Assim, uma abordagem totalmente nova em \textit{matched filtering} aplicado a segmentação de vasos sanguíneos em imagens do fundo de olho é apresentada por  \citeonline{Singh2016a} que  utiliza \textit{kernel} com distribuição probabilística Gumbel, combinado com pré-processamento por \sig{PCA} e equalização adaptativa do histograma e pós-processamento por filtro de comprimento e \textit{thresholding} ótimo baseado em entropia. Singh e Srivastava demonstram a superioridade de seu método em relação ao \textit{matched filtering} com \textit{kernel} Gaussiano em seus experimentos. 
+
+\subsection{Segmentação dos vasos sanguíneos por classificação supervisionada de pixels}
+
+Algoritmos baseados em \textbf{classificação supervisionada de pixels}  são voltados para redes neurais artificiais, como é o caso de  \citeonline{Marin2011},\citeonline{Franklin2014a},  \citeonline{Franklin2014b}
+e podem incluir o uso de \textit{forward selection}  \cite{DRIVE},
+regra delta modificada \cite{Nekovei1991},
+\textit{Convolutional Neural Network} (CNN) and \textit{Random Forest} (RF) \cite{Wang2015}. Um outro classificador que também é utilizado é máquina de vetor suporte \sigla{SVM}{\textit{Support Vector Machine}}, \citeonline{Ricci2007} aplicam \sig{SVM} no vetor de características resultante do processamento da imagem por dois operadores de linha ortogonais para segmentar vasos sanguíneos. \citeonline{Vega2015} utiliza uma \sigla{LNNDP}{\textit{Lattice Neural Network with Dendritic Processing}} para segmentar os vasos sanguíneos e compara seu método com \sig{SVM} e perceptrons multicamadas observando melhores resultados em seu método.
+
+
+O trabalho de \citeonline{Chen2016} propõe uma abordagem  bastante inovadora para prover melhorias em imagens de retina ao tratar a questão como um problema de aprendizado de dicionário. Neste contexto, sinais são descritos como combinações lineares dos sinais atômicos que compõem o dicionário. Em um dicionário \textit{overcomplete}  a quantidade de átomos é maior que o tamanho das informações de entrada. \citeonline{Chen2016} utilizam dois dicionários \textit{overcomplete} para obter a estrutura dos vasos, o \textit{Representation Dictionary} e o \textit{Enhancement Dictionary}. O \textit{Representation Dictionary} é a representação das imagens originais com codificação esparsa, enquanto que o \textit{Enhancement Dictionary} é gerado a partir das imagens rotuladas. Inicialmente, as imagens são representadas com o \textit{Representation Dictionary}, em seguida são reconstruídas por meio da obtenção de coeficientes esparsos e do \textit{Enhancement Dictionary}. O resultado é a  imagem com os vasos sanguíneos realçados possibilitando a segmentação por simples limiarização.
+
+O uso de métodos de classificação supervisionada também é uma das principais abordagens em segmentação dos vasos sanguíneos. Tais métodos são caracterizados por utilizarem passos supervisionados durante o processo de segmentação; pode ser necessário rotular previamente as imagens para determinar os pesos da rede, ou ainda, selecionar características em um passo supervisionado. 
+
+\subsection{Segmentação dos vasos sanguíneos por modelos deformáveis}
+
+A abordagem fundamentada em \textbf{modelos deformáveis} utiliza princípios físicos para simular o comportamento de objetos reais, pode adotar uma metodologia paramétrica ou geométrica. Considerando a segmentação dos vasos sanguíneos, é uma classe de métodos menos utilizada que \textit{matched filtering} e classificação supervisionada, porém, tais métodos são de grande importância devido a maneira que tratam o problema, sua maior aplicabilidade é em sequências de vídeo \cite{Nubia}. 
+
+Modelos paramétricos são baseados em \sigla{ACM}{\textit{active contour models}} (também chamados de \textit{snakes}), essa categoria de modelos deformáveis estabelece curvas na imagem que são movidas em função da influência dos dados locais até que um dado critério de convergência seja atingido, é possível realizar este processo de maneira supervisionada ou não. Já os modelos geométricos utilizam técnicas numéricas para implementar preceitos da teoria de evolução da curva em fluxos geométricos. 
+
+ \citeonline{Henault2010} e \citeonline{QianZhao2014} apresentam trabalhos que fazem uso de \textit{active contour models}. Este último realiza várias etapas de pré processamento: equalização adaptativa do histograma, filtro de gabor 2D e filtro anisotrópico para suavização da imagem. \citeonline{Sum2008} apresentam uma abordagem de modelo deformável geométrico que manipula imagens com iluminação não-uniforme, já que este é um grande problema em imagens da retina.  \citeonline{MartinezPerez2007} usam a primeira e segunda derivadas do \textit{kernel} Gaussiano com um fator de escala para garantir a extração de características geométricas da imagem de fundo do olho, com isso é possível inferir sobre a topologia dos vasos sanguíneos,  o tensor hessiano é usado em  %o local de máxima magnitude (derivada de primeira ordem) e curvatura (derivada de segunda ordem) são em 
+múltiplos passos de crescimento de regiões  resultando em vasos sanguíneos segmentados. 
+
+
+Outras possibilidades em modelos deformáveis incluem multiconcavidade e inundação de água. Como exemplo destes, tem-se o trabalho de \citeonline{Lam2010} que usa o modelo multiconcavidade e \citeonline{Asad2013} que  utilizam uma abordagem baseada em inundação de água que conta também com etapas de evaporação e resulta em vasos realçados. 
+
+\subsection{Segmentação dos vasos sanguíneos por morfologia matemática}
+
+A \textbf{Morfologia matemática} também é muito utilizada na segmentação de vasos sanguíneos, trata-se de uma metodologia baseada em teoria de conjuntos para remover, acrescentar ou gerar informações.  Sua principal construção é a aplicação sistemática de um elemento estruturante que resulta em uma nova imagem com as informações removidas ou adicionadas. Também se incluem nessa categoria os métodos baseados em esqueletos e fecho convexo que são utilizados para descrever formas.
+
+
+Alguns algoritmos fazem uso da morfologia matemática de maneira pura, é o caso de \citeonline{Zana2001} que ajusta o elemento estruturante para contemplar os vasos e suas bifurcações e \citeonline{Rodriguez2005} que utiliza \textit{watershed} morfológica em dois passos, o primeiro que aproxima os vasos e o segundo que os segmenta, porém, é mais comum encontrar a morfologia matemática associada à outros métodos. Outra possibilidade é o uso da morfologia como critério de decisão para a localização dos vasos sanguíneos, é o caso de \citeonline{Fraz2012a} que extrai as linhas centrais dos vasos sanguíneos utilizando a derivada de primeira ordem de um filtro gaussiano e em seguida realiza a avaliação da derivada por meio de uma mapa obtido do fatiamento morfológico do plano de bits. 
+
+
+Porém, o principal uso da morfologia matemática é na forma de pré ou pós-processamento. Muitos dos algoritmos de rastreamento e de classificação supervisionada de pixels e até alguns de \textit{matched filtering} usam afinamento  como pós-processamento para obter informações sobre conectividade melhorando o resultado final da segmentação dos vasos sanguíneos. É importante destacar que esta classe de método possui problemas com o ruído presente nas imagens. Assim, uma alternativa menos suscetível ao ruído  é  a esqueletonização, geralmente feita por Transformada do Eixo Medial - \sigla{MAT}{\textit{Medial Axis Transform}} \cite{Cristiane}. 
+
+\subsection{Segmentação dos vasos sanguíneos por outros métodos e considerações gerais}
+
+Alguns métodos não se enquadram exatamente nas classes discutidas, dentre eles \citeonline{Rodriguez2008} apresenta dois, \textit{mean shift} e método espectral. Em seu trabalho, Rodríguez faz comparação entre ambos tomando como medida o número de vasos obtidos em contraste com a segmentação manual. Observa-se que \textit{mean shift} possui menor índice de falsos positivos, 20\% enquanto que o método espectral resulta em 45\%, ambos não geram falsos negativos. \citeonline{Koukounis2014} apresenta uma solução baseada em hardware para prover rapidez ao \textit{matched filtering}. \citeonline{Tsai2015} propõe uma função de transformação característica adaptativa para segmentar vasos sanguíneos em angiogramas. 
+
+A tabela \ref{tab:comparacaometricas} mostra um comparativo entre diversos métodos apresentados na literatura. Verifica-se que as principais bases são a DRIVE e STARE, e ainda, que as principais medidas de desempenho dos métodos de segmentação são a sensitividade, a especificidade, a precisão e a \sig{ROC}. Dentre os trabalhos levantados, \citeonline{Wang2015} se destaca, com medidas de precisão bastante superior aos demais trabalhos. 
+
+\begin{table}[!htbp]
+\caption{Medida de performance para diversos métodos. Adaptado de \cite{Fraz2012b}}
+\begin{small}
+\begin{center}
+\begin{longtable}{|p{5cm}|p{1.2cm}|l|l|l|p{1.1cm}|}
+\hline
+\textbf{Metodologia} & \textbf{Base} & \textbf{Sensitividade} & \textbf{Especificidade} & \textbf{Precisão} & \textbf{Área sob a ROC} \\ \hline 
+Observador Humano           & DRIVE & 0.7763  & 0.9723 & 0.9470 &-        \\ 
+                            & STARE & 0. 8951 & 0.9384 & 0.9348 &-        \\ \hline
+\citeonline{Chaudhuri1989}       & DRIVE &-	&-	& 0.8773 & 0.7878              \\ \hline
+\citeonline{Sinthanayothin1999}  & Local dataset & 0.833 & 0.91 &- &-     \\ \hline
+\citeonline{Zana2001}            & DRIVE & - & - & 0.9377 & -                   \\ \hline 
+\citeonline{Niemeijer2004}       & DRIVE & 0.7145 &- & 0.9416 & 0.9294          \\ \hline
+\citeonline{DRIVE}                    & DRIVE &    &    & 0.9442  & 0.952    \\ 
+                                                & STARE &  -  &- & 0.9516 & 0.9614  \\ \hline
+\citeonline{Soares2006}          & DRIVE & - & - & 0.9466 & 0.9614        \\ 
+                                               & STARE & - & - & 0.9480 & 0.9671        \\ \hline
+\citeonline{AlRawi2007}          & DRIVE & 	-	&-	& 0.9535 & 0.9435          \\ \hline
+\citeonline{Ricci2007}           & DRIVE &- &- & 0.9563 & 0.9558        \\ 
+                                              & STARE &- &- & 0.9584 & 0.9602        \\ \hline
+\citeonline{MartinezPerez2007}       & DRIVE & 0.7246 & 0.9655 & 0.9344 &    -                \\ 
+                                               & STARE & 0.75506 & 0.9569 & 0.9410 &  -       \\ \hline
+\citeonline{Salem2007}           & STARE & 0.8215 & 0.9750 &-   &-    \\ \hline
+\citeonline{AlRawi2007}          & DRIVE & 	-	& -	& 0.9422 &	0.9582   \\ \hline
+\citeonline{Cinsdikici2009}      & DRIVE  & -	& -	& 0.9293	& 0.9407        \\ \hline
+\citeonline{Osareh2009}          & DRIVE & - & - & - & 0.9650             \\ \hline
+\citeonline{Lupascu2010}         & DRIVE & - &- & 0.9597 & 0.9561     \\ \hline
+\citeonline{Vlachos2010}         & DRIVE & 0.747 & 0.955 & 0.929 & -     \\ \hline                                                                    
+\citeonline{Xu2010}              & DRIVE & 0.7760 &- & 0.9328 & -       \\ \hline
+\citeonline{Marin2011}           & DRIVE & 0.7067 & 0.9801 & 0.9452 & 0.9588  \\ 
+                            & STARE & 0.6944 & 0.9819 & 0.9526 & 0.9769  \\ \hline
+\citeonline{You2011}             & DRIVE & 0.7410 & 0.9751 & 0.9434 &     \\ 
+                            & STARE & 0.7260 & 0.9756 & 0.9497 &   -  \\ \hline
+\citeonline{Fraz2012a}           & DRIVE &   -    &  -   & 0.9430  & -     \\ 
+                            & STARE &   -    &  -   &  0.9442 & -      \\ \hline
+\citeonline{Fathi2013}           & DRIVE & 0.7768 & 0.9759 & 0.9581 & 0.9516  \\   
+                            & STARE & 0.8061 & 0.9717 & 0.9591 & 0.9680  \\   \hline
+\citeonline{Nguyen2013}          & DRIVE & - & - & 0.9404 &         -        \\   
+                            & STARE & - & - & 0.9324 &    -             \\   \hline
+\citeonline{Franklin2014a}       & DRIVE & - & - & 0.9503 &               \\  \hline
+\citeonline{QianZhao2014}        & DRIVE & - & - & 0.9477 &                 \\  
+                            & STARE & - & - & 0.9509 &    -             \\   \hline
+\citeonline{Zhang2015}           & DRIVE & 0.7812 & 0.9668 & 0. 9505 &	–       \\ 
+                            & STARE & 0.7177 & 0.9753 & 0.9484	&- \\ \hline
+\citeonline{Wang2015}            & DRIVE & 0.8173 & 0.9733 & 0.9767 & 0.9475  \\
+                            & STARE & 0.8104 & 0.9791 & 0.9813 & 0.9751  \\ \hline
+\citeonline{Singh2016a}            & DRIVE & -  & - & - & 0.9287 \\
+                            & STARE        & -  & - &  - & 0.9140  \\ \hline
+\citeonline{kar2016}            & DRIVE      &  - & -  & -  & 0.9616 \\
+                                             & STARE      & - & - & - & 0.9735 \\ \hline
+
+\end{longtable}
+
+\end{center}
+\end{small}
+\label{tab:comparacaometricas}
+\end{table}
+
+\section{Trabalhos correlatos}
+
+Dentre os trabalhos citados anteriormente, alguns possuem semelhança com o presente trabalho e por isso serão discutidos nesta seção. Tais trabalhos foram agrupados em três categorias contemplando a segmentação de imagens de fundo de olho: localização do disco óptico, segmentação do disco óptico e segmentação dos vasos sanguíneos.
+
+\subsection{Localização do disco óptico}
+
+Um trabalho a ser destacado em localização do disco óptico é apresentado por \citeonline{Abdullah}, em que se realiza a localização por meio de transformada de Hough circular. 
+
+Inicialmente Abdullah et Al. seleciona o canal verde devido a seu grande contraste e realiza operações para normalizar o contraste e a iluminação. Em seguida, operações morfológicas são aplicadas para remover os vasos sanguíneos presente na imagem, sendo que é escolhido o fechamento com elemento estruturante na forma de disco com raio 5. Feito isto, é aplicada a transformada de Hough circular clássica para detectar o centro do círculo correspondente ao disco óptico. 
+
+Como a transformada de Hough se baseia na equação da circunferência, alguns parâmetros devem ser pré-determinados, no caso, uma estimativa inicial para o raio do disco óptico é fixada em 29 a 50 pixels. A transformada de Hough é aplicada sucessivamente com diferentes graus de sensibilidade, até que um bom candidato a centro do disco seja encontrado. No capítulo \ref{cap5} os resultados apresentados por \citeonline{Abdullah} são comparados ao resultados obtidos.
+
+ 
+
+\subsection{Segmentação do disco óptico}
+
+A segmentação do disco óptico no presente trabalho utiliza \textit{roughness index}, assim como o trabalho de \citeonline{Mookiah2013b}. Outros estudos trazem variações na técnica e também são abordados adiante, é o caso de \citeonline{Chiranjeevi2012} e \citeonline{Xie2015}, que não se aplicam exatamente a segmentação de imagens de fundo de olho, mas que apresentam importantes contribuições.  A teoria sobre \textit{rough sets} foi apresentada na seção \ref{sec:conjuntosaproximativos}, e a segmentação baseada em  \textit{roughness index} na seção \ref{sec:segmentacaori}.
+
+\citeonline{Mookiah2013b} apresenta a segmentação do disco óptico baseada em \textit{intuitionistic fuzzy histon}, conforme discutido na seção \ref{sec:aifs}. Inicialmente é feito o pré-processamento utilizando \sigla{CLAHE}{\textit{Contrast Limited Adaptive Histogram Equalization}}. A seguir os vasos sanguíneos são removidos com  filtro de Gabor 2D com 12 \textit{templates} rotacionados em 15°. Esta etapa é finalizada com operação  morfológica de fechamento com elemento estruturante na forma de disco de tamanho $15 \times 15$.  
+
+A próxima etapa é a localização do disco óptico, que é feita com o auxílio de \sigla{CWNO}{\textit{Column Wise Neighborhood Operation}}, no qual a imagem é processada utilizando a  vizinhança dos pixels em colunas. O resultado do processamento é uma imagem contendo bordas e o disco óptico, nesta imagem são aplicadas as operações: limiarização, dilatação e erosão. A parte mais clara da imagem é escolhida e então  gera-se uma máscara contemplando toda a região que esteja dentro do raio de 150 pixels, a partir do ponto determinado. 
+
+Por último é realizada a segmentação do disco óptico com uso de  \sig{A-IFS} Histon. Esta técnica foi aprimorada ao longo dos anos, sendo que a referência para a mesma é o trabalho de \citeonline{Mushrif2009}, em que o histograma e histon das imagens são utilizados como aproximações \textit{Lower} e \textit{Upper}, respectivamente, conforme discutido na seção \ref{sec:conjuntosaproximativos}. Por meio do \textit{roughness index} obtém-se os picos e vales, sendo que estes últimos consistem em \textit{thresholds} usados para separar a imagem em diversas partes. Ao final é obtido um percentual de 93,4\% de precisão (\textit{accuracy}) em uma base de imagens própria, sendo também realizado um comparativo com \sig{GVF} e limiarização de Otsu, que apresentaram desempenho inferior. 
+
+
+\citeonline{Xie2015} trabalham com a segmentação de imagens médicas por meio de \textit{rough sets} de maneira semelhante a \citeonline{Mookiah2013b}. No entanto, destacam a forte presença de ruído, a baixa separabilidade dos tecidos, dentre outros problemas inerentes as imagens médicas. Por isso,  supõem que fixar os valores utilizados pelo algoritmo na obtenção de picos do \textit{roughness index} pode não ser adequado para todas as imagens. A solução apresentada consiste da suavização do histon e do histograma por meio de \sigla{LPR}{\textit{Local  Polynomial
+Regression}}, gerando um \textit{roughness index} mais suave. Em função da suavidade do \textit{roughness index} picos pouco significativos são eliminados, e o algoritmo de detecção de picos e vales segue um novo formato, conforme seção \ref{sec:lprconceito}.
+
+Xie et al. testam a segmentação por meio de histograma, histon, \textit{roughness index}, \textit{roughness index} com média móvel e \textit{roughness index} suavizado por \sig{LPR}. Nos resultados é possível observar a redução no número de \textit{thresholds} obtidos na segmentação, principalmente na presença de ruído. Em um dos experimentos, 20 imagens de tomografia computadorizada do abdômen 
+são submetidas aos métodos de segmentação com a finalidade de segmentar o fígado, o rim direito e o baço. O resultado de maior significância é observado em \textit{roughness index} suavizado por \sig{LPR} que resulta em 0,92, 0,89 e 0,89 respectivamente, considerando a medida \sig{DSM}.
+
+
+\citeonline{Chiranjeevi2012} aplicam \textit{rough sets} na detecção de objetos em movimentos em sequências de vídeo. Uma das maneiras de se realizar esse tipo detecção é a subtração de fundo, e para tal, é necessário possuir um modelo consistente de classificação dos pixels, que informe se ele está no fundo ou se pertence ao objeto. Como o \textit{roughness index} traz a variação entre os pixels e seus vizinhos, Chiranjeevi e Sengupta usam essa ferramenta para rotular os pixels que pertencem ao fundo e os que pertencem ao objeto. Espera se que o fundo apresente pouca variação em relação aos frames próximos enquanto os pixels do  objeto apresentam grande variação. Assim, a distância de Bhattacharyya é calculada entre o \textit{roughness index} obtido e os novos frames. Chiranjeevi e Sengupta também desenvolveram e aplicaram o conceito de histograma 3D, que gera uma melhor correlação entre as cores presentes no objeto, conforme discutido na seção \ref{sec:hri3d}. 
+
+%O método desenvolvido por Chiranjeevi e Sengupta consiste de obter o primeiro frame, realizando a construção do modelo de fundo baseado em \textit{roughness index}, a medida que um novo frame é submetido ao método, também é obtido seu \textit{roughness index} e  aplica-se então a distância de Bhattacharyya para avaliação da similaridade. O resultado é usado na atualização do modelo de fundo obtido anteriormente. 
+
+Para validar o método, são feitos experimentos com \textit{roughness index 3D} e \textit{fuzzy roughness index 3D} em 8 sequências de vídeos, com quantização para reduzir o tamanho do histograma e histon. A \textit{F-measure} é exibida para cada sequência, em que se observa grande superioridade do método proposto em relação a outros métodos. 
+
+
+
+\section{Segmentação dos vasos sanguíneos}
+\label{sec:segmentacaovasos}
+
+Na segmentação de vasos sanguíneos do fundo de olho um importante trabalho é apresentado por \citeonline{Singh2016a}. É uma abordagem baseada em \textit{matched filter} com o uso de uma distribuição Gumbel. \citeonline{Singh2016a} demonstram que de fato, o perfil em escala de cinza do corte transversal dos vasos sanguíneos não constituem precisamente uma gaussiana, uma vez que os valores de média, mediana e moda não são aproximadamente iguais, sendo que esta é uma importante propriedade na distribuição gaussiana. Assim, Singh e Srivastava concluem que o perfil de intensidade dos vasos é mais próximo a uma distribuição Gumbel do que de uma distribuição gaussiana ou Cauchy. 
+
+A distribuição Gumbel é definida como:
+
+\begin{equation}
+f(x,y)=\dfrac{1}{\beta}e^{\frac{X-\mu}{\beta}}e^{-e^{\frac{X-\mu}{\beta}}} \label{eq:gumbel}
+\end{equation}
+em que $y \leqslant L/2$, $X$ é a distância perpendicular entre o ponto $(x,y)$ e a linha reta passando pelo centro do vaso sanguíneo, $\mu$ é a localização horizontal, $\beta$ é a escala e  $L$ é a linha de segmento por partes. O parâmetro $\beta$ controla a curvatura da distribuição, quando é muito pequeno, a curva é limitada, e quando é grande a curva é aberta. 
+
+A figura \ref{fig:fluxogramabloodvessels} apresenta o fluxograma do algoritmo proposto por \citeonline{Singh2016a} para realizar a segmentação dos vasos sanguíneos. A primeira etapa para se obter um \textit{matched filter} é o pré-processamento da imagem, que deve realçar os vasos sanguíneos. Neste sentido, muitas vezes, se utiliza apenas o canal verde, pois é nele que os vasos sanguíneos possuem maior contraste em relação ao fundo, figura \ref{fig:contrasteruim}. Além disso é feita a conversão para escala de cinza utilizando \sig{PCA} e \sig{CLAHE}. 
+
+ \begin{figure} [!htb]
+ \centering
+ \caption{Algoritmo de segmentação de vasos sanguíneos, \cite{Singh2016a} }\label{fig:fluxogramabloodvessels}
+\input{figuras/cap4/fluxogramabloodvessels}
+\caption*{\textbf{Fonte:} Adaptado de {\cite{Singh2016a}}}
+ \end{figure}
+
+
+O próximo passo é projetar o kernel utilizando a distribuição Gumbel. De acordo com \citeonline{Singh2016a}, três pontos devem ser determinados no projeto de um kernel para \textit{matched filter}:
+\begin{itemize}
+\item aproximação da curvatura dos vasos por meio de  segmentos lineares por partes em forma de sino;
+\item a largura dos vasos sanguíneos, que deve ser decrementada a medida que o vaso é percorrido do disco óptico até as extremidades da retina;
+\item o perfil de intensidade do corte transversal dos vasos sanguíneos da retina.
+\end{itemize}
+
+\section{Segmentação dos vasos sanguíneos por redes neurais}
+
+
+Um trabalho relevante em classificação supervisionada é apresentado por \citeonline{Soomro2017}, que sugere uma rede neural convolucional para segmentar os vasos sanguíneos. Além da \sig{CNN}\, Soomro et al. aplicam estratégias de pré-processamento para melhorar o estágio de treinamento, resultando em uma avaliação de sensibilidade de 0,746 e uma precisão de 0,946 no banco de dados \sig{DRIVE}. O pré processamento neste trabalho é fundamental para garantir um bom aprendizado, uma vez que a distinção  entre o fundo retiniano e os vasos finos não é trivial. A abordagem adotada consiste em técnicas baseadas em morfologia e escala de cinza, iniciando por aproximação bottom-hat (fechamento morfológico seguido de subtração da imagem original) e depois top-hat (subtração entre a imagem original e sua abertura), a subtração entre as imagens bottom-hat e top-hat é realizada para reduzir o ruído. Outro pré-processamento empregado é a conversão de \sig{RGB} para escala de cinza empregando \sig{PCA} para obter um contraste melhor.  Pós-processamento também é empregado com base em limiarização e reconstrução morfológica afim de produzir uma imagem segmentada mais limpa, com o mínimo de pontos espúrios.
+
+\citeonline{Liskowski2016a} utilizam aprendizado profundo em um conjunto de 400.000 amostras obtidas por meio de pré-processamento com normalização global de contraste, transformações geométricas e correções gama no banco de dados DRIVE. As transformações são aplicadas localmente tendo por base cada \textit{patch}\footnote{neste trabalho, um \textit{patch} corresponde a fragmento $3 \times 27 \times 27$ }, inicialmente é feita a normalização de contraste subtraindo a média de cada \textit{patch} e fazendo a divisão pelo desvio padrão, independente dos canais R,G e B. Depois da normalização, é feito o \sigla{ZCA}{Zero-phase Component Analysis} que de maneira similar ao \sig{PCA}, extrai as principais informações, mas que possibilita maior proximidade com os dados originais. Os resultados obtidos indicaram uma sensibilidade de 0,7819, especificidade de 0,9748 e uma precisão de 0,9472.
+
+%O pré-processamento é fundamental no tratamento das irregularidades na iluminação e melhor distinção dos vasos finos garantindo o aprendizado correto e classificação precisa.  
+
+%Assim, neste trabalho, propõe-se o  uso de uma rede neural multicamadas combinada com técnicas de pré-processamento de imagem e pós-processamento para segmentar a estrutura vascular da retina.
+
+
+
+\section{Considerações finais do capítulo}
+
+Este capítulo apresentou os principais estudos realizados em segmentação de imagens do fundo de olho, abordando a segmentação dos vasos sanguíneos e do disco óptico. 
+
+
+A principal dificuldade na segmentação da imagem de fundo de olho é a eliminação da influência dos vasos sanguíneos que se estendem por toda a imagem e se sobrepõe a outras estruturas como o disco óptico, alguns pesquisadores usam técnicas de \textit{inpainting} para contornar este problema. Outro dificultador é que os vasos possuem baixo contraste em relação ao fundo, por isso, é comum encontrar trabalhos que utilizam apenas o canal verde do \sig{RGB}, afinal, neste canal o contraste em relação ao fundo é maior. Diversos trabalhos foram mencionados e verifica-se que o principal método adotado para segmentação dos vasos sanguíneos é o \textit{matched filter}  que vem sendo intensamente estudado nos últimos anos, apesar disso, não é comum encontrar trabalhos com \textit{kernels} baseados em  distribuição probabilística não gaussiana. No caso de segmentação do vasos sanguíneos da retina, foi citado um trabalho recente que utiliza distribuição Gumbel, o problema destacado por seus autores é o ajuste de parâmetros, que precisou de extensivos experimentos. Outras abordagens para a segmentação dos vasos sanguíneos são: \textit{tracking}, morfologia matemática, modelos deformáveis, classificação supervisionada de pixels. Sendo este último também bastante utilizado.
+
+A segmentação do disco óptico é importante para que o mesmo não seja confundido com um exsudato e para que outras estruturas sejam localizadas. Diversas informações provenientes de estudos em oftalmologia auxiliam os métodos de segmentação. Métodos baseados em limiarização por nível de intensidade são rápidos, porém costumam falhar, uma vez que o disco óptico encontra-se obstruído por vasos sanguíneos e possui o lado temporal mais claro que o nasal. Muitas vezes abordagens simples e rápidas são usadas para localizar o disco óptico enquanto que métodos mais robustos delimitam a fronteira do mesmo. Modelos deformáveis constituem-se na principal abordagem para obter um contorno preciso do disco óptico, muitos trabalhos usam \textit{active contour model}. Por outro lado, a localização do disco é feita por \sig{PCA}, transformada de Hough e outros métodos baseados em intensidade. Alguns métodos podem ser usados tanto na localização quanto na segmentação, neste caso alguns refinamentos são aplicados.  
+
+O capítulo a seguir apresenta o método proposto, bem como as bases de dados utilizadas nos experimentos.
+
