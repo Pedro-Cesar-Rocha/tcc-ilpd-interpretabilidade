@@ -79,12 +79,11 @@ como explicado na seção seguinte. Esse cuidado evita o chamado \textit{vazamen
 dados} (\textit{data leakage}), em que informações do conjunto de teste contaminam o 
 treinamento e levam a estimativas de desempenho otimistas demais \cite{KaufmanScharRosset2012, KAPOOR2023100804}.
 
-Toda a análise foi implementada na linguagem R, com os pacotes % TODO: adicionar referência bibliográfica da linguagem R (\cite{}).
-\texttt{tidyverse} para manipulação e visualização dos dados e % TODO: adicionar referência bibliográfica do pacote tidyverse (\cite{}).
-\texttt{corrplot} para a visualização das matrizes de correlação. % TODO: adicionar referência bibliográfica do pacote corrplot (\cite{}).
+Toda a análise foi implementada na linguagem R \cite{linguagemr}, com os pacotes 
+\texttt{tidyverse} \cite{tidyverse} para manipulação e visualização dos dados e 
+\texttt{corrplot} \cite{corrplot2024} para a visualização das matrizes de correlação. 
 Usou-se uma semente aleatória fixa ao longo de todo o \textit{pipeline}, para 
 garantir a reprodutibilidade dos resultados. % TODO: adicionar referência bibliográfica sobre reprodutibilidade e semente aleatória (\cite{}).
-% TODO: Importar referência diretamente da pipeline usando a função cite(). 
 
 As etapas da análise exploratória são descritas a seguir.
 
