@@ -137,7 +137,8 @@ confirmou a razão de desbalanceamento de cerca de 2,5:1 descrita anteriormente
 (Figura~\ref{fig:eda_distribuicao_alvo}). Esse diagnóstico justificou duas decisões metodológicas. A primeira
 foi usar \textbf{divisão estratificada} entre treino e teste, que preserva a mesma 
 proporção de classes nos dois conjuntos. A segunda foi aplicar técnicas de 
-balanceamento apenas no conjunto de treino. Também justificou o uso % TODO: adicionar a seção de divisão estratificada/balanceamento e sua referência (Seção~\ref{}).
+balanceamento apenas no conjunto de treino. Essas decisões são detalhadas nas
+Seções~\ref{sec:divisao_treino_teste} e \ref{sec:balanceamento}. O diagnóstico também justificou o uso
 de métricas menos sensíveis ao desbalanceamento do que a acurácia, como a área sob 
 a curva ROC (AUC), a sensibilidade e a especificidade \cite{FAWCETT2006861, imbalancedata}.
 
@@ -422,7 +423,47 @@ dados, o que também facilita a leitura dos gráficos de dependência SHAP, nos
 quais os pacientes passam a se distribuir de forma mais uniforme ao longo do 
 eixo horizontal.
 
+\subsection{Divisão Treino/Teste}
+\label{sec:divisao_treino_teste}
+
+Após as transformações determinísticas, os dados foram divididos em conjuntos
+de treino e teste na proporção de 80\% e 20\%, respectivamente, por meio da
+função \texttt{caret::createDataPartition}. A divisão foi estratificada pela
+variável-alvo, preservando a proporção das classes em ambos os conjuntos. A
+semente fixa definida por \texttt{PIPELINE\_SEED} garante a reprodutibilidade
+dessa partição. Essa divisão ocorre antes da imputação e da padronização, de
+modo que seus parâmetros sejam estimados exclusivamente no conjunto de treino,
+evitando o vazamento de informação do teste \cite{KaufmanScharRosset2012}.
+
 \subsection{Imputação de Valores Ausentes}
 
 A mediana foi calculada exclusivamente no conjunto de treino e depois aplicada a 
-ambos os conjuntos. % TODO: adicionar a seção que detalha a divisão treino/teste e o ajuste da imputação no treino e sua referência (Seção~\ref{}).
+ambos os conjuntos (Seção~\ref{sec:divisao_treino_teste}).
+
+\subsection{Padronização}
+\label{sec:padronizacao}
+
+Após a imputação, os preditores foram padronizados pela transformação
+\textit{z-score}, com centralização (\textit{center}) e escalonamento
+(\textit{scale}). As médias e os desvios-padrão foram estimados exclusivamente
+no conjunto de treino e, em seguida, aplicados tanto ao treino quanto ao teste,
+mantendo a separação entre os dados usados para ajustar os parâmetros e os
+usados para avaliação. Essa etapa é particularmente relevante para a Regressão
+Logística, um modelo linear sensível às escalas dos preditores; para os modelos
+baseados em árvores, que realizam divisões pela ordem dos valores, a
+padronização tende a ser menos relevante. A decisão também está resumida no
+Quadro~\ref{tab:sintese_aed}.
+
+\subsection{Balanceamento de Classes (SMOTE)}
+\label{sec:balanceamento}
+
+Para lidar com o desbalanceamento das classes, utilizou-se o SMOTE
+(\textit{Synthetic Minority Over-sampling Technique}), que gera amostras
+sintéticas da classe minoritária a partir de observações existentes. O
+balanceamento é aplicado somente aos dados de treino; o conjunto de teste
+mantém sua distribuição original e nunca é balanceado. Durante o treinamento
+com validação cruzada, o SMOTE é aplicado independentemente dentro de cada
+partição de treino de cada \textit{fold}, após a separação dos \textit{folds}.
+Assim, as amostras sintéticas não contaminam as partições de validação — o que
+poderia ocorrer se o balanceamento fosse feito antes da divisão — nem inflacionam
+artificialmente as métricas de desempenho.
