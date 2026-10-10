@@ -455,14 +455,13 @@ mantendo a separação entre os dados usados para ajustar os parâmetros e os
 usados para avaliação. Essa etapa é particularmente relevante para a Regressão
 Logística, um modelo linear sensível às escalas dos preditores; para os modelos
 baseados em árvores, que realizam divisões pela ordem dos valores, a
-padronização tende a ser menos relevante. A decisão também está resumida no
-Quadro~\ref{tab:sintese_aed}.
+padronização tende a ser menos relevante.
 
 \subsection{Balanceamento de Classes (SMOTE)}
 \label{sec:balanceamento}
 
 Para lidar com o desbalanceamento das classes, utilizou-se o SMOTE
-(\textit{Synthetic Minority Over-sampling Technique}), que gera amostras
+(\textit{Synthetic Minority Over-sampling Technique})\cite{smote}, que gera amostras
 sintéticas da classe minoritária a partir de observações existentes. O
 balanceamento é aplicado somente aos dados de treino; o conjunto de teste
 mantém sua distribuição original e nunca é balanceado. Durante o treinamento
