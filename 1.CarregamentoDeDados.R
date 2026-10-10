@@ -114,16 +114,30 @@ comp$Significativo <- ifelse(comp$p_valor < 0.05, "sim", "nao")
 log_table(comp, digits = 3)
 salvar_csv(comp, "results/comparacao_medias_por_classe.csv")
 
+significativas <- comp$Variavel[comp$Significativo == "sim"]
+nao_significativas <- comp$Variavel[comp$Significativo == "nao"]
+log_info("Variaveis com diferenca significativa (p < 0.05): %s",
+         if (length(significativas) > 0) paste(significativas, collapse = ", ") else "nenhuma")
+log_info("Variaveis sem diferenca significativa (p >= 0.05): %s",
+         if (length(nao_significativas) > 0) paste(nao_significativas, collapse = ", ") else "nenhuma")
+
 # --- Correlacao --------------------------------------------------------------
 log_subsection("Matriz de correlacao (Pearson)")
 mat_cor <- cor(df[, num_cols], use = "complete.obs")
 pares <- which(abs(mat_cor) > 0.7 & upper.tri(mat_cor), arr.ind = TRUE)
 if (nrow(pares) > 0) {
-  for (i in seq_len(nrow(pares))) {
+  pares_df <- data.frame(
+    Variavel_1 = rownames(mat_cor)[pares[, 1]],
+    Variavel_2 = colnames(mat_cor)[pares[, 2]],
+    r = round(mat_cor[pares], 3)
+  )
+  pares_df <- pares_df[order(-abs(pares_df$r)), ]
+  for (i in seq_len(nrow(pares_df))) {
     log_warn("Alta correlacao: %s x %s = %.3f",
-             rownames(mat_cor)[pares[i, 1]], colnames(mat_cor)[pares[i, 2]],
-             mat_cor[pares[i, 1], pares[i, 2]])
+             pares_df$Variavel_1[i], pares_df$Variavel_2[i], pares_df$r[i])
   }
+  salvar_csv(pares_df, "results/pares_alta_correlacao.csv")
+  log_info("Pares com |r| > 0.7 salvos em results/pares_alta_correlacao.csv (use para preencher [PARES] no cap4-metodologia.tex).")
 } else {
   log_ok("Nenhum par com |r| > 0.7.")
 }
