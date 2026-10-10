@@ -79,11 +79,11 @@ como explicado na seção seguinte. Esse cuidado evita o chamado \textit{vazamen
 dados} (\textit{data leakage}), em que informações do conjunto de teste contaminam o 
 treinamento e levam a estimativas de desempenho otimistas demais \cite{KaufmanScharRosset2012, KAPOOR2023100804}.
 
-Toda a análise foi implementada na linguagem R \cite{}, com os pacotes 
-\texttt{tidyverse} \cite{} para manipulação e visualização dos dados e 
-\texttt{corrplot} \cite{} para a visualização das matrizes de correlação. 
+Toda a análise foi implementada na linguagem R, com os pacotes % TODO: adicionar referência bibliográfica da linguagem R (\cite{}).
+\texttt{tidyverse} para manipulação e visualização dos dados e % TODO: adicionar referência bibliográfica do pacote tidyverse (\cite{}).
+\texttt{corrplot} para a visualização das matrizes de correlação. % TODO: adicionar referência bibliográfica do pacote corrplot (\cite{}).
 Usou-se uma semente aleatória fixa ao longo de todo o \textit{pipeline}, para 
-garantir a reprodutibilidade dos resultados \cite{}.
+garantir a reprodutibilidade dos resultados. % TODO: adicionar referência bibliográfica sobre reprodutibilidade e semente aleatória (\cite{}).
 % TODO: Importar referência diretamente da pipeline usando a função cite(). 
 
 As etapas da análise exploratória são descritas a seguir.
@@ -135,12 +135,19 @@ torna a segunda hipótese pouco provável.
 
 Calculou-se a frequência absoluta e relativa de cada classe da variável-alvo, o que 
 confirmou a razão de desbalanceamento de cerca de 2,5:1 descrita anteriormente 
-(Figura~\ref{}). Esse diagnóstico justificou duas decisões metodológicas. A primeira 
+(Figura~\ref{fig:eda_distribuicao_alvo}). Esse diagnóstico justificou duas decisões metodológicas. A primeira
 foi usar \textbf{divisão estratificada} entre treino e teste, que preserva a mesma 
 proporção de classes nos dois conjuntos. A segunda foi aplicar técnicas de 
-balanceamento apenas no conjunto de treino (Seção~\ref{}). Também justificou o uso 
+balanceamento apenas no conjunto de treino. Também justificou o uso % TODO: adicionar a seção de divisão estratificada/balanceamento e sua referência (Seção~\ref{}).
 de métricas menos sensíveis ao desbalanceamento do que a acurácia, como a área sob 
 a curva ROC (AUC), a sensibilidade e a especificidade \cite{FAWCETT2006861, imbalancedata}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[scale=0.6]{figuras/cap4-metodologia/eda_distribuicao_alvo.png}
+\caption{Distribuição da variável-alvo (doentes \textit{vs.} saudáveis).}
+\label{fig:eda_distribuicao_alvo}
+\end{figure}
 
 Também se construiu uma tabela de contingência entre o sexo do paciente e a 
 variável-alvo. A base é composta majoritariamente por pacientes do sexo masculino 
@@ -151,6 +158,7 @@ motivo, a avaliação dos modelos e a análise de interpretabilidade foram feita
 de forma estratificada por sexo.
 
 \subsection{Estatísticas Descritivas e Assimetria}
+\label{sec:estatisticas_descritivas_assimetria}
 
 Para cada uma das nove variáveis numéricas foram calculadas a média, o 
 desvio-padrão, o mínimo, a mediana, o máximo e o coeficiente de assimetria 
@@ -232,8 +240,8 @@ supõe que as variâncias dos dois grupos sejam iguais. Essa suposição seria p
 plausível aqui, dada a maior dispersão dos exames no grupo de doentes e a diferença 
 de tamanho entre os grupos \cite{psychologists}. Considerou-se o nível de significância de 5\%.
 
-As variáveis [VARIÁVEIS] apresentaram diferença estatisticamente significativa entre 
-as classes ($p < 0{,}05$), e as variáveis [VARIÁVEIS] não apresentaram (Tabela~\ref{}). 
+As variáveis [VARIÁVEIS] apresentaram diferença estatisticamente significativa entre % TODO: preencher [VARIÁVEIS] com os resultados reais do teste t de Welch.
+as classes ($p < 0{,}05$), e as variáveis [VARIÁVEIS] não apresentaram. % TODO: preencher [VARIÁVEIS] e inserir a tabela de resultados do teste t de Welch e sua referência (Tabela~\ref{}).
 Essa análise é univariada: avalia cada variável isoladamente e não considera 
 interações nem efeitos combinados, que são justamente o que os modelos de aprendizado 
 de máquina conseguem capturar. Além disso, por causa da forte assimetria de algumas 
@@ -244,19 +252,34 @@ comparar, no Capítulo de Resultados, com as importâncias de atributos obtidas 
 meio dos valores SHAP.
 
 Também foram gerados \textit{boxplots} de cada variável numérica, separados por 
-classe (Figura~\ref{}). Eles permitem inspecionar visualmente a sobreposição entre as 
+classe (Figura~\ref{fig:eda_boxplots}). Eles permitem inspecionar visualmente a sobreposição entre as
 distribuições dos dois grupos e a presença de valores extremos. Uma grande 
 sobreposição entre as classes indica que nenhum exame, sozinho, separa bem doentes de 
 saudáveis, o que motiva o uso de modelos multivariados.
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[scale=0.6]{figuras/cap4-metodologia/eda_boxplots_por_classe.png}
+\caption{Boxplots das variáveis numéricas, separados por classe (doente \textit{vs.} saudável).}
+\label{fig:eda_boxplots}
+\end{figure}
+
 \subsection{Análise de Correlação}
 
 Por fim, calculou-se a matriz de correlação de Pearson entre as variáveis numéricas 
-(Figura~\ref{}). As observações com valores ausentes foram excluídas apenas para esse 
+(Figura~\ref{fig:eda_correlacao}). As observações com valores ausentes foram excluídas apenas para esse
 cálculo. O objetivo foi identificar \textbf{multicolinearidade}, ou seja, pares de 
 variáveis que carregam praticamente a mesma informação. Adotou-se $|r| > 0{,}7$ como 
 limiar de correlação forte \cite{Dormann2012Collinearity, Mukaka2012Statistics}.
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[scale=0.6]{figuras/cap4-metodologia/eda_correlacao.png}
+\caption{Matriz de correlação de Pearson entre as variáveis numéricas.}
+\label{fig:eda_correlacao}
+\end{figure}
+
+% TODO: preencher [PARES, ex.: ...] e os coeficientes r com os resultados reais da análise de correlação.
 Encontrou-se correlação forte nos pares [PARES, ex.: \textit{Total\_Bilirubin} × 
 \textit{Direct\_Bilirubin}, $r = $ X]. Essas correlações têm explicação fisiológica: 
 a bilirrubina direta é uma das frações que compõem a bilirrubina total 
@@ -338,7 +361,7 @@ e a base passou de 583 para 570 registros.
 \subsection{Transformação Logarítmica}
 
 Às cinco variáveis assimétricas identificadas na análise exploratória aplicou-se a 
-transformação $x' = \ln(1 + x)$ (Seção~\ref{}) \cite{logtransformation}. O logaritmo comprime a cauda da 
+transformação $x' = \ln(1 + x)$ (Seção~\ref{sec:estatisticas_descritivas_assimetria}) \cite{logtransformation}. O logaritmo comprime a cauda da
 distribuição sem alterar a ordem entre as observações: na 
 \textit{Aspartate\_Aminotransferase}, por exemplo, o máximo, que era mais de 
 cem vezes maior que a mediana na escala original, passa a ser cerca de duas 
@@ -403,4 +426,4 @@ eixo horizontal.
 \subsection{Imputação de Valores Ausentes}
 
 A mediana foi calculada exclusivamente no conjunto de treino e depois aplicada a 
-ambos os conjuntos (Seção~\ref{}).
+ambos os conjuntos. % TODO: adicionar a seção que detalha a divisão treino/teste e o ajuste da imputação no treino e sua referência (Seção~\ref{}).
