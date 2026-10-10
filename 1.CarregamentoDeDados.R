@@ -12,6 +12,26 @@ log_section("ETAPA 1 - CARREGAMENTO DE DADOS E ANALISE EXPLORATORIA")
 t0 <- timer_start()
 ensure_dirs(c("data", "plots", "results"))
 
+# --- Citacoes bibliograficas (linguagem R e pacotes utilizados) -------------
+# Gera um arquivo .bib com as entradas BibTeX oficiais da linguagem R e dos
+# pacotes tidyverse/corrplot, para serem referenciadas no capitulo de
+# Metodologia (\cite{}) sem a necessidade de digitar as citacoes manualmente.
+log_subsection("Gerando citacoes bibliograficas dos pacotes utilizados")
+citacoes_bib <- c(
+  "% Citacao da linguagem R",
+  toBibtex(citation()),
+  "",
+  "% Citacao do pacote tidyverse",
+  toBibtex(citation("tidyverse")),
+  "",
+  "% Citacao do pacote corrplot",
+  toBibtex(citation("corrplot"))
+)
+writeLines(citacoes_bib, "results/citacoes.bib")
+log_ok("Citacoes bibliograficas salvas em results/citacoes.bib")
+log_info("Copie as chaves BibTeX geradas (@...{chave, ...) para o arquivo .bib do TCC e use \\cite{chave} no capitulo de Metodologia.")
+log_info("Reprodutibilidade: a semente fixa PIPELINE_SEED = %d (definida em UtilsPipeline.R) garante resultados reproduziveis em toda a pipeline.", PIPELINE_SEED)
+
 # --- Leitura -----------------------------------------------------------------
 arquivo <- "data/Indian Liver Patient Dataset (ILPD).csv"
 colunas <- c("Age", "Gender", "Total_Bilirubin", "Direct_Bilirubin",
