@@ -134,11 +134,11 @@ torna a segunda hipótese pouco provável.
 
 Calculou-se a frequência absoluta e relativa de cada classe da variável-alvo, o que 
 confirmou a razão de desbalanceamento de cerca de 2,5:1 descrita anteriormente 
-(Figura~\ref{fig:eda_distribuicao_alvo}). Esse diagnóstico justificou duas decisões metodológicas. A primeira
-foi usar \textbf{divisão estratificada} entre treino e teste, que preserva a mesma 
-proporção de classes nos dois conjuntos. A segunda foi aplicar técnicas de 
-balanceamento apenas no conjunto de treino. Essas decisões são detalhadas nas
-Seções~\ref{sec:divisao_treino_teste} e \ref{sec:balanceamento}. O diagnóstico também justificou o uso
+(Figura~\ref{fig:eda_distribuicao_alvo}). Esse diagnóstico justificou duas decisões metodológicas. 
+A primeira foi usar \textbf{divisão estratificada} entre treino e teste, que preserva a mesma 
+proporção de classes nos dois conjuntos, detalhada na Seção~\ref{sec:divisao_treino_teste}. 
+A segunda foi aplicar técnicas de balanceamento apenas no conjunto de treino, detalhada na 
+Seção~\ref{sec:balanceamento}. O diagnóstico também justificou o uso
 de métricas menos sensíveis ao desbalanceamento do que a acurácia, como a área sob 
 a curva ROC (AUC), a sensibilidade e a especificidade \cite{FAWCETT2006861, imbalancedata}.
 
