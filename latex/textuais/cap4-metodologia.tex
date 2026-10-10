@@ -1,0 +1,406 @@
+\chapter{Metodologia} \label{cap4}
+Este capítulo apresenta as técnicas e o protocolo experimental utilizados para a construção e avaliação dos modelos preditivos. Sua organização segue as etapas do processo de descoberta de conhecimento em bases de dados (KDD), portanto, nas próximas seções serão discutidos: as características específicas do dataset Indian Liver Patient Dataset, o pré-processamento e balanceamento dos dados, o treinamento e otimização dos modelos, a avaliação de desempenho, e a análise de explicabilidade via SHapley Additive exPlanations (SHAP).
+
+\section{Base de Dados}
+
+Neste projeto foi utilizado o Indian Liver Patient Dataset (ILPD) \cite{ramana2022ilpd}, 
+um dataset de 583 registros contendo dados bioquímicos relacionados ao fígado, 
+visando auxiliar na predição de patologias hepáticas. O dataset é composto por 10 atributos, 
+sendo 9 variáveis bioquímicas e 1 variável demográfica, além da variável-alvo que classifica 
+os pacientes em diagnosticados com doença hepática ou sem esse diagnóstico.
+
+\subsection{Caracterização das Variáveis}
+
+O conjunto de dados contém as seguintes variáveis preditoras:
+
+\begin{enumerate}
+    \item \textbf{Age}: idade do paciente em anos (numérica);
+    \item \textbf{Gender}: sexo do paciente, codificado como Male ou Female (categórica);
+    \item \textbf{Total\_Bilirubin}: concentração de bilirrubina total em mg/dL (numérica);
+    \item \textbf{Direct\_Bilirubin}: concentração de bilirrubina direta em mg/dL (numérica);
+    \item \textbf{Alkaline\_Phosphotase}: atividade de fosfatase alcalina em IU/L (numérica);
+    \item \textbf{Alamine\_Aminotransferase}: atividade de alanina aminotransferase (ALT/TGP) em IU/L (numérica);
+    \item \textbf{Aspartate\_Aminotransferase}: atividade de aspartato aminotransferase (AST/TGO) em IU/L (numérica);
+    \item \textbf{Total\_Proteins}: concentração de proteínas totais em g/dL (numérica);
+    \item \textbf{Albumin}: concentração de albumina em g/dL (numérica);
+    \item \textbf{AG\_Ratio}: razão albumina/globulina (numérica).
+\end{enumerate}
+
+A variável-alvo é binária, classificando os pacientes como portadores de doença hepática 
+(\textit{Dataset} = 1) ou não (\textit{Dataset} = 2), conforme diagnóstico clínico 
+estabelecido no momento da coleta. Cabe uma ressalva sobre o significado da segunda 
+classe: o rótulo \textit{Dataset} = 2 indica apenas que o paciente \textbf{não recebeu 
+diagnóstico de doença hepática} no momento da coleta, e não que ele seja comprovadamente 
+saudável. Essa distinção é relevante porque todos os indivíduos da base passaram por 
+exames laboratoriais hepáticos, o que sugere que havia alguma suspeita clínica inicial 
+mesmo nos casos sem diagnóstico confirmado. Ao longo deste trabalho, por simplicidade 
+de redação, os pacientes com \textit{Dataset} = 2 serão chamados de ``saudáveis'' ou 
+``não doentes'', mas o leitor deve ter em mente que o termo se refere à ausência de 
+diagnóstico registrado, e não a um estado de saúde verificado.
+
+\subsection{Distribuição das Classes e Desbalanceamento}
+
+O dataset apresenta desbalanceamento significativo de classes. Dos 583 registros originais, 
+416 pacientes (71,4\%) foram classificados como doentes hepáticos, enquanto 167 pacientes 
+(28,6\%) foram classificados como saudáveis, resultando em uma razão de aproximadamente 
+2,5:1 entre as classes. Essa distribuição desigual impõe desafios na modelagem, pois 
+classificadores ingênuos poderiam atingir alta acurácia simplesmente predizendo todos os 
+pacientes como doentes, sem capturar informações discriminativas reais.
+
+\subsection{Contexto e Limitações}
+
+Os dados foram coletados em pacientes do nordeste de Andhra Pradesh, Índia, representando 
+uma população geograficamente circunscrita. A caracterização clínica de ``doença hepática'' 
+no dataset é agregada, não diferenciando entre diferentes patologias hepáticas (hepatite, 
+cirrose, esteatose, etc.). Além disso, a base contém apenas 4 valores ausentes na variável 
+\textit{AG\_Ratio} e 13 registros duplicados, indicando qualidade geral satisfatória dos dados.
+
+O ILPD é um dataset amplamente utilizado na literatura de aprendizado de máquina aplicado 
+ao diagnóstico médico \cite{ramana2022ilpd}, permitindo comparação com estudos anteriores. 
+Contudo, seu tamanho reduzido (583 pacientes) e sua origem em uma população específica 
+limitam a generalização dos resultados para outras populações e contextos clínicos.
+
+\section{Análise Exploratória de Dados}
+
+Antes de qualquer transformação dos dados ou do treinamento de modelos, foi feita 
+uma Análise Exploratória de Dados (AED). A AED é uma etapa importante em qualquer 
+projeto de aprendizado de máquina, porque permite entender a estrutura, a qualidade 
+e o comportamento estatístico das variáveis antes de se tomar decisões de modelagem 
+\cite{exploratorydataanalysis}. 
+As decisões de pré-processamento descritas nas próximas seções, como a remoção de 
+duplicatas, a transformação logarítmica e a imputação de valores ausentes, foram 
+tomadas com base no que esta análise revelou, e não definidas \textit{a priori}.
+
+É importante ressaltar que a AED foi feita sobre o conjunto completo de dados, com finalidade 
+\textbf{apenas descritiva}. Nenhum parâmetro calculado nesta etapa (médias, medianas, 
+desvios-padrão) foi usado para transformar os dados que alimentam os modelos. Esses 
+parâmetros são estimados somente no conjunto de treino, depois da divisão treino/teste, 
+como explicado na seção seguinte. Esse cuidado evita o chamado \textit{vazamento de 
+dados} (\textit{data leakage}), em que informações do conjunto de teste contaminam o 
+treinamento e levam a estimativas de desempenho otimistas demais \cite{KaufmanScharRosset2012, KAPOOR2023100804}.
+
+Toda a análise foi implementada na linguagem R \cite{}, com os pacotes 
+\texttt{tidyverse} \cite{} para manipulação e visualização dos dados e 
+\texttt{corrplot} \cite{} para a visualização das matrizes de correlação. 
+Usou-se uma semente aleatória fixa ao longo de todo o \textit{pipeline}, para 
+garantir a reprodutibilidade dos resultados \cite{}.
+% TODO: Importar referência diretamente da pipeline usando a função cite(). 
+
+As etapas da análise exploratória são descritas a seguir.
+
+\subsection{Leitura e Verificação Estrutural}
+
+O arquivo original do ILPD é distribuído em formato CSV sem cabeçalho. Por isso, os 
+nomes das colunas foram atribuídos manualmente na leitura, seguindo a documentação 
+oficial do repositório UCI \cite{ramana2022ilpd}. Depois da leitura, conferiu-se 
+que o número de observações (583) e de atributos (11, contando a variável-alvo) 
+correspondia ao documentado, e verificou-se o tipo de cada variável. Essa conferência 
+garante que nenhuma coluna foi lida com tipo errado, como uma variável numérica 
+interpretada como texto por causa de um caractere inválido. Erros desse tipo passariam 
+despercebidos e comprometeriam todas as etapas seguintes.
+
+\subsection{Valores Ausentes}
+
+Contou-se a quantidade de valores ausentes em cada variável. Apenas o atributo 
+\textit{AG\_Ratio} apresentou dados faltantes: 4 registros, cerca de 0,69\% da base. 
+Como a proporção é muito pequena, descartaram-se as alternativas mais agressivas, 
+como excluir a variável ou usar métodos de imputação mais complexos (imputação 
+múltipla, imputação por $k$ vizinhos mais próximos). Optou-se pela imputação pela 
+\textbf{mediana}. A mediana é preferível à média porque é uma medida de tendência 
+central robusta, pouco afetada pelos valores extremos e pela assimetria típicos de 
+dados laboratoriais \cite{batistamonard2003}.
+
+Com uma quantidade tão pequena de ausências, é razoável supor que o método de 
+imputação tem impacto desprezível nos resultados \cite{acunaedgar}.
+
+\subsection{Registros Duplicados}
+
+Foram encontrados 13 registros exatamente duplicados, isto é, linhas idênticas em 
+todos os atributos, inclusive na variável-alvo. Nesta etapa exploratória eles foram 
+apenas identificados e mantidos, para que as estatísticas descritivas refletissem a 
+base original tal como é distribuída.
+
+A remoção desses registros, feita na etapa de pré-processamento, é importante por 
+dois motivos. O primeiro é que registros duplicados 
+podem acabar um no conjunto de treino e outro, idêntico, no conjunto de teste. 
+Nesse caso o modelo é avaliado em exemplos que já "viu" durante o treinamento, o 
+que infla artificialmente as métricas de desempenho \cite{KAPOOR2023100804}. O segundo é que 
+duplicatas dão peso desproporcional a certos padrões, distorcendo a distribuição 
+aprendida pelo modelo\cite{christenpeter2012}. Como a base não traz identificadores de paciente, não é 
+possível saber se as duplicatas são erros de registro ou pacientes distintos com 
+exames coincidentes. Mesmo assim, a coincidência exata em dez atributos contínuos 
+torna a segunda hipótese pouco provável.
+
+\subsection{Distribuição da Variável-Alvo e do Sexo}
+
+Calculou-se a frequência absoluta e relativa de cada classe da variável-alvo, o que 
+confirmou a razão de desbalanceamento de cerca de 2,5:1 descrita anteriormente 
+(Figura~\ref{}). Esse diagnóstico justificou duas decisões metodológicas. A primeira 
+foi usar \textbf{divisão estratificada} entre treino e teste, que preserva a mesma 
+proporção de classes nos dois conjuntos. A segunda foi aplicar técnicas de 
+balanceamento apenas no conjunto de treino (Seção~\ref{}). Também justificou o uso 
+de métricas menos sensíveis ao desbalanceamento do que a acurácia, como a área sob 
+a curva ROC (AUC), a sensibilidade e a especificidade \cite{FAWCETT2006861, imbalancedata}.
+
+Também se construiu uma tabela de contingência entre o sexo do paciente e a 
+variável-alvo. A base é composta majoritariamente por pacientes do sexo masculino 
+(cerca de 76\%). Esse desequilíbrio é relevante para o objetivo de interpretabilidade 
+deste trabalho: se um grupo demográfico está sub-representado, o modelo pode ter 
+desempenho desigual entre os grupos e aprender relações enviesadas \cite{Rajkomar2018Ensuring, investigatingbiashealth}. Por esse 
+motivo, a avaliação dos modelos e a análise de interpretabilidade foram feitas também 
+de forma estratificada por sexo.
+
+\subsection{Estatísticas Descritivas e Assimetria}
+
+Para cada uma das nove variáveis numéricas foram calculadas a média, o 
+desvio-padrão, o mínimo, a mediana, o máximo e o coeficiente de assimetria 
+(\textit{skewness}), apresentados na Tabela~\ref{tab:descritivas}. A 
+comparação entre média e mediana é especialmente informativa: como a mediana 
+é pouco afetada por valores extremos, uma média muito superior à mediana 
+indica que poucos valores elevados estão deslocando a média para cima 
+\cite{gettintoknowyourdata}.
+
+Para quantificar a assimetria de forma objetiva, utilizou-se o coeficiente 
+de assimetria amostral, definido como o terceiro momento padronizado:
+
+\begin{equation}
+    b_1 = \frac{1}{n}\sum_{i=1}^{n}\left(\frac{x_i - \bar{x}}{s}\right)^3,
+    \label{eq:assimetria}
+\end{equation}
+
+\noindent em que $n$ é o número de observações não ausentes, $\bar{x}$ é a 
+média amostral e $s$ é o desvio-padrão amostral, calculado com denominador 
+$n-1$. Como cada desvio é elevado ao cubo, o sinal é preservado e os valores 
+mais distantes da média passam a dominar a soma. Em distribuições simétricas, 
+as contribuições positivas e negativas se compensam e $b_1$ fica próximo de 
+zero; valores positivos indicam cauda longa à direita. Existem variantes 
+desse coeficiente que diferem apenas na correção para o tamanho da amostra, 
+mas, para o $n$ deste estudo, as diferenças entre elas são desprezíveis \cite{Joanes1998Comparing}.
+
+\begin{table}[htbp]
+\centering
+\caption{Estatísticas descritivas das variáveis numéricas do ILPD (base original, $n = 583$).}
+\label{tab:descritivas}
+\begin{tabular}{lrrrrrr}
+\hline
+\textbf{Variável} & \textbf{Média} & \textbf{DP} & \textbf{Mín.} & \textbf{Mediana} & \textbf{Máx.} & \textbf{$b_1$} \\
+\hline
+Age                         & 44,75  & 16,19  & 4    & 45   & 90    & $-0{,}03$ \\
+Total\_Bilirubin            & 3,30   & 6,21   & 0,4  & 1,0  & 75,0  & 4,88 \\
+Direct\_Bilirubin           & 1,49   & 2,81   & 0,1  & 0,3  & 19,7  & 3,20 \\
+Alkaline\_Phosphotase       & 290,58 & 242,94 & 63   & 208  & 2110  & 3,75 \\
+Alamine\_Aminotransferase   & 80,71  & 182,62 & 10   & 35   & 2000  & 6,52 \\
+Aspartate\_Aminotransferase & 109,91 & 288,92 & 10   & 42   & 4929  & 10,49 \\
+Total\_Proteins             & 6,48   & 1,09   & 2,7  & 6,6  & 9,6   & $-0{,}28$ \\
+Albumin                     & 3,14   & 0,80   & 0,9  & 3,1  & 5,5   & $-0{,}04$ \\
+AG\_Ratio\textsuperscript{a} & 0,95  & 0,32   & 0,3  & 0,93 & 2,8   & 0,99 \\
+\hline
+\multicolumn{7}{l}{\footnotesize DP: desvio-padrão; $b_1$: coeficiente de assimetria (Equação~\ref{eq:assimetria}).} \\
+\multicolumn{7}{l}{\footnotesize \textsuperscript{a} Calculado sobre as 579 observações não ausentes.} \\
+\end{tabular}
+\end{table}
+
+Adotou-se o critério $|b_1| > 2$ para identificar desvios substanciais da 
+normalidade, valor a partir do qual \citeonline[p.~26]{curran1996robustness} 
+observaram problemas significativos em procedimentos estatísticos, 
+classificando distribuições com assimetria 2,0 como moderadamente 
+não normais e com assimetria 3,0 como severamente não normais 
+\cite[p.~20]{curran1996robustness}. Cinco variáveis ultrapassaram esse 
+limiar: \textit{Total\_Bilirubin}, \textit{Direct\_Bilirubin}, 
+\textit{Alkaline\_Phosphotase}, \textit{Alamine\_Aminotransferase} e 
+\textit{Aspartate\_Aminotransferase}, com coeficientes entre 3,20 e 10,49, 
+todos superiores inclusive ao nível de não normalidade severa. As demais 
+variáveis não ultrapassaram 1,0 em valor absoluto. Dada essa separação 
+nítida, a seleção das variáveis a serem transformadas não depende da 
+escolha exata do limiar.
+
+Esse comportamento é esperado do ponto de vista clínico. Em indivíduos 
+saudáveis, bilirrubinas e enzimas hepáticas permanecem em faixas estreitas de 
+referência, mas, em pacientes com lesão ou disfunção hepática, podem atingir 
+valores várias vezes acima do limite superior da normalidade \cite{Giannini2005Liver, Kwo2016ACG}. Os 
+valores extremos, portanto, não são erros de medição, e sim a própria 
+manifestação laboratorial da doença que se deseja predizer. Removê-los 
+significaria descartar justamente os casos mais informativos. Por isso, 
+decidiu-se \textbf{não remover os \textit{outliers}} dessas variáveis \cite{Aggarwal2015}.
+
+\subsection{Comparação entre Classes}
+
+Para uma primeira avaliação do poder discriminativo de cada variável, compararam-se 
+as médias dos grupos de pacientes doentes e saudáveis com o \textbf{teste $t$ de 
+Welch}. Esse teste foi escolhido no lugar do teste $t$ de Student clássico porque não 
+supõe que as variâncias dos dois grupos sejam iguais. Essa suposição seria pouco 
+plausível aqui, dada a maior dispersão dos exames no grupo de doentes e a diferença 
+de tamanho entre os grupos \cite{psychologists}. Considerou-se o nível de significância de 5\%.
+
+As variáveis [VARIÁVEIS] apresentaram diferença estatisticamente significativa entre 
+as classes ($p < 0{,}05$), e as variáveis [VARIÁVEIS] não apresentaram (Tabela~\ref{}). 
+Essa análise é univariada: avalia cada variável isoladamente e não considera 
+interações nem efeitos combinados, que são justamente o que os modelos de aprendizado 
+de máquina conseguem capturar. Além disso, por causa da forte assimetria de algumas 
+variáveis, os resultados do teste devem ser lidos com cautela. Ainda assim, o teste 
+de Welch tende a ser robusto a desvios de normalidade em amostras deste tamanho, 
+pelo Teorema Central do Limite \cite{theimportanceofnormality}. Os resultados servem como referência para 
+comparar, no Capítulo de Resultados, com as importâncias de atributos obtidas por 
+meio dos valores SHAP.
+
+Também foram gerados \textit{boxplots} de cada variável numérica, separados por 
+classe (Figura~\ref{}). Eles permitem inspecionar visualmente a sobreposição entre as 
+distribuições dos dois grupos e a presença de valores extremos. Uma grande 
+sobreposição entre as classes indica que nenhum exame, sozinho, separa bem doentes de 
+saudáveis, o que motiva o uso de modelos multivariados.
+
+\subsection{Análise de Correlação}
+
+Por fim, calculou-se a matriz de correlação de Pearson entre as variáveis numéricas 
+(Figura~\ref{}). As observações com valores ausentes foram excluídas apenas para esse 
+cálculo. O objetivo foi identificar \textbf{multicolinearidade}, ou seja, pares de 
+variáveis que carregam praticamente a mesma informação. Adotou-se $|r| > 0{,}7$ como 
+limiar de correlação forte \cite{Dormann2012Collinearity, Mukaka2012Statistics}.
+
+Encontrou-se correlação forte nos pares [PARES, ex.: \textit{Total\_Bilirubin} × 
+\textit{Direct\_Bilirubin}, $r = $ X]. Essas correlações têm explicação fisiológica: 
+a bilirrubina direta é uma das frações que compõem a bilirrubina total 
+\cite{Fevery2008Bilirubin, Kwo2016ACG}, e a razão albumina/globulina é derivada 
+da albumina e das proteínas totais, uma vez que a globulina é obtida pela 
+diferença entre as duas \cite{Busher1990Albumin, Newsome2018Guidelines}.
+
+Mesmo com essa redundância, optou-se por \textbf{manter todas as variáveis}. A decisão 
+tem três motivos:
+\begin{enumerate}
+    \item Os modelos baseados em árvores (\textit{Random Forest}, XGBoost e LightGBM) 
+    são, em geral, robustos à multicolinearidade quanto ao desempenho preditivo 
+    \cite{Breiman2001RandomForests, Chen2016XGBoost, Ke2017LightGBM}. Em estudo de 
+    simulação com diferentes níveis de colinearidade, \citeonline{Dormann2012Collinearity} 
+    observaram que \textit{Random Forest} e árvores com \textit{boosting} mantiveram 
+    desempenho estável em dados de teste, degradando apenas sob correlações extremas 
+    ou quando a estrutura de correlação muda entre treino e teste, situação que não 
+    se aplica a este trabalho, pois treino e teste provêm da mesma base;
+    \item Excluir variáveis clinicamente relevantes contraria o objetivo de 
+    interpretabilidade deste trabalho, que é entender como os modelos usam os exames 
+    laboratoriais disponíveis;
+    \item A multicolinearidade afeta principalmente a \textit{interpretação} dos 
+    modelos, não sua capacidade preditiva \cite{Strobl2008Conditional, Dormann2012Collinearity}. 
+    No caso do método SHAP, a presença de variáveis correlacionadas pode levar à 
+    divisão da importância entre elas: como o modelo pode usar qualquer uma das 
+    variáveis redundantes para capturar a mesma informação, o crédito atribuído a 
+    cada uma individualmente tende a se diluir \cite{Aas2021Explaining, Chen2023Algorithms, Verdinelli2024Feature}. 
+    Esse efeito é particularmente relevante na variante do TreeSHAP utilizada 
+    neste trabalho para o XGBoost e o LightGBM, que estima as contribuições a 
+    partir da estrutura das próprias árvores e das frequências de passagem pelos 
+    nós, aproximando a distribuição condicional das variáveis 
+    \cite{Lundberg2020Trees, Chen2023Algorithms}. Já para o \textit{Random Forest}, 
+    cujos valores SHAP foram estimados por amostragem de Monte Carlo com permutação 
+    marginal, as variáveis são tratadas como independentes, o que evita a divisão 
+    de crédito mas pode avaliar o modelo em combinações de valores pouco plausíveis 
+    quando há dependência \cite{Chen2020TrueToModel}. Essa diferença entre 
+    estimadores é considerada explicitamente na discussão dos resultados.
+\end{enumerate}
+
+Como limitação, o coeficiente de Pearson mede apenas associações lineares e é 
+sensível a valores extremos: um único ponto atípico pode alterar substancialmente a 
+magnitude e até o sinal do coeficiente \cite{Schober2018Correlation, deWinter2016Comparing}. 
+Como as correlações foram calculadas na escala original, a presença de variáveis 
+muito assimétricas pode ter influenciado a magnitude dos coeficientes, uma vez que 
+distribuições com caudas pesadas tendem a inflar o valor de $r$ 
+\cite{Bishara2015Reducing, deWinter2016Comparing}.
+
+\subsection{Síntese}
+
+O Quadro~\ref{tab:sintese_aed} resume os principais achados da análise exploratória e 
+as decisões metodológicas que deles decorreram.
+
+\begin{table}[htbp]
+\centering
+\caption{Síntese dos achados da análise exploratória e decisões decorrentes.}
+\label{tab:sintese_aed}
+\begin{tabular}{p{6cm}p{8cm}}
+\hline
+\textbf{Achado} & \textbf{Decisão metodológica} \\
+\hline
+4 valores ausentes em \textit{AG\_Ratio} (0,69\%) & Imputação pela mediana, estimada apenas no treino \\
+13 registros duplicados & Remoção antes da divisão treino/teste \\
+Desbalanceamento de classes (2,5:1) & Divisão estratificada, balanceamento no treino e métricas como AUC \\
+Predominância do sexo masculino ($\approx$76\%) & Avaliação e análise SHAP estratificadas por sexo \\
+Forte assimetria em 5 variáveis ($|b_1| > 2$) & Transformação $\ln(1+x)$, sem remoção de \textit{outliers} \\
+Correlações fortes entre pares de variáveis & Manutenção das variáveis e cautela na interpretação SHAP \\
+Escalas heterogêneas entre exames & Padronização (\textit{z-score}) ajustada no treino \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Pré-processamento}
+
+\subsection{Remoção de Duplicatas}
+
+Os 13 registros duplicados identificados na análise exploratória foram removidos, 
+e a base passou de 583 para 570 registros.
+
+\subsection{Transformação Logarítmica}
+
+Às cinco variáveis assimétricas identificadas na análise exploratória aplicou-se a 
+transformação $x' = \ln(1 + x)$ (Seção~\ref{}) \cite{logtransformation}. O logaritmo comprime a cauda da 
+distribuição sem alterar a ordem entre as observações: na 
+\textit{Aspartate\_Aminotransferase}, por exemplo, o máximo, que era mais de 
+cem vezes maior que a mediana na escala original, passa a ser cerca de duas 
+vezes maior na escala transformada. Após a transformação, calculada sobre a 
+base já sem os registros duplicados ($n = 570$), os coeficientes de 
+assimetria passaram a variar entre 1,24 e 1,72, todos abaixo do limiar 
+adotado (Tabela~\ref{tab:assimetria_log}). A soma de uma unidade antes do 
+logaritmo garante que a transformação seja bem definida para valores 
+próximos de zero, como os da \textit{Direct\_Bilirubin} (mínimo de 0,1 mg/dL).
+
+Observe-se que os valores da coluna ``Antes'' da Tabela~\ref{tab:assimetria_log} 
+diferem ligeiramente dos apresentados na Tabela~\ref{tab:descritivas}. A diferença 
+não é um erro: a Tabela~\ref{tab:descritivas} descreve a base original completa 
+($n = 583$), enquanto a Tabela~\ref{tab:assimetria_log} foi calculada após a 
+remoção dos 13 registros duplicados ($n = 570$), que é a base efetivamente usada 
+no pré-processamento. Como o coeficiente de assimetria é sensível à composição 
+exata da amostra, a exclusão de poucas observações já produz pequenas variações 
+nas casas decimais, sem alterar nenhuma das conclusões.
+
+Cabe ainda um esclarecimento sobre o momento em que essa transformação é aplicada. 
+Diferentemente da imputação pela mediana e da padronização, que dependem de 
+parâmetros estimados a partir dos dados (mediana, média e desvio-padrão do 
+treino), a transformação $\ln(1+x)$ é \textbf{determinística e livre de 
+parâmetros}: o valor transformado de cada observação depende exclusivamente 
+dela mesma, e não de nenhuma estatística do conjunto. Por isso, aplicá-la antes 
+da divisão treino/teste, como foi feito neste trabalho, não introduz vazamento 
+de dados, pois nenhuma informação do conjunto de teste é usada para definir a 
+transformação \cite{KaufmanScharRosset2012}. O mesmo não valeria, por exemplo, 
+para uma transformação de Box-Cox, cujo expoente $\lambda$ é estimado a partir 
+dos dados e, portanto, deveria ser ajustado apenas no treino.
+
+\begin{table}[htbp]
+\centering
+\caption{Coeficiente de assimetria ($b_1$) antes e depois da transformação $\ln(1+x)$ ($n = 570$).}
+\label{tab:assimetria_log}
+\begin{tabular}{lrr}
+\hline
+\textbf{Variável} & \textbf{Antes} & \textbf{Depois} \\
+\hline
+Total\_Bilirubin            & 4,84  & 1,72 \\
+Direct\_Bilirubin           & 3,17  & 1,68 \\
+Alkaline\_Phosphotase       & 3,71  & 1,32 \\
+Alamine\_Aminotransferase   & 6,66  & 1,46 \\
+Aspartate\_Aminotransferase & 10,50 & 1,24 \\
+\hline
+\end{tabular}
+\end{table}
+
+A transformação é especialmente relevante para a Regressão Logística, que 
+assume relação linear entre os preditores e o logaritmo da razão de chances 
+e é sensível a observações extremas \cite{Hosmer2005Applied}. Na escala logarítmica, o efeito 
+de cada exame passa a depender de variações proporcionais, como dobrar o 
+valor de uma enzima, o que é mais coerente com a interpretação clínica desses 
+marcadores. Já os modelos baseados em árvores de decisão são, em princípio, 
+invariantes a transformações monotônicas, pois suas divisões dependem apenas 
+da ordem dos valores \cite{elementsofstatiscal}. Ainda assim, a transformação foi aplicada a 
+todos os modelos, para que fossem comparados sobre a mesma representação dos 
+dados, o que também facilita a leitura dos gráficos de dependência SHAP, nos 
+quais os pacientes passam a se distribuir de forma mais uniforme ao longo do 
+eixo horizontal.
+
+\subsection{Imputação de Valores Ausentes}
+
+A mediana foi calculada exclusivamente no conjunto de treino e depois aplicada a 
+ambos os conjuntos (Seção~\ref{}).
