@@ -240,8 +240,34 @@ supõe que as variâncias dos dois grupos sejam iguais. Essa suposição seria p
 plausível aqui, dada a maior dispersão dos exames no grupo de doentes e a diferença 
 de tamanho entre os grupos \cite{psychologists}. Considerou-se o nível de significância de 5\%.
 
-As variáveis [VARIÁVEIS] apresentaram diferença estatisticamente significativa entre % TODO: preencher [VARIÁVEIS] com os resultados reais do teste t de Welch.
-as classes ($p < 0{,}05$), e as variáveis [VARIÁVEIS] não apresentaram. % TODO: preencher [VARIÁVEIS] e inserir a tabela de resultados do teste t de Welch e sua referência (Tabela~\ref{}).
+As variáveis \textit{Age}, \textit{Total\_Bilirubin}, \textit{Direct\_Bilirubin}, 
+\textit{Alkaline\_Phosphotase}, \textit{Alamine\_Aminotransferase}, 
+\textit{Aspartate\_Aminotransferase}, \textit{Albumin} e \textit{AG\_Ratio} 
+apresentaram diferença estatisticamente significativa entre as classes 
+($p < 0{,}05$), e apenas a variável \textit{Total\_Proteins} não apresentou 
+diferença significativa ($p = 0{,}393$), conforme a Tabela~\ref{tab:teste_welch}.
+
+\begin{table}[htbp]
+\centering
+\caption{Resultado do teste $t$ de Welch entre as classes doente e saudável.}
+\label{tab:teste_welch}
+\begin{tabular}{lrrrl}
+\hline
+\textbf{Variável} & \textbf{Média Doente} & \textbf{Média Saudável} & \textbf{$p$-valor} & \textbf{Signif.} \\
+\hline
+Age                         & 46,15  & 41,24 & 0,0014   & sim \\
+Total\_Bilirubin            & 4,16   & 1,14  & $<0{,}001$ & sim \\
+Direct\_Bilirubin           & 1,92   & 0,40  & $<0{,}001$ & sim \\
+Alkaline\_Phosphotase       & 319,01 & 219,75 & $<0{,}001$ & sim \\
+Alamine\_Aminotransferase   & 99,61  & 33,65 & $<0{,}001$ & sim \\
+Aspartate\_Aminotransferase & 137,70 & 40,69 & $<0{,}001$ & sim \\
+Total\_Proteins             & 6,46   & 6,54  & 0,3932   & não \\
+Albumin                     & 3,06   & 3,34  & $<0{,}001$ & sim \\
+AG\_Ratio                   & 0,91   & 1,03  & $<0{,}001$ & sim \\
+\hline
+\end{tabular}
+\end{table}
+
 Essa análise é univariada: avalia cada variável isoladamente e não considera 
 interações nem efeitos combinados, que são justamente o que os modelos de aprendizado 
 de máquina conseguem capturar. Além disso, por causa da forte assimetria de algumas 
@@ -279,9 +305,10 @@ limiar de correlação forte \cite{Dormann2012Collinearity, Mukaka2012Statistics
 \label{fig:eda_correlacao}
 \end{figure}
 
-% TODO: preencher [PARES, ex.: ...] e os coeficientes r com os resultados reais da análise de correlação.
-Encontrou-se correlação forte nos pares [PARES, ex.: \textit{Total\_Bilirubin} × 
-\textit{Direct\_Bilirubin}, $r = $ X]. Essas correlações têm explicação fisiológica: 
+Encontrou-se correlação forte nos pares \textit{Total\_Bilirubin} × 
+\textit{Direct\_Bilirubin} ($r = 0{,}874$), \textit{Alamine\_Aminotransferase} × 
+\textit{Aspartate\_Aminotransferase} ($r = 0{,}792$) e \textit{Total\_Proteins} × 
+\textit{Albumin} ($r = 0{,}783$). Essas correlações têm explicação fisiológica: 
 a bilirrubina direta é uma das frações que compõem a bilirrubina total 
 \cite{Fevery2008Bilirubin, Kwo2016ACG}, e a razão albumina/globulina é derivada 
 da albumina e das proteínas totais, uma vez que a globulina é obtida pela 
@@ -334,18 +361,19 @@ as decisões metodológicas que deles decorreram.
 
 \begin{table}[htbp]
 \centering
+\small
 \caption{Síntese dos achados da análise exploratória e decisões decorrentes.}
 \label{tab:sintese_aed}
-\begin{tabular}{p{6cm}p{8cm}}
+\begin{tabular}{p{6.2cm}p{7.3cm}}
 \hline
 \textbf{Achado} & \textbf{Decisão metodológica} \\
 \hline
-4 valores ausentes em \textit{AG\_Ratio} (0,69\%) & Imputação pela mediana, estimada apenas no treino \\
-13 registros duplicados & Remoção antes da divisão treino/teste \\
-Desbalanceamento de classes (2,5:1) & Divisão estratificada, balanceamento no treino e métricas como AUC \\
-Predominância do sexo masculino ($\approx$76\%) & Avaliação e análise SHAP estratificadas por sexo \\
-Forte assimetria em 5 variáveis ($|b_1| > 2$) & Transformação $\ln(1+x)$, sem remoção de \textit{outliers} \\
-Correlações fortes entre pares de variáveis & Manutenção das variáveis e cautela na interpretação SHAP \\
+4 valores ausentes em \textit{AG\_Ratio} (0,69\%) & Imputação pela mediana, estimada apenas no treino \\[2pt]
+13 registros duplicados & Remoção antes da divisão treino/teste \\[2pt]
+Desbalanceamento de classes (2,5:1) & Divisão estratificada, balanceamento no treino e métricas como AUC \\[2pt]
+Predominância do sexo masculino ($\approx$76\%) & Avaliação e análise SHAP estratificadas por sexo \\[2pt]
+Forte assimetria em 5 variáveis ($|b_1| > 2$) & Transformação $\ln(1+x)$, sem remoção de \textit{outliers} \\[2pt]
+Correlações fortes entre pares de variáveis & Manutenção das variáveis e cautela na interpretação SHAP \\[2pt]
 Escalas heterogêneas entre exames & Padronização (\textit{z-score}) ajustada no treino \\
 \hline
 \end{tabular}
@@ -415,7 +443,7 @@ assume relação linear entre os preditores e o logaritmo da razão de chances
 e é sensível a observações extremas \cite{Hosmer2005Applied}. Na escala logarítmica, o efeito 
 de cada exame passa a depender de variações proporcionais, como dobrar o 
 valor de uma enzima, o que é mais coerente com a interpretação clínica desses 
-marcadores. Já os modelos baseados em árvores de decisão são, em princípio, 
+marcadores. Já os modelos baseados em árvores de decis��o são, em princípio, 
 invariantes a transformações monotônicas, pois suas divisões dependem apenas 
 da ordem dos valores \cite{elementsofstatiscal}. Ainda assim, a transformação foi aplicada a 
 todos os modelos, para que fossem comparados sobre a mesma representação dos 
@@ -428,12 +456,13 @@ eixo horizontal.
 
 Após as transformações determinísticas, os dados foram divididos em conjuntos
 de treino e teste na proporção de 80\% e 20\%, respectivamente, por meio da
-função \texttt{caret::createDataPartition}. A divisão foi estratificada pela
-variável-alvo, preservando a proporção das classes em ambos os conjuntos. A
-semente fixa definida por \texttt{PIPELINE\_SEED} garante a reprodutibilidade
-dessa partição. Essa divisão ocorre antes da imputação e da padronização, de
-modo que seus parâmetros sejam estimados exclusivamente no conjunto de treino,
-evitando o vazamento de informação do teste \cite{KaufmanScharRosset2012}.
+função \texttt{createDataPartition} do pacote \texttt{caret}. A divisão foi
+estratificada pela variável-alvo, preservando a proporção das classes em ambos
+os conjuntos. Uma semente aleatória fixa, definida uma única vez no início do
+\textit{pipeline}, garante a reprodutibilidade dessa partição. Essa divisão
+ocorre antes da imputação e da padronização, de modo que os parâmetros dessas
+duas etapas sejam estimados exclusivamente no conjunto de treino, evitando o
+vazamento de informação do conjunto de teste \cite{KaufmanScharRosset2012}.
 
 \subsection{Imputação de Valores Ausentes}
 
