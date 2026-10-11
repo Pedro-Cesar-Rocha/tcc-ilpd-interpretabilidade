@@ -770,15 +770,14 @@ Os quatro modelos foram treinados com o pacote \texttt{caret} \cite{},
 % preditivos no R?"
 que oferece uma interface unificada para o ajuste de diferentes algoritmos, a
 reamostragem e a otimização de hiperparâmetros. O mesmo protocolo foi aplicado a todos
-os modelos, e todo o processo utilizou
+os modelos, sempre com ``doente'' como classe positiva, e todo o processo utilizou
 exclusivamente os 457 pacientes do conjunto de treino; o conjunto de teste foi
-reservado para a avaliação final (Seção~\ref{sec:avaliacao_desempenho}). A AUC-ROC,
-usada na seleção, independe da classe tomada como referência; já a sensibilidade e a
-especificidade registradas na validação cruzada pela função \texttt{twoClassSummary}
-do \texttt{caret} tomam como evento o primeiro nível da variável-alvo, ``saudável'', de
-modo que a sensibilidade registrada nessa etapa corresponde à especificidade em relação
-à classe ``doente'', e vice-versa. No conjunto de teste, ``doente'' foi definida
-explicitamente como a classe positiva.
+reservado para a avaliação final (Seção~\ref{sec:avaliacao_desempenho}). Como a função
+\texttt{twoClassSummary} do \texttt{caret}, empregada no cálculo das métricas em cada
+partição, toma como evento o primeiro nível da variável-alvo (``saudável''), a
+sensibilidade e a especificidade por ela retornadas foram permutadas, de modo que
+também na validação cruzada ambas se refiram à classe ``doente''; a AUC-ROC, utilizada
+na seleção dos modelos, independe dessa convenção.
 
 \subsection{Validação Cruzada Repetida}
 \label{sec:validacao_cruzada}
