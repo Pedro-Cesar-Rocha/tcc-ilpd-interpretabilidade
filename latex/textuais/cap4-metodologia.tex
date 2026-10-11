@@ -789,10 +789,13 @@ categoria válida mais próxima. Como o ponto sorteado é o mesmo para todas as
 variáveis, a amostra sintética herda o sexo do paciente de origem do qual está mais
 próxima no segmento de interpolação. As variáveis contínuas permanecem interpoladas,
 os pacientes reais não são alterados e a busca pelos vizinhos continua a considerar
-todas as variáveis padronizadas, inclusive \textit{Gender}. A correção vale para todas
-as iterações da validação cruzada e para o ajuste dos modelos finais, e o diagnóstico
-do balanceamento sobre o conjunto de treino completo verifica que as amostras
-sintéticas contêm apenas os dois valores válidos dessa variável.
+todas as variáveis padronizadas, inclusive \textit{Gender}. Como a diferença entre os
+dois valores padronizados dessa variável pesa na distância, os vizinhos mais próximos
+tendem a ser do mesmo sexo, e os pares de sexos diferentes, embora possíveis, são
+pouco frequentes. A correção vale para todas as iterações da validação cruzada e para
+o ajuste dos modelos finais. O diagnóstico do balanceamento sobre o conjunto de treino
+completo registra quantas amostras sintéticas precisaram ser corrigidas e verifica
+que todas contêm apenas os dois valores válidos dessa variável.
 
 \subsection{Otimização de Hiperparâmetros}
 \label{sec:otimizacao_hiperparametros}
