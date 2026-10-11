@@ -468,3 +468,260 @@ partição de treino de cada \textit{fold}, após a separação dos \textit{fold
 Assim, as amostras sintéticas não contaminam as partições de validação — o que
 poderia ocorrer se o balanceamento fosse feito antes da divisão — nem inflacionam
 artificialmente as métricas de desempenho.
+
+\section{Modelos Preditivos}
+
+Foram comparados quatro classificadores com diferentes graus de flexibilidade:
+um modelo linear, empregado como referência interpretável, e três métodos
+baseados em árvores, capazes de representar relações não lineares e interações
+entre os preditores. Essa comparação permite examinar se a maior flexibilidade
+dos modelos de conjunto oferece vantagens preditivas em relação a uma
+abordagem linear, sem pressupor de antemão qual método terá o melhor
+desempenho. A classe positiva considerada no treinamento é ``doente''.
+
+\subsection{Regressão Logística}
+
+A Regressão Logística modela a probabilidade de pertencimento à classe positiva
+por meio da função logística aplicada a uma combinação linear dos preditores.
+Embora seja um classificador linear na escala dos logitos, a transformação
+logística produz probabilidades entre zero e um. Seus coeficientes descrevem
+a variação nos logitos associada aos preditores, mantidos os demais constantes;
+a exponenciação de cada coeficiente fornece a correspondente razão de chances
+(\textit{odds ratio}) \cite{Hosmer2005Applied, elementsofstatiscal}.
+
+Neste estudo, ajustou-se o modelo binomial sem busca de hiperparâmetros. Ele foi
+incluído como \textit{baseline} por combinar uma formulação estatística
+conhecida com interpretação direta dos coeficientes, oferecendo um ponto de
+comparação para os métodos de árvores. Como os preditores numéricos foram
+padronizados, os coeficientes correspondem a variações de uma unidade na escala
+padronizada; suas exponenciais são apresentadas como razões de chances.
+
+\subsection{Random Forest}
+
+O Random Forest constrói um conjunto de árvores de decisão a partir de
+reamostragens dos dados e de subconjuntos aleatórios de preditores considerados
+nas divisões. Para classificação, as árvores contribuem para a previsão
+agregada do conjunto. A aleatorização e a agregação visam reduzir a variância
+em relação a uma árvore individual, preservando a capacidade de representar
+relações não lineares \cite{Breiman2001RandomForests}.
+
+Esse método foi incluído por oferecer uma estratégia de \textit{bagging}
+robusta e não linear, distinta do ajuste aditivo por boosting dos outros
+métodos de árvores. No treinamento, foram utilizadas 500 árvores; os demais
+parâmetros considerados pelo classificador foram selecionados no procedimento
+de busca descrito na seção seguinte.
+
+\subsection{XGBoost}
+
+O XGBoost é um método de \textit{gradient boosting} que constrói árvores
+sequencialmente: cada nova etapa busca reduzir a função de perda, levando em
+conta os erros do conjunto de árvores já ajustado. A implementação acrescenta
+recursos de regularização e eficiência computacional ao processo de
+aprendizado de árvores \cite{Chen2016XGBoost}.
+
+Sua inclusão permite avaliar uma abordagem de boosting amplamente utilizada,
+com mecanismos de regularização e uma implementação otimizada, em contraste
+com a agregação por reamostragem do Random Forest. Os parâmetros da variante
+de árvores do XGBoost foram selecionados por busca aleatória, conforme o
+protocolo de treinamento.
+
+\subsection{LightGBM}
+
+O LightGBM é outro método de \textit{gradient boosting} baseado em árvores,
+projetado para treinar de forma eficiente em conjuntos de dados de maior
+dimensão. Sua estratégia de crescimento das árvores e suas técnicas de
+amostragem e representação de atributos buscam reduzir o custo computacional
+sem abandonar o ajuste sequencial característico do boosting
+\cite{Ke2017LightGBM}.
+
+O método foi incluído para comparar uma implementação de boosting com
+estratégia de eficiência distinta à do XGBoost. Como o ambiente de treinamento
+utilizado não oferece suporte nativo ao LightGBM, a integração foi feita por
+meio de um adaptador compatível com a interface de treinamento empregada no
+pipeline; seus hiperparâmetros foram submetidos à mesma busca aleatória dos
+demais modelos ajustáveis.
+
+\section{Treinamento e Validação Cruzada}
+
+O treinamento e a seleção de modelos foram conduzidos apenas com o conjunto de
+treino, preservando o conjunto de teste separado para a avaliação final. Para
+estimar o desempenho durante o desenvolvimento, utilizou-se validação cruzada
+repetida, com cinco partições (\textit{folds}) e três repetições. Em cada
+rodada, quatro partições são usadas para ajuste e a partição restante para
+validação; as repetições submetem os modelos a partições distintas e reduzem
+a dependência dos resultados em relação a uma única divisão aleatória dos
+dados.
+
+Nos modelos que possuem parâmetros de ajuste, foram avaliadas 30 combinações
+amostradas por busca aleatória. Em comparação com uma grade exaustiva, a busca
+aleatória permite explorar valores distintos em cada dimensão do espaço de
+hiperparâmetros, sem exigir a avaliação de todas as combinações cartesianas;
+essa abordagem é particularmente útil quando apenas parte dos parâmetros
+influencia fortemente o desempenho \cite{}% TODO: buscar Bergstra e Bengio (2012), “Random Search for Hyper-Parameter Optimization”. Prompt para Consensus: “Qual é o artigo de Bergstra e Bengio, publicado em 2012, que compara busca aleatória e busca em grade para otimização de hiperparâmetros, e quais são seus principais argumentos de eficiência?”
+A Regressão Logística, ajustada sem hiperparâmetros a otimizar, não requer essa
+busca.
+
+A seleção dos modelos e das combinações de hiperparâmetros foi baseada na área
+sob a curva ROC (AUC-ROC), calculada a partir das probabilidades estimadas para
+a classe positiva. A AUC resume a capacidade de ordenação dos casos positivos
+acima dos negativos ao longo dos limiares, sem depender de um único ponto de
+corte. Por isso, complementa a acurácia, que pode ser enganosa quando as
+classes têm frequências diferentes: como discutido na Análise Exploratória,
+um classificador pode obter acurácia aparentemente alta favorecendo a classe
+mais frequente sem discriminar adequadamente os casos da classe minoritária
+\cite{FAWCETT2006861, imbalancedata}.
+
+O desbalanceamento foi tratado dentro do procedimento de reamostragem: em cada
+\textit{fold}, o SMOTE é aplicado somente à partição usada para ajustar o
+modelo, depois da separação da partição de validação. Dessa forma, as
+observações sintéticas não são compartilhadas com a validação, evitando
+vazamento de informação e mantendo a estimativa de desempenho baseada em dados
+não balanceados artificialmente.
+
+Ao final da validação cruzada, os resultados dos quatro modelos foram
+comparados pela distribuição das AUCs nos \textit{folds}, apresentada em
+gráfico de caixas, e por testes t pareados com correção de Bonferroni para as
+comparações entre pares. A comparação pareada considera que os modelos foram
+avaliados nas mesmas partições; a correção de Bonferroni controla o aumento do
+erro tipo I decorrente das comparações múltiplas. A literatura sobre
+comparação estatística de classificadores discute as escolhas e limitações
+desses procedimentos \cite{}% TODO: buscar Janez Demšar (2006), “Statistical Comparisons of Classifiers over Multiple Data Sets”. Prompt para Consensus: “Quais procedimentos estatísticos Demšar recomenda em 2006 para comparar classificadores e quais são as limitações de testes pareados sobre resultados de validação cruzada?”
+
+\section{Avaliação de Desempenho}
+
+Após a seleção e o ajuste dos modelos, o desempenho foi medido no conjunto de
+teste, que não participou do treinamento, da seleção de hiperparâmetros nem da
+geração de amostras SMOTE. Esse conjunto manteve a distribuição observada das
+classes, de modo que as métricas finais reflitam a prevalência original dos
+dados e não uma distribuição artificialmente balanceada. Para cada modelo,
+foram obtidas as previsões de classe e as probabilidades estimadas para
+``doente''.
+
+A matriz de confusão resume verdadeiros positivos, verdadeiros negativos,
+falsos positivos e falsos negativos para um limiar de decisão. No limiar padrão
+de 0,5, a partir dela foram calculadas a acurácia, a acurácia balanceada, a
+sensibilidade, a especificidade, a precisão, a medida F1 e a estatística Kappa;
+a AUC-ROC foi calculada a partir das probabilidades. A sensibilidade corresponde à
+proporção de doentes identificados, enquanto a especificidade corresponde à
+proporção de não doentes identificados. A precisão expressa a proporção de
+previsões positivas que são de fato positivas, e a medida F1 resume o
+equilíbrio entre precisão e sensibilidade. A acurácia balanceada dá peso
+igual à sensibilidade e à especificidade, e o Kappa expressa a concordância
+entre classe prevista e observada descontada a concordância esperada ao acaso.
+Para a AUC de cada modelo, foram calculados intervalos de confiança de 95\%
+pelo método de DeLong.
+
+Considerar a acurácia isoladamente seria inadequado diante do desbalanceamento
+identificado na AED: ela pode ser dominada pelo desempenho na classe mais
+frequente e ocultar erros na classe minoritária. Por essa razão, a avaliação
+considera conjuntamente métricas por classe, acurácia balanceada e AUC, em
+consonância com a discussão sobre curvas ROC e classificação em bases
+desbalanceadas \cite{FAWCETT2006861, imbalancedata}. Também foram construídas
+curvas Precision--Recall. Como elas relacionam precisão e sensibilidade da
+classe positiva, complementam a curva ROC ao tornar explícito o compromisso
+entre encontrar casos doentes e limitar os falsos positivos em um cenário no
+qual a prevalência da classe positiva não é majoritária.
+
+Além do limiar padrão de 0,5, foram examinados dois critérios de decisão. O
+primeiro é o limiar que maximiza o índice de Youden, definido pela soma da
+sensibilidade e da especificidade menos um. O segundo é um limiar clínico
+escolhido para garantir sensibilidade de pelo menos 90\%, selecionando, entre
+os limiares que atendem a essa meta, aquele que preserva a maior especificidade
+possível. Essa análise prioriza a redução de falsos negativos — pacientes
+doentes classificados como não doentes —, erro considerado especialmente
+crítico em um cenário de triagem clínica, no qual um resultado negativo
+equivocado pode atrasar a investigação diagnóstica \cite{}% TODO: buscar literatura de diagnóstico médico sobre custo assimétrico de falsos negativos e priorização de sensibilidade em triagem. Prompt para Consensus: “Que estudos ou diretrizes de diagnóstico clínico discutem o custo de falsos negativos e justificam priorizar alta sensibilidade em testes de triagem médica?”
+
+As AUCs dos quatro modelos no conjunto de teste também foram comparadas em
+pares pelo teste de DeLong para curvas ROC. O método permite avaliar a
+diferença entre áreas sem tratar as estimativas das curvas como independentes
+quando são obtidas nos mesmos pacientes \cite{}% TODO: buscar Elizabeth R. DeLong, David M. DeLong e Daniel L. Clarke-Pearson (1988), “Comparing the Areas under Two or More Correlated Receiver Operating Characteristic Curves: A Nonparametric Approach”. Prompt para Consensus: “Qual método não paramétrico DeLong, DeLong e Clarke-Pearson propuseram em 1988 para comparar as áreas sob duas ou mais curvas ROC correlacionadas?”
+
+Por fim, as métricas foram calculadas separadamente para pacientes do sexo
+feminino e masculino, como continuação da preocupação com a predominância
+masculina observada na AED. Para cada grupo foram estimadas AUC e seu intervalo
+de confiança de 95\%, sensibilidade e especificidade. A diferença de AUC entre
+os grupos foi avaliada pelo teste de DeLong para amostras independentes, e
+também foram examinadas as diferenças de sensibilidade e especificidade. Essa
+estratificação permite identificar possíveis disparidades de desempenho e
+risco desigual de falsos negativos, sem, por si só, estabelecer sua causa;
+essa auditoria é relevante diante das preocupações com viés algorítmico em
+saúde \cite{Rajkomar2018Ensuring, investigatingbiashealth}. As diferenças
+devem ser interpretadas com cautela, considerando a quantidade de observações
+disponíveis em cada grupo.
+
+\section{Interpretabilidade com SHAP}
+
+Os valores SHAP (\textit{SHapley Additive exPlanations}) adaptam os valores de
+Shapley da teoria dos jogos cooperativos para atribuir a cada preditor uma
+contribuição à previsão de um modelo. Para uma observação, cada contribuição
+representa a parcela associada à variável na diferença entre uma previsão de
+referência e a previsão obtida para aquela observação, segundo a definição do
+valor de Shapley. Essa formulação fornece explicações locais aditivas, que
+podem também ser agregadas para descrever padrões globais \cite{}% TODO: buscar Scott M. Lundberg e Su-In Lee (2017), “A Unified Approach to Interpreting Model Predictions”, artigo original que introduziu SHAP. Prompt para Consensus: “Qual artigo de Lundberg e Lee, publicado em 2017, introduziu SHAP como uma abordagem unificada para interpretar previsões de modelos de machine learning?”
+
+O cálculo depende do tipo de modelo. Para XGBoost e LightGBM, foram usados
+valores TreeSHAP exatos, obtidos pelas contribuições nativas das árvores. No
+fluxo adotado, essas contribuições estão na escala de logitos (\textit{log-odds});
+valores positivos deslocam a previsão em direção à classe ``doente'' e valores
+negativos em direção à classe ``saudável''. TreeSHAP permite calcular as
+atribuições para modelos de árvores explorando sua estrutura
+\cite{Lundberg2020Trees}.
+
+Para o Random Forest, utilizou-se o pacote \textit{fastshap} para obter uma
+estimativa amostral de SHAP por Monte Carlo, com 100 simulações por explicação
+e na escala de probabilidade. Essa
+escolha decorre de o fluxo utilizado não dispor de TreeSHAP exato para o
+Random Forest. A estimativa amostral aproxima as contribuições a partir de
+coalizões de variáveis; diferentemente do cálculo TreeSHAP empregado para os
+modelos de boosting, o procedimento adotado trata as variáveis como
+independentes ao construir as amostras de referência. As diferenças de
+algoritmo e de escala devem ser consideradas ao interpretar e comparar os
+valores obtidos \cite{}% TODO: buscar o trabalho original sobre Kernel SHAP e amostragem de valores de Shapley, associado a Scott M. Lundberg e Su-In Lee (2017), “A Unified Approach to Interpreting Model Predictions”, e verificar a formulação de Shapley Sampling Values. Prompt para Consensus: “Qual publicação original descreve Kernel SHAP e a aproximação amostral dos valores de Shapley para explicar previsões de modelos, e como o método amostra coalizões de variáveis?”
+
+Os coeficientes e respectivas razões de chances da Regressão Logística
+fornecem uma representação direta dos efeitos estimados, de modo que esse
+modelo não integra a seleção padrão de modelos a explicar. A regra também
+inclui o melhor modelo no teste segundo a AUC; caso a Regressão Logística
+ocupe essa posição, ela é incluída nessa seleção. Assim, são explicados o
+XGBoost, o Random Forest e o melhor modelo no teste, removendo-se duplicatas.
+
+Para cada modelo explicado, a importância global de uma variável é calculada
+pela média do valor absoluto de SHAP entre os pacientes; ela resume a
+magnitude média da contribuição, mas não informa sua direção. O gráfico
+\textit{beeswarm} mostra a distribuição das contribuições individuais e
+relaciona sua posição com os valores das variáveis, permitindo observar
+heterogeneidade entre pacientes. A direção do efeito também é examinada pela
+correlação entre o valor de cada variável e seu valor SHAP; essa associação é
+descritiva e não deve ser interpretada como efeito causal. Para as quatro
+variáveis de maior importância, gráficos de dependência mostram como as
+contribuições variam ao longo dos valores observados. Por fim, gráficos
+\textit{waterfall} decompõem previsões individuais em relação ao valor de
+referência, mostrando como as contribuições de cada variável conduzem à
+previsão do paciente.
+
+As explicações locais são produzidas para três casos definidos a partir do
+conjunto de teste: o verdadeiro positivo com maior probabilidade estimada de
+doença, o verdadeiro negativo com menor probabilidade estimada de doença e o
+falso negativo de pior erro, isto é, o paciente doente com menor probabilidade
+estimada de pertencer à classe positiva. A seleção torna possível examinar
+tanto previsões corretas de maior confiança quanto um caso particularmente
+crítico de doença não identificada.
+
+Como aprofundamento da avaliação de desempenho por sexo, a importância SHAP
+também é calculada separadamente para os grupos feminino e masculino. A
+concordância entre os rankings de importância de cada grupo é resumida pela
+correlação de Spearman; adicionalmente, examina-se a contribuição SHAP média
+com sinal da variável \textit{Gender} em cada grupo. Essas análises descrevem
+se o modelo distribui e direciona suas contribuições de modo semelhante
+entre os grupos, sem substituir a avaliação de disparidades de desempenho nem
+permitir, isoladamente, inferências causais.
+
+Por último, os rankings de importância são comparados entre os quatro
+classificadores. Para XGBoost e Random Forest são consideradas as importâncias
+SHAP; para Random Forest e LightGBM também se obtêm importâncias nativas dos
+modelos, e para a Regressão Logística usa-se o valor absoluto dos coeficientes
+padronizados. A concordância entre esses rankings é examinada por correlação
+de Spearman. Como as medidas de importância têm definições e escalas
+diferentes, a comparação enfatiza a ordenação relativa das variáveis, e não a
+equivalência numérica das contribuições.
