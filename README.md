@@ -374,16 +374,16 @@ Note que o balanceamento **não é perfeito** (55% / 45%). Essa foi uma escolha 
 
 | Modelo | AUC média | DP | AUC mín | AUC máx | Sens. média | Spec. média |
 |---|---|---|---|---|---|---|
-| **Regressão Logística** | **0,753** | 0,054 | 0,656 | 0,836 | 0,667 | 0,697 |
-| XGBoost | 0,725 | 0,064 | 0,616 | 0,827 | 0,701 | 0,639 |
-| Random Forest | 0,723 | 0,074 | 0,572 | 0,811 | **0,743** | 0,507 |
-| LightGBM | 0,720 | 0,064 | 0,607 | 0,792 | 0,685 | 0,659 |
+| **Regressão Logística** | **0,753** | 0,054 | 0,656 | 0,836 | **0,697** | 0,667 |
+| XGBoost | 0,725 | 0,064 | 0,616 | 0,827 | 0,639 | 0,701 |
+| Random Forest | 0,723 | 0,074 | 0,572 | 0,811 | 0,507 | 0,743 |
+| LightGBM | 0,720 | 0,064 | 0,607 | 0,792 | 0,659 | 0,685 |
 
 Com o SMOTE aplicado corretamente dentro de cada fold, o quadro muda em relação ao que se obtém com SMOTE *antes* da CV (onde os modelos de árvore atingiam AUC ≈ 0,85–0,87 e a regressão logística ≈ 0,77):
 
 - **A regressão logística passa a ser o melhor modelo na CV**, e os três modelos de árvore formam um bloco em torno de 0,72, com caixas amplamente sobrepostas.
 - A queda de ~0,13 de AUC nos modelos de árvore confirma que **o SMOTE antes da CV vaza informação**: as amostras sintéticas são interpolações de pacientes que também estão na partição de validação, e modelos flexíveis aprendem essa estrutura. A regressão logística, mais rígida, praticamente não se beneficiava do vazamento (0,774 → 0,753).
-- O Random Forest tem a **maior sensibilidade (0,74) e a menor especificidade (0,51) na CV** no limiar 0,5: com `mtry = 1` suas probabilidades ficam concentradas perto de 0,5 e o limiar padrão separa mal os pacientes saudáveis — reforçando a necessidade da análise de limiar (Seção 7.4).
+- O Random Forest tem a **menor sensibilidade na CV (0,51)** no limiar 0,5: com `mtry = 1` suas probabilidades ficam concentradas perto de 0,5 e o limiar padrão corta mal a classe positiva — reforçando a necessidade da análise de limiar (Seção 7.4).
 
 #### Teste t pareado entre modelos (correção de Bonferroni)
 
