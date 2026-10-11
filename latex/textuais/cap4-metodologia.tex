@@ -624,8 +624,8 @@ máximo dez valores distintos. Durante o treinamento, também foi calculada a
 importância por permutação de cada variável, definida como a queda na acurácia
 observada nas amostras \textit{out-of-bag}, isto é, nas observações não sorteadas no
 \textit{bootstrap} de cada árvore, quando os valores da variável são embaralhados
-aleatoriamente \cite{Breiman2001RandomForests}. Essa medida é retomada na comparação
-entre os rankings de importância (Seção~\ref{sec:comparacao_importancias}).
+aleatoriamente \cite{Breiman2001RandomForests}. Uma variante dessa medida, calculada
+separadamente para cada classe, é retomada na comparação entre os rankings de importância (Seção~\ref{sec:comparacao_importancias}).
 
 O \textit{Random Forest} foi incluído na comparação por ser um dos métodos de
 \textit{ensemble} mais consolidados como classificador de propósito geral, por exigir
@@ -770,9 +770,15 @@ Os quatro modelos foram treinados com o pacote \texttt{caret} \cite{},
 % preditivos no R?"
 que oferece uma interface unificada para o ajuste de diferentes algoritmos, a
 reamostragem e a otimização de hiperparâmetros. O mesmo protocolo foi aplicado a todos
-os modelos, sempre com ``doente'' como classe positiva, e todo o processo utilizou
+os modelos, e todo o processo utilizou
 exclusivamente os 457 pacientes do conjunto de treino; o conjunto de teste foi
-reservado para a avaliação final (Seção~\ref{sec:avaliacao_desempenho}).
+reservado para a avaliação final (Seção~\ref{sec:avaliacao_desempenho}). A AUC-ROC,
+usada na seleção, independe da classe tomada como referência; já a sensibilidade e a
+especificidade registradas na validação cruzada pela função \texttt{twoClassSummary}
+do \texttt{caret} tomam como evento o primeiro nível da variável-alvo, ``saudável'', de
+modo que a sensibilidade registrada nessa etapa corresponde à especificidade em relação
+à classe ``doente'', e vice-versa. No conjunto de teste, ``doente'' foi definida
+explicitamente como a classe positiva.
 
 \subsection{Validação Cruzada Repetida}
 \label{sec:validacao_cruzada}
@@ -1014,7 +1020,12 @@ dos modelos, da seleção de hiperparâmetros nem do balanceamento. Esse conjunt
 foi balanceado e preserva a distribuição real das classes, condição para que as
 métricas reflitam o desempenho esperado em dados com a mesma composição da base
 original. Para cada modelo, foram obtidas as probabilidades previstas de doença e as
-classes previstas com o limiar padrão de 0,5.
+classes previstas pela regra padrão de cada algoritmo: corte de 0,5 na probabilidade
+prevista para a Regressão Logística, o XGBoost e o LightGBM, e voto majoritário das 500
+árvores no \textit{Random Forest}, com empates desfeitos aleatoriamente. Por isso, as
+métricas do \textit{Random Forest} obtidas por essa regra podem diferir ligeiramente das
+calculadas com o corte $P \geq 0{,}5$ na análise de limiares
+(Seção~\ref{sec:limiar_decisao}).
 
 \subsection{Matriz de Confusão e Métricas}
 \label{sec:metricas}
@@ -1269,7 +1280,7 @@ diferem entre os sexos (Seção~\ref{sec:shap_sexo}).
 
 Os modelos de \textit{ensemble} descritos na Seção~\ref{sec:modelos_preditivos}
 tendem a apresentar bom desempenho preditivo, mas suas previsões resultam da
-combinação de centenas de árvores, o que impede a inspeção direta do raciocínio que
+combinação de dezenas a centenas de árvores, o que impede a inspeção direta do raciocínio que
 as produziu. Para explicá-las, utilizou-se o SHAP (\textit{SHapley Additive
 exPlanations}) \cite{},
 % TODO: buscar o artigo seminal de LUNDBERG, S. M.; LEE, S.-I. "A unified approach to
@@ -1365,7 +1376,8 @@ cada variável e cada paciente, além de estimar cada $v(S)$, o que é inviável
 maioria das aplicações. Foram, por isso, utilizados dois métodos de estimação,
 conforme o modelo.
 
-Para o XGBoost e o LightGBM, utilizou-se o TreeSHAP \cite{Lundberg2020Trees}, algoritmo
+Para os modelos de \textit{boosting} (o XGBoost e, caso fosse o modelo de maior AUC-ROC
+no teste, o LightGBM), utilizou-se o TreeSHAP \cite{Lundberg2020Trees}, algoritmo
 específico para modelos baseados em árvores que calcula os valores SHAP em tempo
 polinomial. Em vez de enumerar as coalizões, o algoritmo percorre recursivamente cada
 árvore e acumula, em uma única passagem, as contribuições de todas as coalizões;
@@ -1373,10 +1385,11 @@ quando uma divisão envolve uma variável fora da coalizão, os dois ramos são
 ponderados pela proporção de observações de treino que seguiu cada um deles. O
 resultado é exato para essa formulação, que aproxima a esperança condicional a partir
 da própria estrutura das árvores, e foi obtido diretamente pelas funções nativas das
-bibliotecas XGBoost e LightGBM. Nesses dois modelos, os valores SHAP estão na escala
+bibliotecas XGBoost e LightGBM. Nesses modelos, os valores SHAP estão na escala
 do logaritmo da razão de chances, em que o modelo é aditivo
-(Equação~\ref{eq:boosting}). Como a biblioteca XGBoost modela internamente a
-probabilidade da classe ``saudável'', primeiro nível da variável-alvo, os valores
+(Equação~\ref{eq:boosting}). Como a interface \texttt{xgbTree} do \texttt{caret} codifica como positiva a classe
+``saudável'', primeiro nível da variável-alvo, o XGBoost ajustado modela internamente o
+logaritmo da razão de chances dessa classe; por isso, os valores
 foram multiplicados por $-1$ para que se refiram à classe ``doente''; a conversão é
 exata, pois o logaritmo da razão de chances de uma classe é o simétrico do da outra.
 
@@ -1426,7 +1439,7 @@ valores conhecidos do paciente explicado, a estimativa trata as variáveis como
 independentes, o que corresponde à forma marginal descrita na
 Seção~\ref{sec:valores_shapley}, enquanto o TreeSHAP aproxima a distribuição
 condicional. Como, além disso, os valores do \textit{Random Forest} estão na escala de
-probabilidade, e os do XGBoost e do LightGBM, na escala do logaritmo da razão de
+probabilidade, e os obtidos pelo TreeSHAP, na escala do logaritmo da razão de
 chances, as magnitudes não são diretamente comparáveis entre os modelos; as
 comparações concentram-se, por isso, na ordem de importância das variáveis e na
 direção de seus efeitos.
@@ -1483,7 +1496,9 @@ partir da qual foram produzidas as seguintes análises e visualizações:
     para cada variável, a correlação de Pearson entre seus valores e seus valores
     SHAP. Correlações acima de 0,3 foram interpretadas como indicativas de que valores
     elevados da variável aumentam a probabilidade prevista de doença; abaixo de $-0{,}3$,
-    de que a reduzem; e, entre esses limites, de efeito fraco ou não monotônico. Os pontos
+    de que a reduzem; e, entre esses limites, de efeito fraco ou não monotônico. Variáveis com valores SHAP constantes (nulos, por não
+    serem utilizadas pelo modelo) têm correlação indefinida e foram classificadas como
+    ``sem variação''. Os pontos
     de corte são uma convenção heurística, adotada apenas para resumir o padrão
     observado \cite{Schober2018Correlation};
     \item \textbf{Gráficos de dependência}: para as quatro variáveis mais importantes,
@@ -1546,15 +1561,21 @@ Por fim, verificou-se se os quatro modelos atribuem importâncias semelhantes à
 variáveis. Para isso, construiu-se um ranking de importância a partir de cada medida
 disponível: a importância SHAP global para os modelos explicados na
 Seção~\ref{sec:modelos_explicados}; a importância nativa do \textit{Random Forest},
-dada pela importância por permutação (Seção~\ref{sec:random_forest}), e a do LightGBM,
+dada pela média, entre as duas classes, da importância por permutação específica de cada
+classe (a queda na taxa de acerto da classe nas amostras \textit{out-of-bag}, dividida
+por seu erro-padrão), reescalada para o intervalo de 0 a 100
+(Seção~\ref{sec:random_forest}), e a do LightGBM,
 dada pelo ganho acumulado nas divisões em que cada variável é utilizada, ambas
 calculadas independentemente de o modelo também ter sido explicado por SHAP; e o valor
 absoluto dos coeficientes para a Regressão Logística, comparáveis entre si porque os
 preditores estão padronizados. Assim, o \textit{Random Forest} contribui com dois
 rankings, um baseado em SHAP e outro em sua importância nativa, o que permite verificar
 também a concordância entre as duas medidas para um mesmo modelo. Variáveis
-não utilizadas por um modelo receberam importância nula e, portanto, a última posição
-em seu ranking. A concordância entre todos os pares de rankings foi medida pela
+não utilizadas por um modelo receberam importância nula e ocuparam as últimas posições
+de seu ranking: nos rankings SHAP, os empates entre elas foram desfeitos pela ordem das
+colunas, sem atribuição de postos médios, enquanto, na importância nativa do LightGBM,
+as variáveis ausentes receberam todas a última posição. Esses empates devem ser
+considerados na interpretação das correlações. A concordância entre todos os pares de rankings foi medida pela
 correlação de postos de Spearman.
 
 Como as medidas têm naturezas diferentes, a comparação baseia-se nas posições dos
