@@ -27,12 +27,20 @@ log_info("O SMOTE sera aplicado dentro de cada fold da CV e no ajuste final (car
 # --- Configuracao da validacao cruzada --------------------------------------
 log_subsection("Configuracao da validacao cruzada")
 N_RANDOM <- 30   # combinacoes de hiperparametros sorteadas por modelo (Random Search)
+
+# twoClassSummary trata o 1o nivel do fator ("saudavel") como evento; troca Sens/Spec
+# para que se refiram a classe positiva "doente". A AUC (e a selecao do modelo) nao muda.
+resumo_doente <- function(data, lev = NULL, model = NULL) {
+  s <- twoClassSummary(data, lev, model)
+  c(ROC = s[["ROC"]], Sens = s[["Spec"]], Spec = s[["Sens"]])
+}
+
 ctrl <- trainControl(
   method          = "repeatedcv",
   number          = 5,
   repeats         = 3,
   classProbs      = TRUE,
-  summaryFunction = twoClassSummary,   # ROC, Sens, Spec
+  summaryFunction = resumo_doente,     # ROC, Sens, Spec (classe positiva = "doente")
   sampling        = smote_caret,       # SMOTE por fold (sem vazamento para a validacao)
   search          = "random",          # Random Search de hiperparametros
   savePredictions = "final",
