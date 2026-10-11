@@ -54,6 +54,8 @@ comp <- data.frame(
 log_table(comp, digits = 3)
 log_info("Amostras sinteticas devem ter medias proximas as da classe minoritaria original ('%s').", minoritaria)
 categorias_gender <- sort(unique(treino$Gender))   # valores padronizados: Feminino < 0 < Masculino
+log_info("Gender nas sinteticas: %d amostra(s) com valor intermediario (pacientes de origem de sexos diferentes) devolvida(s) a categoria mais proxima",
+         res$n_corrigidas)
 log_info("Gender nas sinteticas: %d Feminino, %d Masculino | apenas categorias validas (sem valores intermediarios): %s",
          sum(sinteticas$Gender == categorias_gender[1]), sum(sinteticas$Gender == categorias_gender[2]),
          if (all(sinteticas$Gender %in% categorias_gender)) "sim" else "NAO")

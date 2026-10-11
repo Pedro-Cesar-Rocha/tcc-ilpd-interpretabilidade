@@ -229,15 +229,16 @@ Verifica cada dependência e instala apenas o que falta. Registra no log a vers�
 ### Etapa 3 — Balanceamento com SMOTE (diagnóstico)
 
 - SMOTE (Synthetic Minority Over-sampling Technique) com `K = 5` vizinhos, via a mesma função `aplicar_smote()` usada na etapa 4.
+- **`Gender` é binária:** o SMOTE interpola todas as variáveis, o que geraria "sexos intermediários" quando os dois pacientes de origem são de sexos diferentes. `aplicar_smote()` devolve o `Gender` de cada amostra sintética para a **categoria válida mais próxima** (a amostra herda o sexo do paciente de origem mais próximo no segmento de interpolação). Os pacientes reais e as variáveis contínuas não mudam. É uma versão simplificada da ideia do SMOTE-NC (Chawla et al., 2002).
 - Aplicado ao treino completo apenas para **diagnóstico e visualização**: 457 → 589 observações (132 sintéticas).
-- Verificação de integridade: compara as médias das amostras sintéticas com as da classe minoritária original.
+- Verificação de integridade: compara as médias das amostras sintéticas com as da classe minoritária original, registra quantas sintéticas tinham `Gender` intermediário e precisaram de correção (são raras, porque a distância usada para achar os vizinhos já inclui o `Gender` padronizado e aproxima pacientes do mesmo sexo) e confere que o `Gender` sintético só assume os dois valores válidos.
 - O arquivo `df_balanceado.rds` **não** é usado para treinar — ver etapa 4.
 
 ### Etapa 4 — Treinamento dos modelos
 
 **Validação cruzada repetida: 5 folds × 3 repetições = 15 avaliações por combinação de hiperparâmetros.** A métrica de seleção é a **AUC-ROC**.
 
-**SMOTE dentro de cada fold.** O `trainControl` recebe `sampling = smote_caret` (definido em `UtilsPipeline.R`). Em cada iteração da CV o SMOTE é aplicado **apenas à partição de treino do fold**; a partição de validação contém somente pacientes reais. Sem isso (SMOTE antes da CV), amostras sintéticas — interpolações de pacientes que também estão na validação — vazam entre as partições e inflam a AUC da CV. O ajuste final de cada modelo também aplica SMOTE ao treino completo.
+**SMOTE dentro de cada fold.** O `trainControl` recebe `sampling = smote_caret` (definido em `UtilsPipeline.R`). Em cada iteração da CV o SMOTE é aplicado **apenas à partição de treino do fold**; a partição de validação contém somente pacientes reais. Sem isso (SMOTE antes da CV), amostras sintéticas — interpolações de pacientes que também estão na validação — vazam entre as partições e inflam a AUC da CV. O ajuste final de cada modelo também aplica SMOTE ao treino completo. Em todos esses casos, o `Gender` das amostras sintéticas volta à categoria válida mais próxima (ver etapa 3).
 
 **Random Search.** `trainControl(search = "random")` sorteia 30 combinações de hiperparâmetros por modelo (`tuneLength = 30`); o wrapper do LightGBM implementa o mesmo comportamento na sua função `grid`.
 
@@ -265,20 +266,21 @@ Para cada modelo:
 - Acurácia, acurácia balanceada, sensibilidade, especificidade, precisão, F1, Kappa, AUC.
 - **Intervalo de confiança de 95% da AUC** pelo método de **DeLong**.
 - **Limiar ótimo pelo índice de Youden** (maximiza Sens + Spec − 1).
-- **Limiar clínico (foco em Recall)**: o maior limiar que ainda garante **Sens ≥ 90 %**, com a especificidade e a precisão resultantes — quantifica o custo de priorizar falsos negativos em cada modelo.
+- **Limiar clínico (foco em Recall)**: o maior limiar que ainda garante **Sens ≥ 90 %** — quantifica o custo, em especificidade e precisão, de priorizar os falsos negativos em cada modelo.
+- **Os dois limiares são escolhidos sem olhar o teste**: saem das predições *out-of-fold* da validação cruzada (`modelo$pred`, guardadas com `savePredictions = "final"`; 457 pacientes × 3 repetições = 1.371 predições, cada uma feita por um modelo que não viu aquele paciente). Depois são aplicados, fixos, às probabilidades do teste, onde se medem sensibilidade, especificidade e precisão (`Sens_Youden`, `Spec_Youden`, `Sens_Recall90`, `Spec_Recall90`, `Precisao_Recall90`). Escolher o limiar no próprio teste tornaria essas métricas otimistas (Leeflang et al., 2008); por isso a sensibilidade no teste com o limiar clínico pode ficar um pouco abaixo de 90 %.
 
 Comparação entre modelos:
 
 - Tabela consolidada → `results/metricas_teste.csv`; o nome do melhor modelo (por AUC) é salvo em `results/melhor_modelo.rds` e lido pela etapa 6.
-- **Teste de DeLong pareado** para todas as combinações de modelos.
+- **Teste de DeLong pareado** para todas as combinações de modelos, com **correção de Bonferroni** para as 6 comparações (`p_valor` original e `p_ajustado_Bonferroni`; a coluna `Significativo_5pct` usa o ajustado) → `results/delong_pareado.csv`.
 - Curvas ROC sobrepostas, curvas Precision-Recall, gráfico de barras de métricas.
-- **Análise de sensibilidade ao limiar** (0,1 a 0,9) para **todos** os modelos, com contagem de FN/FP → `results/analise_limiar_modelos.csv` e `plots/limiar_sens_spec_modelos.png`.
+- **Análise de sensibilidade ao limiar** (0,1 a 0,9) para **todos** os modelos, com contagem de FN/FP → `results/analise_limiar_modelos.csv` e `plots/limiar_sens_spec_modelos.png`. É uma grade **descritiva** no teste: nenhum limiar é escolhido a partir dela.
 
 **Análise estratificada por sexo (auditoria de viés — Straw & Wu, 2022):**
 
 - Prevalência de doença por sexo no teste.
-- Para cada modelo e sexo: AUC com IC DeLong, sensibilidade, especificidade, F1, **taxa de falsos negativos** (limiar 0,5 e limiar clínico) → `results/metricas_por_sexo.csv`.
-- **Gap Masculino − Feminino** em AUC/Sens/Spec e **teste de DeLong não pareado** entre as curvas ROC dos dois sexos → `results/gap_desempenho_sexo.csv`.
+- Para cada modelo e sexo: AUC com IC DeLong, sensibilidade, especificidade, F1, **taxa de falsos negativos** (limiar 0,5 e limiar clínico escolhido na CV) → `results/metricas_por_sexo.csv`.
+- **Gap Masculino − Feminino** em AUC/Sens/Spec e **teste de DeLong não pareado** entre as curvas ROC dos dois sexos, com correção de Bonferroni para os 4 testes (um por modelo) → `results/gap_desempenho_sexo.csv`.
 - Gráficos: `metricas_por_sexo.png` e `roc_por_sexo.png`.
 
 ### Etapa 6 — Explicabilidade com SHAP
@@ -305,11 +307,22 @@ Aplicada ao **XGBoost**, ao **Random Forest** e ao **melhor modelo do teste** (s
 | `comparacao_importancia_modelos.csv` | Rankings SHAP (XGB, RF) × importância nativa (RF, LightGBM) × \|coeficiente\| da regressão logística |
 | `concordancia_rankings_spearman.csv` | Matriz de correlação de Spearman entre todos os rankings |
 
+> **Empates nos rankings:** em todos os rankings (SHAP global, SHAP por sexo, importância nativa e coeficientes), variáveis com importância exatamente igual — tipicamente as que um modelo não usa — recebem o **posto médio** (ex.: empate nas posições 9 e 10 → 9,5 para ambas), calculado antes do arredondamento. Assim o empate não é desfeito pela ordem das colunas, e o Spearman é calculado sobre os postos médios. Variáveis ausentes do `varImp` do LightGBM recebem importância 0 e empatam no fim do ranking.
+
 ---
 
 ## 7. Resultados obtidos
 
 > Valores da execução de referência (`logs/pipeline_20260912_224913.log`). Podem variar levemente entre máquinas por diferenças de paralelismo, mas a seed fixa (`42`) garante reprodutibilidade na mesma máquina. Todas as tabelas estão em `results/` e todas as figuras em `plots/`.
+
+> ⚠️ **Resultados a regenerar.** Os números abaixo são da execução de 12/09/2026, **anterior** a quatro correções metodológicas do pipeline (descritas na Seção 6):
+>
+> 1. o `Gender` das amostras sintéticas do SMOTE volta à categoria válida mais próxima — **muda os dados de treino de cada fold e, portanto, pode alterar todos os modelos e os números das Seções 7.3 a 7.6**. A mudança deve ser pequena: no diagnóstico da etapa 3, só 1 das 132 sintéticas tinha `Gender` intermediário. A tabela de médias desse diagnóstico, por outro lado, muda bastante, porque antes ela usava, por engano, pacientes reais da classe majoritária em vez das amostras sintéticas;
+> 2. os limiares de Youden e clínico (Sens ≥ 90 %) passam a ser escolhidos nas predições *out-of-fold* da CV e só aplicados ao teste — muda a tabela de limiares da Seção 7.4 e as métricas por sexo no limiar clínico;
+> 3. os testes de DeLong (entre modelos e entre sexos) ganham p-valores com correção de Bonferroni;
+> 4. empates nos rankings de importância recebem postos médios — muda as posições empatadas da Seção 7.5 e as correlações de Spearman.
+>
+> A Seção 7.1 (análise exploratória) e as contagens de classe da Seção 7.2 não mudam. Reexecute `ExecutarTudo.R` e atualize esta seção.
 
 ### 7.1 Análise exploratória
 
@@ -720,6 +733,10 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 | **Random Search** (30 combinações) | Grade exaustiva | Cobre espaços contínuos (`eta`, `learning_rate`, `subsample`) com custo fixo; a literatura mostra eficiência igual ou superior à grade para o mesmo orçamento (Bergstra & Bengio, 2012) |
 | AUC como métrica de seleção + **limiar clínico** (Sens ≥ 90 %) | Acurácia; ou otimizar Recall diretamente | Acurácia é enganosa em dados desbalanceados; otimizar Recall puro leva ao modelo trivial "todos doentes". A AUC escolhe o modelo com melhor ordenação e o limiar clínico traduz isso em Recall alvo |
 | Teste de DeLong e t pareado | Comparar apenas médias | Diferenças de AUC de poucos centésimos podem ser ruído; testes estatísticos deixam isso explícito |
+| **Bonferroni** no t pareado da CV e nos testes de DeLong (6 pares de modelos; 4 testes entre sexos) | p-valores brutos | Com várias comparações simultâneas, a chance de ao menos um "significativo" por acaso passa de 5 %; Bonferroni limita essa chance a 5 % |
+| **Limiares (Youden e clínico) escolhidos nas predições *out-of-fold* da CV** e só aplicados ao teste | Escolher o limiar nas previsões do próprio teste | Escolher no teste infla sensibilidade/especificidade, sobretudo em amostras pequenas (Leeflang et al., 2008); assim o teste continua independente |
+| `Gender` sintético devolvido à **categoria válida mais próxima** | Interpolar `Gender` como se fosse contínua | Evita "sexos intermediários" sem significado; mesma ideia do SMOTE-NC (Chawla et al., 2002) |
+| **Postos médios** nos empates dos rankings de importância | Desempatar pela ordem das colunas | A ordem das colunas é arbitrária e alteraria a correlação de Spearman entre rankings |
 | **Estratificação por sexo** (métricas, ROC, SHAP) | Avaliar só no agregado | Prevalência e perfil laboratorial diferem entre sexos; um modelo pode ter FN concentrados em um grupo sem que a métrica global revele (Straw & Wu, 2022) |
 | SHAP em vez de só importância nativa | `varImp()` do caret | SHAP fornece direção do efeito, explicações locais e é consistente entre modelos |
 | **TreeSHAP exato** para XGBoost/LightGBM | Monte Carlo (`fastshap`) para todos | Exato, determinístico e instantâneo; `fastshap` fica reservado ao Random Forest, que não tem TreeSHAP nativo em R |
@@ -736,7 +753,9 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 - Amostra pequena (113 pacientes de teste; 32 mulheres) → intervalos de confiança largos; nenhuma diferença entre modelos, nem entre sexos, foi significativa.
 - Dataset de uma única região geográfica — generalização para outras populações não é garantida.
 - O rótulo "doente" agrupa diferentes patologias hepáticas.
-- SMOTE gera amostras por interpolação linear, o que pode criar pacientes fisiologicamente implausíveis.
+- SMOTE gera amostras por interpolação linear, o que pode criar pacientes fisiologicamente implausíveis (o `Gender` é devolvido a uma categoria válida, mas as variáveis contínuas continuam interpoladas).
+- Os limiares escolhidos na CV vêm de modelos ajustados com ~80 % do treino; aplicá-los ao modelo final (ajustado no treino completo) é uma aproximação, e a sensibilidade no teste pode ficar abaixo da meta de 90 %.
+- O "melhor modelo", que define qual modelo extra a etapa 6 explica, ainda é escolhido pela AUC no teste. Isso não altera nenhuma métrica reportada, mas é uma escolha feita olhando o teste.
 - Random Search com 30 combinações explora o espaço de hiperparâmetros de forma limitada; a seleção do modelo ainda é feita na mesma CV usada para o tuning (sem CV aninhada), o que pode manter leve otimismo.
 - Os valores SHAP do Random Forest são aproximados (Monte Carlo) e estão em escala diferente (probabilidade) dos de XGBoost/LightGBM (log-odds).
 - Especificidade baixa em todos os modelos no limiar 0,5, e muito baixa no limiar clínico de Sens ≥ 90 %.
@@ -765,6 +784,7 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 - DeLong, E. R., DeLong, D. M., & Clarke-Pearson, D. L. (1988). Comparing the areas under two or more correlated ROC curves. *Biometrics*, 44(3), 837–845.
 - Kuhn, M. (2008). Building Predictive Models in R Using the caret Package. *Journal of Statistical Software*, 28(5).
 - Youden, W. J. (1950). Index for rating diagnostic tests. *Cancer*, 3(1), 32–35.
+- Leeflang, M. M. G., Moons, K. G. M., Reitsma, J. B., & Zwinderman, A. H. (2008). Bias in sensitivity and specificity caused by data-driven selection of optimal cutoff values: mechanisms, magnitude, and solutions. *Clinical Chemistry*, 54(4), 729–737.
 - Bergstra, J., & Bengio, Y. (2012). Random Search for Hyper-Parameter Optimization. *Journal of Machine Learning Research*, 13, 281–305.
 - Lundberg, S. M., Erion, G. G., & Lee, S.-I. (2018). Consistent Individualized Feature Attribution for Tree Ensembles. *arXiv:1802.03888* (TreeSHAP).
 - Straw, I., & Wu, H. (2022). Investigating for bias in healthcare algorithms: a sex-stratified analysis of supervised machine learning models in liver disease prediction. *BMJ Health & Care Informatics*, 29(1), e100457.

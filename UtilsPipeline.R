@@ -110,15 +110,18 @@ aplicar_smote <- function(x, y, K = 5) {
   # smotefamily devolve rbind(minoritaria original, sinteticas, majoritaria original)
   dados      <- res$data
   sinteticas <- res$syn_data
+  n_corrigidas <- 0L
   for (v in intersect(VARS_BINARIAS, names(x))) {
     categorias      <- sort(unique(x[[v]]))
+    n_corrigidas    <- n_corrigidas + sum(!(sinteticas[[v]] %in% categorias))
     dados[[v]]      <- categoria_mais_proxima(dados[[v]], categorias)
     sinteticas[[v]] <- categoria_mais_proxima(sinteticas[[v]], categorias)
   }
   classe <- factor(ifelse(dados$class == 1, positiva, levels(y)[1]), levels = levels(y))
   dados$class <- NULL
   sinteticas$class <- NULL
-  list(x = dados, y = classe, n_sinteticas = nrow(sinteticas), sinteticas = sinteticas)
+  list(x = dados, y = classe, n_sinteticas = nrow(sinteticas), sinteticas = sinteticas,
+       n_corrigidas = n_corrigidas)
 }
 
 smote_caret <- list(
