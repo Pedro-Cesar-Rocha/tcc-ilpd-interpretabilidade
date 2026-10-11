@@ -1543,13 +1543,16 @@ amostral discutidas anteriormente, os resultados por sexo têm caráter descriti
 \label{sec:comparacao_importancias}
 
 Por fim, verificou-se se os quatro modelos atribuem importâncias semelhantes às
-variáveis. Para isso, construiu-se um ranking de importância para cada modelo a partir
-da medida disponível: a importância SHAP global para os modelos explicados na
-Seção~\ref{sec:modelos_explicados}; a importância nativa, quando o modelo não foi
-explicado por SHAP, dada pela importância por permutação no \textit{Random Forest}
-(Seção~\ref{sec:random_forest}) e pelo ganho acumulado nas divisões em que cada
-variável é utilizada no LightGBM; e o valor absoluto dos coeficientes para a Regressão
-Logística, comparáveis entre si porque os preditores estão padronizados. Variáveis
+variáveis. Para isso, construiu-se um ranking de importância a partir de cada medida
+disponível: a importância SHAP global para os modelos explicados na
+Seção~\ref{sec:modelos_explicados}; a importância nativa do \textit{Random Forest},
+dada pela importância por permutação (Seção~\ref{sec:random_forest}), e a do LightGBM,
+dada pelo ganho acumulado nas divisões em que cada variável é utilizada, ambas
+calculadas independentemente de o modelo também ter sido explicado por SHAP; e o valor
+absoluto dos coeficientes para a Regressão Logística, comparáveis entre si porque os
+preditores estão padronizados. Assim, o \textit{Random Forest} contribui com dois
+rankings, um baseado em SHAP e outro em sua importância nativa, o que permite verificar
+também a concordância entre as duas medidas para um mesmo modelo. Variáveis
 não utilizadas por um modelo receberam importância nula e, portanto, a última posição
 em seu ranking. A concordância entre todos os pares de rankings foi medida pela
 correlação de postos de Spearman.
