@@ -343,11 +343,14 @@ tem três motivos:
     \item Os modelos baseados em árvores costumam manter bom desempenho preditivo na
     presença de variáveis correlacionadas. Em estudo de simulação com diferentes
     níveis de colinearidade, \citeonline{Dormann2013Collinearity} observaram que
-    \textit{Random Forest} e árvores com \textit{boosting} mantiveram desempenho
-    estável em dados de teste com a mesma estrutura de correlação do treino. A
-    degradação ocorreu apenas quando a estrutura de correlação mudou
-    substancialmente entre treino e teste, situação que não se aplica a este
-    trabalho, pois treino e teste provêm da mesma base;
+    \textit{Random Forest} e árvores com \textit{boosting} (\textit{boosted
+    regression trees}) mantiveram desempenho estável em dados de teste com a mesma
+    estrutura de correlação do treino. A degradação ocorreu apenas quando a
+    estrutura de correlação mudou substancialmente entre treino e teste, situação
+    que não se aplica a este trabalho, pois treino e teste provêm da mesma base. O
+    estudo não avaliou o XGBoost nem o LightGBM; a extensão da conclusão a eles é
+    uma extrapolação, considerada razoável por serem também \textit{ensembles} de
+    árvores de decisão com \textit{boosting};
     \item Excluir variáveis clinicamente relevantes contraria o objetivo de
     interpretabilidade deste trabalho, que é entender como os modelos usam os exames
     laboratoriais disponíveis;
