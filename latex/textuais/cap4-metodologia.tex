@@ -498,24 +498,10 @@ SHAP, descritos na Seção~\ref{sec:shap}.
 A inclusão da Regressão Logística como referência tem justificativa prática e
 conceitual. Do ponto de vista prático, revisões sistemáticas de modelos de predição
 clínica indicam que métodos de aprendizado de máquina nem sempre superam a regressão
-logística \cite{}.
-% TODO: buscar a revisão sistemática de CHRISTODOULOU, E.; MA, J.; COLLINS, G. S.;
-% STEYERBERG, E. W.; VERBAKEL, J. Y.; VAN CALSTER, B. "A systematic review shows no
-% performance benefit of machine learning over logistic regression for clinical
-% prediction models". Journal of Clinical Epidemiology, v. 110, p. 12-22, 2019.
-% Chave sugerida: Christodoulou2019Systematic.
-% Prompt Consensus: "Qual é a revisão sistemática de Christodoulou et al., de 2019, que
-% comparou o desempenho de modelos de machine learning e de regressão logística em
-% modelos de predição clínica?"
+logística \cite{Christodoulou2019Systematic}.
 Do ponto de vista conceitual, defende-se que, em decisões de alto risco, como as
 clínicas, modelos interpretáveis sejam preferidos sempre que apresentarem desempenho
-comparável ao de modelos opacos \cite{}.
-% TODO: buscar o artigo de RUDIN, C. "Stop explaining black box machine learning models
-% for high stakes decisions and use interpretable models instead". Nature Machine
-% Intelligence, v. 1, n. 5, p. 206-215, 2019. Chave sugerida: Rudin2019Stop.
-% Prompt Consensus: "Qual é o artigo de Cynthia Rudin, de 2019, que defende o uso de
-% modelos interpretáveis em vez de explicar modelos de caixa-preta em decisões de alto
-% risco?"
+comparável ao de modelos opacos \cite{Rudin2019Stop}.
 Assim, a complexidade adicional dos modelos de árvore só se justifica se resultar em
 ganho de desempenho em relação à Regressão Logística, o que é verificado
 estatisticamente nas Seções~\ref{sec:comparacao_cv} e~\ref{sec:comparacao_auc}.
@@ -524,12 +510,7 @@ estatisticamente nas Seções~\ref{sec:comparacao_cv} e~\ref{sec:comparacao_auc}
 \label{sec:regressao_logistica}
 
 A Regressão Logística é o modelo estatístico clássico para variáveis-resposta binárias
-\cite{}.
-% TODO: buscar o artigo seminal de COX, D. R. "The regression analysis of binary
-% sequences". Journal of the Royal Statistical Society: Series B (Methodological),
-% v. 20, n. 2, p. 215-242, 1958. Chave sugerida: Cox1958Regression.
-% Prompt Consensus: "Qual é o artigo seminal de David Cox, de 1958, que formalizou a
-% regressão logística para a análise de variáveis-resposta binárias?"
+\cite{Cox1958Regression}.
 Ela modela o logaritmo da razão de chances (\textit{log-odds}) de o paciente ser doente
 como uma combinação linear dos preditores \cite{Hosmer2005Applied}:
 
@@ -609,13 +590,7 @@ que o classificam como doente:
 $I[\cdot]$ é a função indicadora, que vale 1 quando a condição é verdadeira e 0 caso
 contrário.
 
-Utilizou-se a implementação do pacote \texttt{randomForest} \cite{},
-% TODO: buscar a referência do pacote: LIAW, A.; WIENER, M. "Classification and
-% regression by randomForest". R News, v. 2, n. 3, p. 18-22, 2002. Também pode ser
-% obtida no R com toBibtex(citation("randomForest")). Chave sugerida:
-% Liaw2002Classification.
-% Prompt Consensus: "Qual é o artigo de Liaw e Wiener, de 2002, publicado na R News,
-% que apresenta o pacote randomForest para o R?"
+Utilizou-se a implementação do pacote \texttt{randomForest} \cite{Liaw2002Classification},
 com $B = 500$ árvores, valor padrão da implementação. O número de árvores não foi
 otimizado porque seu aumento não provoca sobreajuste, apenas faz o erro de
 generalização convergir para um valor-limite \cite{Breiman2001RandomForests}. O único
@@ -638,12 +613,7 @@ modelos de \textit{boosting} descritos a seguir.
 \label{sec:xgboost}
 
 O XGBoost (\textit{eXtreme Gradient Boosting}) \cite{Chen2016XGBoost} é uma
-implementação otimizada e regularizada do \textit{gradient boosting} \cite{}.
-% TODO: buscar o artigo seminal de FRIEDMAN, J. H. "Greedy function approximation: a
-% gradient boosting machine". The Annals of Statistics, v. 29, n. 5, p. 1189-1232,
-% 2001. Chave sugerida: Friedman2001Greedy.
-% Prompt Consensus: "Qual é o artigo seminal de Jerome Friedman, publicado por volta de
-% 2001 no Annals of Statistics, que introduziu o gradient boosting machine?"
+implementação otimizada e regularizada do \textit{gradient boosting} \cite{Friedman2001Greedy}.
 Diferentemente do \textit{bagging}, em que as árvores são construídas de forma
 independente, no \textit{boosting} elas são construídas sequencialmente: cada nova
 árvore é ajustada para corrigir os erros do conjunto atual, aproximando o gradiente
@@ -721,15 +691,7 @@ amostragem GOSS, já que, com poucas centenas de pacientes, o custo computaciona
 Outra característica da implementação é o crescimento das árvores por folha
 (\textit{leaf-wise}, ou melhor-primeiro): em vez de expandir todos os nós de um mesmo
 nível, como no crescimento por nível (\textit{level-wise}), o algoritmo expande, a
-cada passo, a folha cuja divisão produz a maior redução da perda \cite{}.
-% TODO: o crescimento leaf-wise não é a contribuição central do artigo Ke2017LightGBM;
-% a documentação oficial do LightGBM (seção "Features", item "Leaf-wise (Best-first)
-% Tree Growth") o atribui a SHI, H. "Best-first decision tree learning". Dissertação
-% (Mestrado), University of Waikato, Hamilton, Nova Zelândia, 2007. Chave sugerida:
-% Shi2007BestFirst. Alternativa: citar a documentação oficial do LightGBM como @misc.
-% Prompt Consensus: "Qual é o trabalho de Haijian Shi, de 2007, na University of
-% Waikato, que descreve o aprendizado de árvores de decisão best-first (crescimento por
-% folha)?"
+cada passo, a folha cuja divisão produz a maior redução da perda \cite{Shi2007BestFirst}.
 Para um mesmo número de folhas, essa estratégia tende a atingir perda menor, mas pode
 gerar árvores profundas e assimétricas, com maior risco de sobreajuste em bases
 pequenas como o ILPD. Por isso, a complexidade das árvores é controlada
@@ -760,14 +722,7 @@ pequeno porte.
 \section{Treinamento e Validação Cruzada}
 \label{sec:treinamento_validacao}
 
-Os quatro modelos foram treinados com o pacote \texttt{caret} \cite{},
-% TODO: buscar a referência do pacote: KUHN, M. "Building predictive models in R using
-% the caret package". Journal of Statistical Software, v. 28, n. 5, p. 1-26, 2008.
-% Também pode ser obtida no R com toBibtex(citation("caret")). Chave sugerida:
-% Kuhn2008Building.
-% Prompt Consensus: "Qual é o artigo de Max Kuhn, de 2008, publicado no Journal of
-% Statistical Software, que apresenta o pacote caret para a construção de modelos
-% preditivos no R?"
+Os quatro modelos foram treinados com o pacote \texttt{caret} \cite{Kuhn2008Building},
 que oferece uma interface unificada para o ajuste de diferentes algoritmos, a
 reamostragem e a otimização de hiperparâmetros. O mesmo protocolo foi aplicado a todos
 os modelos, sempre com ``doente'' como classe positiva, e todo o processo utilizou
@@ -799,15 +754,7 @@ pacientes foram distribuídos entre os \textit{folds}, o procedimento foi repeti
 vezes, com partições diferentes, totalizando $5 \times 3 = 15$ ajustes e avaliações
 para cada combinação de hiperparâmetros. A média sobre as repetições reduz a
 variância associada à partição e torna mais estáveis tanto a estimativa de desempenho
-quanto a comparação entre modelos \cite{}.
-% TODO: buscar o estudo de KIM, J.-H. "Estimating classification error rate: repeated
-% cross-validation, repeated hold-out and bootstrap". Computational Statistics & Data
-% Analysis, v. 53, n. 11, p. 3735-3745, 2009. Chave sugerida: Kim2009Estimating.
-% Alternativa: MOLINARO, A. M.; SIMON, R.; PFEIFFER, R. M. "Prediction error
-% estimation: a comparison of resampling methods". Bioinformatics, v. 21, n. 15,
-% p. 3301-3307, 2005.
-% Prompt Consensus: "Qual estudo, como o de Kim (2009), mostra que repetir a validação
-% cruzada k-fold reduz a variância da estimativa do erro de classificação?"
+quanto a comparação entre modelos \cite{Kim2009Estimating}.
 Essa estabilidade é especialmente relevante em bases pequenas como o ILPD, nas quais a
 troca de poucos pacientes entre partições pode alterar sensivelmente as métricas.
 Antes do treinamento de cada modelo, a semente aleatória foi redefinida para o mesmo
@@ -826,14 +773,7 @@ conjunto de treino. Se o balanceamento fosse aplicado antes da divisão em
 enquanto os pacientes reais que a originaram permanecem na partição de treino, ou o
 contrário, de modo que o modelo seria avaliado em dados quase idênticos aos que viu
 no treinamento. Isso configuraria vazamento de dados \cite{KaufmanScharRosset2012} e
-produziria estimativas de desempenho otimistas \cite{}.
-% TODO: buscar o artigo de SANTOS, M. S.; SOARES, J. P.; ABREU, P. H.; ARAÚJO, H.;
-% SANTOS, J. "Cross-validation for imbalanced datasets: avoiding overoptimistic and
-% overfitting approaches". IEEE Computational Intelligence Magazine, v. 13, n. 4,
-% p. 59-76, 2018. Chave sugerida: Santos2018CrossValidation.
-% Prompt Consensus: "Qual artigo, de Santos et al. (2018), mostra que aplicar
-% oversampling como o SMOTE antes da validação cruzada produz estimativas de
-% desempenho otimistas?"
+produziria estimativas de desempenho otimistas \cite{Santos2018CrossValidation}.
 
 \subsection{Otimização de Hiperparâmetros}
 \label{sec:otimizacao_hiperparametros}
@@ -853,13 +793,10 @@ sobre todo o conjunto de treino.
 \caption{Espaço de busca dos hiperparâmetros na busca aleatória (30 sorteios por
 modelo).}
 \label{tab:espaco_busca}
-% TODO: conferir as faixas do XGBoost e do Random Forest na versão do caret instalada
-% no pipeline. Elas não são definidas no código do projeto, e sim pela função interna
-% de busca aleatória do caret (métodos "xgbTree" e "rf"), e foram conferidas no
-% código-fonte da versão 7.0-1. Para confirmar, executar no R:
-% caret::getModelInfo("xgbTree", regex = FALSE)$xgbTree$grid e
-% caret::getModelInfo("rf", regex = FALSE)$rf$grid. As faixas do LightGBM são
-% definidas pelo próprio pipeline, na especificação customizada do modelo.
+% Faixas do XGBoost e do Random Forest: função interna de busca aleatória do caret
+% (métodos "xgbTree" e "rf"), conferidas no código-fonte da versão 7.0-1; o log da
+% execução confirma as 10 combinações distintas de mtry testadas no Random Forest.
+% Faixas do LightGBM: especificação customizada do modelo definida no pipeline.
 \begin{tabular}{lll}
 \hline
 \textbf{Modelo} & \textbf{Hiperparâmetro} & \textbf{Valores sorteados} \\
@@ -897,12 +834,7 @@ partições. O segundo é a eficiência: como, em geral, apenas alguns hiperpar�
 influenciam de fato o desempenho, a busca aleatória explora mais valores distintos de
 cada um deles com o mesmo número de avaliações e encontra configurações tão boas
 quanto ou melhores que as da busca em grade, com custo computacional muito menor
-\cite{}.
-% TODO: buscar o artigo seminal de BERGSTRA, J.; BENGIO, Y. "Random search for
-% hyper-parameter optimization". Journal of Machine Learning Research, v. 13,
-% p. 281-305, 2012. Chave sugerida: Bergstra2012Random.
-% Prompt Consensus: "Qual é o artigo de Bergstra e Bengio, de 2012, que mostra que a
-% busca aleatória de hiperparâmetros é mais eficiente que a busca em grade?"
+\cite{Bergstra2012Random}.
 Além disso, a busca aleatória permite amostrar hiperparâmetros contínuos, como a taxa
 de aprendizado, em qualquer ponto do intervalo, e não apenas em valores pré-fixados.
 No \textit{Random Forest}, cujo único hiperparâmetro otimizado (\texttt{mtry}) assume
@@ -914,16 +846,7 @@ Como a mesma validação cruzada foi usada para escolher os hiperparâmetros e p
 estimar o desempenho, a AUC-ROC média da combinação selecionada tende a ser
 ligeiramente otimista: ao se escolher o melhor resultado entre muitos candidatos,
 escolhe-se também, em parte, o candidato mais favorecido pelas flutuações aleatórias
-das partições \cite{}.
-% TODO: buscar o artigo de CAWLEY, G. C.; TALBOT, N. L. C. "On over-fitting in model
-% selection and subsequent selection bias in performance evaluation". Journal of
-% Machine Learning Research, v. 11, p. 2079-2107, 2010. Chave sugerida:
-% Cawley2010OverFitting. Alternativa: VARMA, S.; SIMON, R. "Bias in error estimation
-% when using cross-validation for model selection". BMC Bioinformatics, v. 7, art. 91,
-% 2006.
-% Prompt Consensus: "Qual artigo, de Cawley e Talbot (2010), mostra que usar a mesma
-% validação cruzada para selecionar hiperparâmetros e estimar o desempenho gera
-% estimativas otimistas?"
+das partições \cite{Cawley2010OverFitting}.
 Esse viés de seleção é uma das razões pelas quais o desempenho final é estimado em um
 conjunto de teste que não participou de nenhuma etapa do treinamento
 (Seção~\ref{sec:avaliacao_desempenho}).
@@ -951,15 +874,7 @@ Há ainda duas razões ligadas às demais decisões metodológicas. A primeira �
 SMOTE altera a proporção de classes vista pelos modelos durante o treinamento, de
 modo que as probabilidades previstas deixam de refletir a prevalência real de doença
 e tendem a superestimar a probabilidade da classe que foi ampliada artificialmente
-\cite{}.
-% TODO: buscar o artigo de VAN DEN GOORBERGH, R.; VAN SMEDEN, M.; TIMMERMAN, D.;
-% VAN CALSTER, B. "The harm of class imbalance corrections for risk prediction models:
-% illustration and simulation using logistic regression". Journal of the American
-% Medical Informatics Association, v. 29, n. 9, p. 1525-1534, 2022. Chave sugerida:
-% vandenGoorbergh2022Harm.
-% Prompt Consensus: "Qual artigo, de van den Goorbergh et al. (2022), mostra que
-% técnicas de correção de desbalanceamento como o SMOTE prejudicam a calibração das
-% probabilidades de modelos de predição de risco?"
+\cite{vandenGoorbergh2022Harm}.
 Nessas condições, o limiar de 0,5 perde seu significado natural, e uma métrica que
 dependa dele seria afetada pelo balanceamento. A AUC-ROC, por depender apenas da
 ordenação das previsões, permite selecionar os modelos pela capacidade de
@@ -984,29 +899,13 @@ pareada: para cada par de modelos, calculou-se a diferença de AUC-ROC em cada u
 igual a zero. Como são realizadas seis comparações, uma para cada par de modelos, os
 valores-$p$ foram ajustados pela correção de Bonferroni, que multiplica cada
 valor-$p$ pelo número de comparações para controlar a probabilidade de ao menos um
-falso positivo no conjunto dos testes \cite{}.
-% TODO: buscar o artigo de DEMŠAR, J. "Statistical comparisons of classifiers over
-% multiple data sets". Journal of Machine Learning Research, v. 7, p. 1-30, 2006.
-% Chave sugerida: Demsar2006Statistical. Observação: o artigo trata principalmente da
-% comparação de classificadores em múltiplas bases de dados, mas discute o teste t
-% pareado e as correções para comparações múltiplas, como a de Bonferroni.
-% Prompt Consensus: "Qual é o artigo de Janez Demšar, de 2006, sobre comparações
-% estatísticas de classificadores, incluindo testes pareados e correções para
-% comparações múltiplas?"
+falso positivo no conjunto dos testes \cite{Demsar2006Statistical}.
 
 Esse procedimento deve ser interpretado com cautela. As 15 estimativas não são
 independentes, pois os conjuntos de treino das diferentes partições compartilham a
 maior parte dos pacientes, o que leva o teste $t$ a subestimar a variância das
 diferenças e a rejeitar a hipótese nula com frequência maior do que o nível nominal
-\cite{}.
-% TODO: buscar o artigo de NADEAU, C.; BENGIO, Y. "Inference for the generalization
-% error". Machine Learning, v. 52, n. 3, p. 239-281, 2003. Chave sugerida:
-% Nadeau2003Inference. Alternativa: DIETTERICH, T. G. "Approximate statistical tests
-% for comparing supervised classification learning algorithms". Neural Computation,
-% v. 10, n. 7, p. 1895-1923, 1998.
-% Prompt Consensus: "Qual artigo, de Nadeau e Bengio (2003), mostra que o teste t
-% pareado aplicado aos folds da validação cruzada subestima a variância por causa da
-% sobreposição entre os conjuntos de treino?"
+\cite{Nadeau2003Inference}.
 Por isso, o teste foi tratado como evidência complementar, a ser confrontada com a
 comparação no conjunto de teste independente (Seção~\ref{sec:comparacao_auc}).
 
@@ -1071,12 +970,7 @@ A partir dessas quantidades, foram calculadas as seguintes métricas:
     descontada a concordância esperada ao acaso, $\kappa = (p_o - p_e)/(1 - p_e)$, em
     que $p_o$ é a acurácia observada e $p_e$ é a acurácia esperada caso as
     classificações fossem independentes das classes reais, mantidas as proporções
-    marginais da matriz de confusão \cite{};
-    % TODO: buscar o artigo seminal de COHEN, J. "A coefficient of agreement for
-    % nominal scales". Educational and Psychological Measurement, v. 20, n. 1,
-    % p. 37-46, 1960. Chave sugerida: Cohen1960Coefficient.
-    % Prompt Consensus: "Qual é o artigo seminal de Jacob Cohen, de 1960, que
-    % introduziu o coeficiente Kappa de concordância para escalas nominais?"
+    marginais da matriz de confusão \cite{Cohen1960Coefficient};
     \item \textbf{AUC-ROC}: área sob a curva ROC (Seção~\ref{sec:metrica_selecao}),
     a única das métricas listadas que não depende do limiar de decisão.
 \end{itemize}
@@ -1093,25 +987,11 @@ e sensibilidade na classe positiva (F1) e que descontam o acerto esperado ao aca
 (Kappa).
 
 Para quantificar a incerteza da AUC-ROC estimada no teste, calculou-se seu intervalo
-de confiança de 95\% pelo método de DeLong \cite{},
-% TODO: buscar o artigo seminal de DELONG, E. R.; DELONG, D. M.; CLARKE-PEARSON, D. L.
-% "Comparing the areas under two or more correlated receiver operating characteristic
-% curves: a nonparametric approach". Biometrics, v. 44, n. 3, p. 837-845, 1988.
-% Chave sugerida: DeLong1988Comparing. Esta mesma referência é usada na
-% Seção "Comparação Estatística das AUCs".
-% Prompt Consensus: "Qual é o artigo seminal de DeLong, DeLong e Clarke-Pearson, de
-% 1988, que propôs um método não paramétrico para comparar as áreas sob curvas ROC
-% correlacionadas?"
+de confiança de 95\% pelo método de DeLong \cite{DeLong1988Comparing},
 um procedimento não paramétrico, baseado na teoria das estatísticas $U$, que estima a
 variância da AUC-ROC sem supor nenhuma distribuição para as probabilidades previstas.
 As AUCs, seus intervalos de confiança, as curvas ROC e os testes de comparação
-descritos adiante foram calculados com o pacote \texttt{pROC} \cite{}.
-% TODO: buscar a referência do pacote: ROBIN, X.; TURCK, N.; HAINARD, A.; TIBERTI, N.;
-% LISACEK, F.; SANCHEZ, J.-C.; MÜLLER, M. "pROC: an open-source package for R and S+ to
-% analyze and compare ROC curves". BMC Bioinformatics, v. 12, art. 77, 2011. Também
-% pode ser obtida no R com toBibtex(citation("pROC")). Chave sugerida: Robin2011pROC.
-% Prompt Consensus: "Qual é o artigo de Robin et al., de 2011, que apresenta o pacote
-% pROC para analisar e comparar curvas ROC no R?"
+descritos adiante foram calculados com o pacote \texttt{pROC} \cite{Robin2011pROC}.
 Com apenas 113 pacientes, dos quais 32 saudáveis, esses intervalos tendem a ser
 largos, o que deve ser considerado na interpretação das diferenças entre os modelos.
 
@@ -1132,16 +1012,7 @@ classe, a precisão depende diretamente da proporção entre as classes, o que t
 curva PR sensível ao desbalanceamento \cite{imbalancedata}. Por esse motivo, a curva PR
 é frequentemente recomendada como complemento, ou mesmo como alternativa mais
 informativa, à curva ROC na avaliação de classificadores em dados desbalanceados
-\cite{}.
-% TODO: buscar o artigo de SAITO, T.; REHMSMEIER, M. "The precision-recall plot is more
-% informative than the ROC plot when evaluating binary classifiers on imbalanced
-% datasets". PLoS ONE, v. 10, n. 3, e0118432, 2015. Chave sugerida:
-% Saito2015Precision. Alternativa: DAVIS, J.; GOADRICH, M. "The relationship between
-% precision-recall and ROC curves". In: Proceedings of the 23rd International
-% Conference on Machine Learning (ICML), p. 233-240, 2006.
-% Prompt Consensus: "Qual artigo, de Saito e Rehmsmeier (2015), mostra que a curva
-% precision-recall é mais informativa que a curva ROC para avaliar classificadores em
-% dados desbalanceados?"
+\cite{Saito2015Precision}.
 A linha de referência da curva PR é a prevalência da classe positiva no teste, que
 corresponde à precisão esperada de um classificador aleatório. Cabe observar, porém,
 que no ILPD a classe positiva é a majoritária, de modo que essa linha de referência é
@@ -1155,37 +1026,20 @@ a seguir.
 
 A classificação com limiar de 0,5 só minimiza o custo esperado dos erros quando as
 probabilidades previstas estão bem calibradas e os falsos positivos e os falsos
-negativos têm o mesmo custo \cite{}.
-% TODO: buscar o artigo de ELKAN, C. "The foundations of cost-sensitive learning". In:
-% Proceedings of the 17th International Joint Conference on Artificial Intelligence
-% (IJCAI), p. 973-978, 2001. Chave sugerida: Elkan2001Foundations.
-% Prompt Consensus: "Qual é o artigo de Charles Elkan, de 2001, que define o limiar de
-% decisão ótimo a partir dos custos dos falsos positivos e dos falsos negativos no
-% aprendizado sensível a custo?"
+negativos têm o mesmo custo \cite{Elkan2001Foundations}.
 Nenhuma das duas condições se verifica aqui: as probabilidades são afetadas pelo
 balanceamento do treino (Seção~\ref{sec:metrica_selecao}) e, em um cenário de triagem
 clínica, os dois erros têm consequências muito diferentes. Um falso negativo, isto é,
 um paciente doente classificado como saudável, pode atrasar o diagnóstico e o
 tratamento, enquanto um falso positivo tende a resultar na solicitação de exames
 complementares. Em testes de triagem, o ponto de corte deve, portanto, levar em conta
-o custo maior do falso negativo \cite{}.
-% TODO: buscar o artigo de HABIBZADEH, F.; HABIBZADEH, P.; YADOLLAHIE, M. "On
-% determining the most appropriate test cut-off value: the case of tests with
-% continuous results". Biochemia Medica, v. 26, n. 3, p. 297-307, 2016. Chave
-% sugerida: Habibzadeh2016Determining.
-% Prompt Consensus: "Qual artigo, como o de Habibzadeh et al. (2016), discute como
-% escolher o ponto de corte de um teste diagnóstico considerando o custo maior dos
-% falsos negativos em relação aos falsos positivos?"
+o custo maior do falso negativo \cite{Habibzadeh2016Determining}.
 Por esse motivo, o falso negativo foi considerado o erro mais crítico, e a escolha do
 limiar foi tratada como uma decisão explícita, analisada de três formas para cada
 modelo:
 
 \begin{enumerate}
-    \item \textbf{Limiar de Youden}: limiar que maximiza o índice de Youden \cite{},
-    % TODO: buscar o artigo seminal de YOUDEN, W. J. "Index for rating diagnostic
-    % tests". Cancer, v. 3, n. 1, p. 32-35, 1950. Chave sugerida: Youden1950Index.
-    % Prompt Consensus: "Qual é o artigo seminal de W. J. Youden, de 1950, que propôs o
-    % índice J (sensibilidade + especificidade - 1) para avaliar testes diagnósticos?"
+    \item \textbf{Limiar de Youden}: limiar que maximiza o índice de Youden \cite{Youden1950Index},
     \begin{equation}
         J = \textrm{Sensibilidade} + \textrm{Especificidade} - 1,
         \label{eq:youden}
@@ -1217,15 +1071,7 @@ fixado com dados de treino ou de validação e confirmado em dados independentes
 
 Para verificar se as diferenças de AUC-ROC observadas no conjunto de teste são
 estatisticamente significativas, aplicou-se o teste de DeLong para curvas ROC
-correlacionadas \cite{}.
-% TODO: mesma referência do intervalo de confiança da AUC (Seção "Matriz de Confusão e
-% Métricas"): DELONG, E. R.; DELONG, D. M.; CLARKE-PEARSON, D. L. "Comparing the areas
-% under two or more correlated receiver operating characteristic curves: a
-% nonparametric approach". Biometrics, v. 44, n. 3, p. 837-845, 1988. Chave sugerida:
-% DeLong1988Comparing.
-% Prompt Consensus: "Qual é o artigo de DeLong et al. (1988) que propõe o teste não
-% paramétrico para comparar AUCs de curvas ROC correlacionadas, obtidas nos mesmos
-% pacientes?"
+correlacionadas \cite{DeLong1988Comparing}.
 Como os quatro modelos são avaliados nos mesmos 113 pacientes, suas AUCs não são
 independentes: um paciente difícil de classificar tende a ser difícil para todos os
 modelos. O método de DeLong leva essa dependência em conta ao estimar a covariância
@@ -1281,15 +1127,7 @@ Os modelos de \textit{ensemble} descritos na Seção~\ref{sec:modelos_preditivos
 tendem a apresentar bom desempenho preditivo, mas suas previsões resultam da
 combinação de dezenas a centenas de árvores, o que impede a inspeção direta do raciocínio que
 as produziu. Para explicá-las, utilizou-se o SHAP (\textit{SHapley Additive
-exPlanations}) \cite{},
-% TODO: buscar o artigo seminal de LUNDBERG, S. M.; LEE, S.-I. "A unified approach to
-% interpreting model predictions". In: Advances in Neural Information Processing
-% Systems 30 (NIPS 2017), p. 4765-4774, 2017. Chave sugerida: Lundberg2017Unified.
-% Observação: o .bib já contém Lundberg2020Trees, que é um trabalho posterior; esta
-% referência de 2017 ainda NÃO consta em bibliografia3.bib.
-% Prompt Consensus: "Qual é o artigo seminal que introduziu os valores de Shapley
-% (SHAP) para explicar modelos de machine learning, de Lundberg e Lee, por volta de
-% 2017?"
+exPlanations}) \cite{Lundberg2017Unified},
 um método que atribui a cada variável uma contribuição para cada previsão individual,
 com base nos valores de Shapley da teoria dos jogos cooperativos. As explicações são
 locais, pois decompõem a previsão de cada paciente, mas podem ser agregadas para
@@ -1302,13 +1140,7 @@ as explicações se referem a pacientes não vistos durante o treinamento.
 
 Os valores de Shapley foram propostos no contexto dos jogos cooperativos, em que um
 conjunto de jogadores colabora para gerar um ganho total, e respondem à pergunta de
-como dividir esse ganho de forma justa entre os jogadores \cite{}.
-% TODO: buscar o trabalho seminal de SHAPLEY, L. S. "A value for n-person games". In:
-% KUHN, H. W.; TUCKER, A. W. (Ed.). Contributions to the Theory of Games II. Princeton:
-% Princeton University Press, 1953. (Annals of Mathematics Studies, v. 28),
-% p. 307-317. Chave sugerida: Shapley1953Value.
-% Prompt Consensus: "Qual é o trabalho seminal de Lloyd Shapley, de 1953, que definiu o
-% valor de Shapley para a divisão justa de ganhos em jogos cooperativos de n jogadores?"
+como dividir esse ganho de forma justa entre os jogadores \cite{Shapley1953Value}.
 Sejam $\mathcal{P} = \{1, \ldots, p\}$ o conjunto de jogadores e $v(S)$ o ganho obtido
 por uma coalizão $S \subseteq \mathcal{P}$, chamado de função característica do jogo.
 O valor de Shapley do jogador $j$ é dado por:
@@ -1394,25 +1226,8 @@ exata, pois o logaritmo da razão de chances de uma classe é o simétrico do da
 
 Para o \textit{Random Forest}, cuja implementação não dispõe de cálculo nativo de
 valores SHAP no fluxo utilizado, empregou-se a estimação amostral por Monte Carlo
-proposta por Štrumbelj e Kononenko \cite{},
-% TODO: buscar o artigo de ŠTRUMBELJ, E.; KONONENKO, I. "Explaining prediction models
-% and individual predictions with feature contributions". Knowledge and Information
-% Systems, v. 41, n. 3, p. 647-665, 2014. Chave sugerida: Strumbelj2014Explaining.
-% Observação: é este o algoritmo implementado no pacote fastshap (amostragem de
-% permutações), e NÃO o Kernel SHAP de Lundberg e Lee (2017), que usa regressão linear
-% ponderada. Versão anterior do método: ŠTRUMBELJ, E.; KONONENKO, I. "An efficient
-% explanation of individual classifications using game theory". Journal of Machine
-% Learning Research, v. 11, p. 1-18, 2010.
-% Prompt Consensus: "Qual é o artigo de Štrumbelj e Kononenko, de 2014, que propõe a
-% estimação dos valores de Shapley por amostragem de Monte Carlo para explicar
-% previsões individuais de modelos?"
-implementada no pacote \texttt{fastshap} \cite{}.
-% TODO: buscar a referência do pacote: GREENWELL, B. M. "fastshap: fast approximate
-% Shapley values". Pacote R, versão 0.1.1 (versão instalada no pipeline). Obter a
-% referência exata no R com toBibtex(citation("fastshap")). Chave sugerida:
-% Greenwell2024fastshap (ajustar o ano à versão citada).
-% Prompt Consensus: "Qual é a referência do pacote R fastshap, de Brandon Greenwell,
-% para o cálculo aproximado de valores de Shapley por Monte Carlo?"
+proposta por \citeonline{Strumbelj2014Explaining},
+implementada no pacote \texttt{fastshap} \cite{Greenwell2024fastshap}.
 Para cada paciente $\mathbf{x}$ e cada variável $j$, sorteiam-se uma ordenação
 aleatória das variáveis e um paciente de referência $\mathbf{z}$ do conjunto de teste.
 A partir deles, constroem-se dois pacientes híbridos: $\mathbf{x}_{+j}$, que recebe os
@@ -1457,13 +1272,7 @@ coeficientes já descrevem diretamente o efeito de cada variável
 (Seção~\ref{sec:regressao_logistica}). Em modelos lineares, inclusive, os valores SHAP
 na escala do logaritmo da razão de chances têm forma fechada, desde que as variáveis
 sejam tratadas como independentes: $\phi_j = \beta_j (x_j - \mathrm{E}[X_j])$
-\cite{},
-% TODO: mesma referência do SHAP original (LUNDBERG, S. M.; LEE, S.-I. "A unified
-% approach to interpreting model predictions". NIPS 30, 2017), que apresenta o Linear
-% SHAP. Chave sugerida: Lundberg2017Unified.
-% Prompt Consensus: "Em que artigo Lundberg e Lee (2017) mostram que, para modelos
-% lineares com variáveis independentes, o valor SHAP de uma variável é o coeficiente
-% multiplicado pela diferença entre o valor observado e a média da variável?"
+\cite{Lundberg2017Unified},
 de modo que, com preditores padronizados e o treino como referência, a contribuição
 de cada variável é simplesmente o produto $\beta_j x_j$. Caso a Regressão Logística
 fosse o modelo de maior AUC-ROC no teste, ela seria explicada pelo mesmo estimador
@@ -1520,13 +1329,11 @@ partir da qual foram produzidas as seguintes análises e visualizações:
     modelo a subestimar o risco daquele paciente.
 \end{enumerate}
 
-Os gráficos foram produzidos com o pacote \texttt{shapviz} \cite{}.
-% TODO: buscar a referência do pacote: MAYER, M. "shapviz: SHAP visualizations". Pacote
-% R. Obter a referência exata (versão instalada e ano) no R com
-% toBibtex(citation("shapviz")). Chave sugerida: Mayer2024shapviz (ajustar o ano à
-% versão citada).
-% Prompt Consensus: "Qual é a referência do pacote R shapviz, de Michael Mayer, para a
-% visualização de valores SHAP?"
+Os gráficos foram produzidos com o pacote \texttt{shapviz} \cite{Mayer2026shapviz}.
+% TODO: confirmar no R a versão do shapviz usada no pipeline, com
+% packageVersion("shapviz"), e acrescentá-la ao campo note da entrada
+% Mayer2026shapviz do .bib, ajustando o ano à data de publicação dessa versão
+% (toBibtex(citation("shapviz")) fornece a referência completa).
 
 \subsection{Auditoria de Viés por Sexo}
 \label{sec:shap_sexo}
