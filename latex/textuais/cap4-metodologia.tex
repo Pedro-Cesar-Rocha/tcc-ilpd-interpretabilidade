@@ -166,7 +166,7 @@ desvio-padrão, o mínimo, a mediana, o máximo e o coeficiente de assimetria
 comparação entre média e mediana é especialmente informativa: como a mediana 
 é pouco afetada por valores extremos, uma média muito superior à mediana 
 indica que poucos valores elevados estão deslocando a média para cima 
-\cite{gettintoknowyourdata}.
+\cite{han2012getting}.
 
 Para quantificar a assimetria de forma objetiva, utilizou-se o coeficiente 
 de assimetria amostral, definido como o terceiro momento padronizado:
@@ -208,28 +208,35 @@ AG\_Ratio\textsuperscript{a} & 0,95  & 0,32   & 0,3  & 0,93 & 2,8   & 0,99 \\
 \end{tabular}
 \end{table}
 
-Adotou-se o critério $|b_1| > 2$ para identificar desvios substanciais da 
-normalidade, valor a partir do qual \citeonline[p.~26]{curran1996robustness} 
-observaram problemas significativos em procedimentos estatísticos, 
-classificando distribuições com assimetria 2,0 como moderadamente 
-não normais e com assimetria 3,0 como severamente não normais 
-\cite[p.~20]{curran1996robustness}. Cinco variáveis ultrapassaram esse 
-limiar: \textit{Total\_Bilirubin}, \textit{Direct\_Bilirubin}, 
-\textit{Alkaline\_Phosphotase}, \textit{Alamine\_Aminotransferase} e 
-\textit{Aspartate\_Aminotransferase}, com coeficientes entre 3,20 e 10,49, 
-todos superiores inclusive ao nível de não normalidade severa. As demais 
-variáveis não ultrapassaram 1,0 em valor absoluto. Dada essa separação 
-nítida, a seleção das variáveis a serem transformadas não depende da 
-escolha exata do limiar.
+Adotou-se o critério $|b_1| > 2$ para identificar desvios substanciais da
+normalidade. O valor segue a referência de \citeonline[p.~26]{curran1996robustness},
+que, em simulações sobre o teste de ajuste de modelos de análise fatorial
+confirmatória, encontraram problemas significativos a partir de assimetria
+univariada de 2,0 e curtose de 7,0, e consideraram suspeitos valores que se
+aproximem desses. Nesse mesmo estudo, assimetria de 2,0 (com curtose de 7,0)
+representou não normalidade moderada, e assimetria de 3,0 (com curtose de
+21,0), não normalidade severa \cite[p.~20]{curran1996robustness}. Trata-se,
+portanto, de uma convenção heurística, e não de um limite estabelecido.
+Cinco variáveis ultrapassaram esse limiar: \textit{Total\_Bilirubin},
+\textit{Direct\_Bilirubin}, \textit{Alkaline\_Phosphotase},
+\textit{Alamine\_Aminotransferase} e \textit{Aspartate\_Aminotransferase},
+com coeficientes entre 3,20 e 10,49, todos superiores inclusive ao nível de
+não normalidade severa. As demais variáveis não ultrapassaram 1,0 em valor
+absoluto. Dada essa separação nítida, a seleção das variáveis a serem
+transformadas não depende da escolha exata do limiar.
 
-Esse comportamento é esperado do ponto de vista clínico. Em indivíduos 
-saudáveis, bilirrubinas e enzimas hepáticas permanecem em faixas estreitas de 
-referência, mas, em pacientes com lesão ou disfunção hepática, podem atingir 
-valores várias vezes acima do limite superior da normalidade \cite{Giannini2005Liver, Kwo2016ACG}. Os 
-valores extremos, portanto, não são erros de medição, e sim a própria 
-manifestação laboratorial da doença que se deseja predizer. Removê-los 
-significaria descartar justamente os casos mais informativos. Por isso, 
-decidiu-se \textbf{não remover os \textit{outliers}} dessas variáveis \cite{Aggarwal2015}.
+Esse comportamento é esperado do ponto de vista clínico. Em indivíduos
+saudáveis, bilirrubinas e enzimas hepáticas permanecem dentro de faixas de
+referência definidas, mas, em pacientes com lesão ou disfunção hepática,
+podem atingir valores várias vezes acima do limite superior da normalidade
+\cite{Giannini2005Liver, Kwo2016ACG}. Os valores extremos são, portanto,
+compatíveis com a manifestação laboratorial da doença que se deseja predizer,
+e não necessariamente com erros de medição. Em limpeza de dados, observações
+atípicas costumam ser tratadas como ruído decorrente de erros de coleta, mas
+podem também ser o próprio fenômeno de interesse \cite[p.~237]{Aggarwal2015}.
+Como a base não permite verificar a origem de cada valor, e removê-los
+significaria descartar justamente casos clinicamente informativos,
+decidiu-se \textbf{não remover os \textit{outliers}} dessas variáveis.
 
 \subsection{Comparação entre Classes}
 
