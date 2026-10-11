@@ -2,8 +2,10 @@
 # 5.Avaliacao.R
 # Avalia os modelos no conjunto de teste (distribuicao real, sem SMOTE):
 # matriz de confusao, metricas, IC 95% da AUC (DeLong), curvas ROC e
-# Precision-Recall, analise do limiar de decisao com foco em Recall (para
-# todos os modelos) e analise de desempenho estratificada por sexo (vies).
+# Precision-Recall, limiares de decisao (Youden e foco em Recall) escolhidos
+# nas predicoes out-of-fold da validacao cruzada e apenas aplicados ao teste,
+# comparacao pareada das AUCs (DeLong com correcao de Bonferroni) e analise
+# de desempenho estratificada por sexo (vies).
 # =============================================================================
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
@@ -33,7 +35,7 @@ log_kv(paste0("Classe ", levels(teste$Dataset)),
 log_kv(paste0("Sexo ", levels(genero)),
        sprintf("%d (%.1f%%)", table(genero), 100 * prop.table(table(genero))))
 
-# Menor limiar que garante sensibilidade >= alvo (prioriza reduzir falsos negativos)
+# Maior limiar que ainda garante sensibilidade >= alvo (menor custo em especificidade)
 limiar_recall <- function(roc_o, alvo) {
   co <- coords(roc_o, "all", ret = c("threshold", "sensitivity", "specificity", "precision"))
   co <- co[is.finite(co$threshold) & co$sensitivity >= alvo, ]
@@ -47,6 +49,15 @@ metricas_no_limiar <- function(prob, real, limiar) {
     Precisao = unname(cm$byClass["Precision"]), F1 = unname(cm$byClass["F1"]),
     Acuracia_Bal = unname(cm$byClass["Balanced Accuracy"]),
     FN = unname(cm$table["saudavel", "doente"]), FP = unname(cm$table["doente", "saudavel"]))
+}
+
+# Curva ROC das predicoes out-of-fold da validacao cruzada (somente treino).
+# Com savePredictions = "final", o caret guarda, para os hiperparametros finais,
+# a probabilidade prevista para cada paciente do treino pelo modelo do fold em
+# que ele ficou de fora (uma vez por repeticao: 5 folds x 3 repeticoes).
+roc_oof <- function(modelo) {
+  oof <- modelo$pred
+  roc(oof$obs, oof$doente, levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
 }
 
 # --- Avaliacao individual -----------------------------------------------------
@@ -81,22 +92,34 @@ avaliar <- function(modelo, nome) {
   log_kv(names(metricas), metricas, digits = 4)
   log_info("IC 95%% da AUC (DeLong): [%.4f ; %.4f]", ic[1], ic[3])
 
+  # Limiares escolhidos SOMENTE com dados de treino (predicoes out-of-fold da CV)
+  # e apenas aplicados ao teste; escolhe-los nas proprias previsoes do teste
+  # tornaria otimistas as metricas reportadas nesses limiares.
+  roc_cv <- roc_oof(modelo)
+  log_info("ROC out-of-fold da CV: %d predicoes | AUC = %.4f", length(roc_cv$response), as.numeric(auc(roc_cv)))
+
   # Limiar otimo pelo indice de Youden (Sens + Spec - 1)
-  yj <- coords(roc_o, "best", best.method = "youden", ret = c("threshold", "sensitivity", "specificity"))
-  log_info("Limiar otimo (Youden): %.3f -> Sens = %.3f | Spec = %.3f",
-           yj$threshold[1], yj$sensitivity[1], yj$specificity[1])
+  yj   <- coords(roc_cv, "best", best.method = "youden", ret = c("threshold", "sensitivity", "specificity"))
+  m_yj <- metricas_no_limiar(prob, teste$Dataset, yj$threshold[1])
+  log_info("Limiar otimo (Youden, CV): %.3f -> CV: Sens = %.3f | Spec = %.3f || teste: Sens = %.3f | Spec = %.3f",
+           yj$threshold[1], yj$sensitivity[1], yj$specificity[1], m_yj["Sensibilidade"], m_yj["Especificidade"])
 
-  # Limiar clinico: menor sacrificio de especificidade que garante Recall >= alvo
-  lr <- limiar_recall(roc_o, RECALL_ALVO)
-  log_info("Limiar clinico (Recall >= %.0f%%): %.3f -> Sens = %.3f | Spec = %.3f | Precisao = %.3f",
-           100 * RECALL_ALVO, lr$threshold, lr$sensitivity, lr$specificity, lr$precision)
+  # Limiar clinico: menor sacrificio de especificidade que garante Recall >= alvo na CV
+  lr   <- limiar_recall(roc_cv, RECALL_ALVO)
+  m_lr <- metricas_no_limiar(prob, teste$Dataset, lr$threshold)
+  log_info("Limiar clinico (Recall >= %.0f%% na CV): %.3f -> CV: Sens = %.3f | Spec = %.3f || teste: Sens = %.3f | Spec = %.3f | Precisao = %.3f",
+           100 * RECALL_ALVO, lr$threshold, lr$sensitivity, lr$specificity,
+           m_lr["Sensibilidade"], m_lr["Especificidade"], m_lr["Precisao"])
 
-  list(nome = nome, prob = prob, roc = roc_o,
+  list(nome = nome, prob = prob, roc = roc_o, limiar_recall = lr$threshold,
        metricas = c(Modelo = nome, round(metricas, 4), AUC_IC_inf = round(ic[1], 4), AUC_IC_sup = round(ic[3], 4),
                     Limiar_Youden = round(yj$threshold[1], 3),
+                    Sens_Youden = round(m_yj[["Sensibilidade"]], 4),
+                    Spec_Youden = round(m_yj[["Especificidade"]], 4),
                     Limiar_Recall90 = round(lr$threshold, 3),
-                    Spec_Recall90 = round(lr$specificity, 4),
-                    Precisao_Recall90 = round(lr$precision, 4)))
+                    Sens_Recall90 = round(m_lr[["Sensibilidade"]], 4),
+                    Spec_Recall90 = round(m_lr[["Especificidade"]], 4),
+                    Precisao_Recall90 = round(m_lr[["Precisao"]], 4)))
 }
 
 resultados <- imap(modelos, ~avaliar(.x, .y))
@@ -107,8 +130,10 @@ tabela <- map_dfr(resultados, ~as.data.frame(t(.x$metricas), stringsAsFactors = 
   mutate(across(-Modelo, as.numeric)) %>%
   arrange(desc(AUC))
 log_table(tabela %>% select(Modelo, AUC, Sensibilidade, Especificidade, F1, Acuracia_Bal, Kappa), digits = 4)
-log_info("Foco em Recall: especificidade obtida por cada modelo quando o limiar garante Sens >= %.0f%%:", 100 * RECALL_ALVO)
-log_table(tabela %>% select(Modelo, Limiar_Recall90, Spec_Recall90, Precisao_Recall90), digits = 4)
+log_info("Limiar de Youden escolhido na CV (out-of-fold) e aplicado ao teste:")
+log_table(tabela %>% select(Modelo, Limiar_Youden, Sens_Youden, Spec_Youden), digits = 4)
+log_info("Foco em Recall: desempenho no teste com o limiar que garante Sens >= %.0f%% na CV:", 100 * RECALL_ALVO)
+log_table(tabela %>% select(Modelo, Limiar_Recall90, Sens_Recall90, Spec_Recall90, Precisao_Recall90), digits = 4)
 salvar_csv(tabela, "results/metricas_teste.csv")
 
 melhor <- tabela$Modelo[1]
@@ -116,7 +141,10 @@ log_ok("Melhor modelo pela AUC no teste: %s (AUC = %.4f)", melhor, tabela$AUC[1]
 salvar_rds(melhor, "results/melhor_modelo.rds")
 
 # --- Comparacao estatistica das curvas ROC (DeLong) --------------------------
-log_subsection("Comparacao pareada das AUCs (teste de DeLong)")
+# Seis comparacoes simultaneas (todos os pares de modelos): os p-valores sao
+# ajustados por Bonferroni para controlar a taxa de erro do tipo I da familia,
+# como na comparacao das AUCs da validacao cruzada.
+log_subsection("Comparacao pareada das AUCs (teste de DeLong, correcao de Bonferroni)")
 nomes <- names(resultados)
 pares <- combn(nomes, 2, simplify = FALSE)
 delong <- map_dfr(pares, function(p) {
@@ -124,10 +152,13 @@ delong <- map_dfr(pares, function(p) {
   data.frame(Modelo_A = p[1], Modelo_B = p[2],
              AUC_A = round(as.numeric(auc(resultados[[p[1]]]$roc)), 4),
              AUC_B = round(as.numeric(auc(resultados[[p[2]]]$roc)), 4),
-             p_valor = round(tt$p.value, 4))
+             p_valor = tt$p.value)
 })
-delong$Significativo_5pct <- ifelse(delong$p_valor < 0.05, "sim", "nao")
+delong$p_ajustado_Bonferroni <- round(p.adjust(delong$p_valor, method = "bonferroni"), 4)
+delong$p_valor <- round(delong$p_valor, 4)
+delong$Significativo_5pct <- ifelse(delong$p_ajustado_Bonferroni < 0.05, "sim", "nao")
 log_table(delong)
+log_info("Significancia avaliada no p-valor ajustado (Bonferroni, %d comparacoes).", nrow(delong))
 salvar_csv(delong, "results/delong_pareado.csv")
 
 # --- Curvas ROC ---------------------------------------------------------------
@@ -186,6 +217,7 @@ for (nm in names(resultados)) {
   log_table(sens_lim %>% filter(Modelo == nm) %>% select(-Modelo), digits = 3)
 }
 log_info("Em triagem clinica, limiares menores priorizam sensibilidade (menos falsos negativos).")
+log_info("Grade apenas descritiva: os limiares de decisao (Youden e clinico) foram escolhidos na CV, nao nesta tabela.")
 salvar_csv(sens_lim, "results/analise_limiar_modelos.csv")
 
 p_lim <- sens_lim %>%
@@ -211,7 +243,7 @@ por_sexo <- map_dfr(resultados, function(r) {
     roc_g <- roc(real, prob, levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
     ic_g  <- ci.auc(roc_g, method = "delong")
     m05   <- metricas_no_limiar(prob, real, 0.5)
-    m90   <- metricas_no_limiar(prob, real, tabela$Limiar_Recall90[tabela$Modelo == r$nome])
+    m90   <- metricas_no_limiar(prob, real, r$limiar_recall)   # limiar clinico escolhido na CV
     data.frame(Modelo = r$nome, Sexo = g, n = sum(idx), n_doentes = sum(real == "doente"),
                AUC = round(as.numeric(auc(roc_g)), 4),
                AUC_IC_inf = round(ic_g[1], 4), AUC_IC_sup = round(ic_g[3], 4),
@@ -227,7 +259,8 @@ por_sexo <- map_dfr(resultados, function(r) {
 log_table(por_sexo %>% select(Modelo, Sexo, n, n_doentes, AUC, Sensibilidade, Especificidade, Taxa_FN), digits = 4)
 salvar_csv(por_sexo, "results/metricas_por_sexo.csv")
 
-# Diferenca de AUC entre sexos (DeLong, amostras independentes) e gap de metricas
+# Diferenca de AUC entre sexos (DeLong, amostras independentes) e gap de metricas.
+# Um teste por modelo: p-valores ajustados por Bonferroni (4 comparacoes).
 gap_sexo <- map_dfr(resultados, function(r) {
   idx_f <- genero == "Feminino"; idx_m <- genero == "Masculino"
   roc_f <- roc(teste$Dataset[idx_f], r$prob[idx_f], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
@@ -237,12 +270,14 @@ gap_sexo <- map_dfr(resultados, function(r) {
   data.frame(Modelo = r$nome,
              AUC_Feminino = round(as.numeric(auc(roc_f)), 4), AUC_Masculino = round(as.numeric(auc(roc_m)), 4),
              Dif_AUC = round(as.numeric(auc(roc_m)) - as.numeric(auc(roc_f)), 4),
-             p_valor_DeLong = round(tt$p.value, 4),
+             p_valor_DeLong = tt$p.value,
              Dif_Sensibilidade = round(diff(ps$Sensibilidade), 4),   # Masculino - Feminino
              Dif_Especificidade = round(diff(ps$Especificidade), 4),
              row.names = NULL)
-})
-gap_sexo$Significativo_5pct <- ifelse(gap_sexo$p_valor_DeLong < 0.05, "sim", "nao")
+}) %>%
+  mutate(p_ajustado_Bonferroni = round(p.adjust(p_valor_DeLong, method = "bonferroni"), 4),
+         p_valor_DeLong = round(p_valor_DeLong, 4), .after = p_valor_DeLong)
+gap_sexo$Significativo_5pct <- ifelse(gap_sexo$p_ajustado_Bonferroni < 0.05, "sim", "nao")
 log_table(gap_sexo, digits = 4)
 log_info("Dif_* = Masculino - Feminino. Diferencas sistematicas de Sensibilidade indicam risco desigual de falso negativo.")
 log_warn("Amostras por sexo sao pequenas (especialmente feminino); interpretar gaps com cautela (ver ICs).")
