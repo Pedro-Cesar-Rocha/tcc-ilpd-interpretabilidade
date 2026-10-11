@@ -320,9 +320,7 @@ Aplicada ao **XGBoost**, ao **Random Forest** e ao **melhor modelo do teste** (s
 
 ## 7. Resultados obtidos
 
-> Valores da execução de referência (`logs/pipeline_20261011_003612.log`, de 11/10/2026), que já inclui as correções metodológicas descritas na Seção 6. Podem variar levemente entre máquinas por diferenças de paralelismo, mas a seed fixa (`42`) garante reprodutibilidade na mesma máquina. Todas as tabelas estão em `results/` e todas as figuras em `plots/`.
-
-> O log `logs/pipeline_20260912_224913.log` é de uma versão anterior do pipeline e fica apenas como histórico. Em relação a ele, não mudaram a análise exploratória, as contagens do SMOTE e os resultados do XGBoost e do LightGBM (cujos modelos finais não usam `Gender`). Mudaram pouco a regressão logística e o Random Forest, porque o `Gender` das amostras sintéticas agora volta a uma categoria válida. Também mudaram a tabela de médias do diagnóstico do SMOTE (que antes usava, por engano, pacientes reais da classe majoritária), a Sens/Spec da CV (antes com os rótulos trocados), os limiares de Youden e clínico (agora escolhidos na CV), os p-valores (agora com Bonferroni) e os postos empatados dos rankings. A principal mudança de conclusão é que, na CV, a regressão logística passa a ser significativamente superior também ao Random Forest (Seção 7.3).
+> Valores da execução de referência (`logs/pipeline_20261011_003612.log`, de 11/10/2026). Podem variar levemente entre máquinas por diferenças de paralelismo, mas a seed fixa (`42`) garante reprodutibilidade na mesma máquina. Todas as tabelas estão em `results/` e todas as figuras em `plots/`.
 
 ### 7.1 Análise exploratória
 
@@ -394,7 +392,7 @@ Verificação de integridade das 132 sintéticas: suas médias ficam a no máxim
 | Random Forest | 0,722 | 0,075 | 0,575 | 0,807 | **0,735** | 0,510 |
 | LightGBM | 0,720 | 0,064 | 0,607 | 0,792 | 0,685 | 0,659 |
 
-> Sensibilidade e especificidade referem-se à classe positiva `doente`. O `twoClassSummary` do caret toma o primeiro nível do desfecho (`saudavel`) como evento, por isso o pipeline usa um *wrapper* (`resumo_doente`) que troca as duas métricas; a AUC não é afetada. No log de 12/09/2026, gerado antes dessa correção, as linhas de Sens/Spec da CV aparecem com os rótulos trocados.
+> Sensibilidade e especificidade referem-se à classe positiva `doente`. O `twoClassSummary` do caret toma o primeiro nível do desfecho (`saudavel`) como evento, por isso o pipeline usa um *wrapper* (`resumo_doente`) que troca as duas métricas; a AUC não é afetada.
 
 Com o SMOTE aplicado corretamente dentro de cada fold, o quadro muda em relação ao que se obtém com SMOTE *antes* da CV (onde os modelos de árvore atingiam AUC ≈ 0,85–0,87 e a regressão logística ≈ 0,77):
 
@@ -763,11 +761,12 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 
 **Limitações**
 
-- Amostra pequena (113 pacientes de teste; 32 mulheres) → intervalos de confiança largos; nenhuma diferença entre modelos, nem entre sexos, foi significativa.
+- Amostra pequena (113 pacientes de teste; 32 mulheres) → intervalos de confiança largos; no teste, nenhuma diferença entre modelos, nem entre sexos, foi significativa.
 - Dataset de uma única região geográfica — generalização para outras populações não é garantida.
 - O rótulo "doente" agrupa diferentes patologias hepáticas.
 - SMOTE gera amostras por interpolação linear, o que pode criar pacientes fisiologicamente implausíveis (o `Gender` é devolvido a uma categoria válida, mas as variáveis contínuas continuam interpoladas).
-- Os limiares escolhidos na CV vêm de modelos ajustados com ~80 % do treino; aplicá-los ao modelo final (ajustado no treino completo) é uma aproximação, e a sensibilidade no teste pode ficar abaixo da meta de 90 %.
+- Os limiares escolhidos na CV vêm de modelos ajustados com ~80 % do treino; aplicá-los ao modelo final (ajustado no treino completo) é uma aproximação, e a sensibilidade no teste pode ficar abaixo da meta de 90 % — foi o que ocorreu com o XGBoost (0,84).
+- O teste t pareado da CV usa 15 estimativas não independentes e tende a ser liberal (Nadeau & Bengio, 2003); a superioridade da RL na CV deve ser lida junto com o DeLong no teste, que não a confirma.
 - O "melhor modelo", que define qual modelo extra a etapa 6 explica, ainda é escolhido pela AUC no teste. Isso não altera nenhuma métrica reportada, mas é uma escolha feita olhando o teste.
 - Random Search com 30 combinações explora o espaço de hiperparâmetros de forma limitada; a seleção do modelo ainda é feita na mesma CV usada para o tuning (sem CV aninhada), o que pode manter leve otimismo.
 - Os valores SHAP do Random Forest são aproximados (Monte Carlo) e estão em escala diferente (probabilidade) dos de XGBoost/LightGBM (log-odds).
@@ -802,3 +801,4 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 - Lundberg, S. M., Erion, G. G., & Lee, S.-I. (2018). Consistent Individualized Feature Attribution for Tree Ensembles. *arXiv:1802.03888* (TreeSHAP).
 - Straw, I., & Wu, H. (2022). Investigating for bias in healthcare algorithms: a sex-stratified analysis of supervised machine learning models in liver disease prediction. *BMJ Health & Care Informatics*, 29(1), e100457.
 - Santos, M. S., Soares, J. P., Abreu, P. H., Araújo, H., & Santos, J. (2018). Cross-Validation for Imbalanced Datasets: Avoiding Overoptimistic and Overfitting Approaches. *IEEE Computational Intelligence Magazine*, 13(4), 59–76.
+- Nadeau, C., & Bengio, Y. (2003). Inference for the Generalization Error. *Machine Learning*, 52(3), 239–281.
