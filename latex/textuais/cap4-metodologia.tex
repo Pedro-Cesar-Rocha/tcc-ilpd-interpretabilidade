@@ -468,3 +468,980 @@ partição de treino de cada \textit{fold}, após a separação dos \textit{fold
 Assim, as amostras sintéticas não contaminam as partições de validação — o que
 poderia ocorrer se o balanceamento fosse feito antes da divisão — nem inflacionam
 artificialmente as métricas de desempenho.
+
+\section{Modelos Preditivos}
+\label{sec:modelos_preditivos}
+
+Para investigar a relação entre desempenho preditivo e interpretabilidade, eixo central
+deste trabalho, foram comparados quatro classificadores. O primeiro é a Regressão
+Logística, um modelo linear e intrinsecamente interpretável, utilizado como linha de
+base (\textit{baseline}). Os outros três são métodos de \textit{ensemble} baseados em
+árvores de decisão, apresentados em ordem crescente de complexidade algorítmica: o
+\textit{Random Forest}, que combina árvores treinadas de forma independente; o XGBoost,
+que constrói as árvores sequencialmente, cada uma corrigindo os erros das anteriores,
+com regularização explícita da complexidade; e o LightGBM, que segue o mesmo princípio
+sequencial com otimizações adicionais na construção das árvores. Os quatro modelos
+recebem os mesmos dez preditores pré-processados e estimam a probabilidade de que o
+paciente pertença à classe positiva, ``doente''.
+
+Os três modelos de \textit{ensemble} têm como bloco básico a árvore de decisão, que
+particiona recursivamente o espaço dos preditores por meio de regras do tipo
+$x_j \leq c$, escolhidas de modo a tornar cada região resultante o mais homogênea
+possível quanto à classe \cite{elementsofstatiscal}. Árvores individuais são fáceis de
+interpretar, mas instáveis: pequenas alterações nos dados de treino podem produzir
+árvores muito diferentes, o que se traduz em alta variância \cite{elementsofstatiscal}.
+Os métodos de \textit{ensemble} contornam essa limitação combinando muitas árvores, ao
+custo de perder a interpretabilidade direta do modelo resultante, que passa a funcionar
+como uma caixa-preta (\textit{black box}). É essa perda que motiva o uso dos valores
+SHAP, descritos na Seção~\ref{sec:shap}.
+
+A inclusão da Regressão Logística como referência tem justificativa prática e
+conceitual. Do ponto de vista prático, revisões sistemáticas de modelos de predição
+clínica indicam que métodos de aprendizado de máquina nem sempre superam a regressão
+logística \cite{Christodoulou2019Systematic}.
+Do ponto de vista conceitual, defende-se que, em decisões de alto risco, como as
+clínicas, modelos interpretáveis sejam preferidos sempre que apresentarem desempenho
+comparável ao de modelos opacos \cite{Rudin2019Stop}.
+Assim, a complexidade adicional dos modelos de árvore só se justifica se resultar em
+ganho de desempenho em relação à Regressão Logística, o que é verificado
+estatisticamente nas Seções~\ref{sec:comparacao_cv} e~\ref{sec:comparacao_auc}.
+
+\subsection{Regressão Logística}
+\label{sec:regressao_logistica}
+
+A Regressão Logística é o modelo estatístico clássico para variáveis-resposta binárias
+\cite{Cox1958Regression}.
+Ela modela o logaritmo da razão de chances (\textit{log-odds}) de o paciente ser doente
+como uma combinação linear dos preditores \cite{Hosmer2005Applied}:
+
+\begin{equation}
+    \ln\left(\frac{\pi(\mathbf{x})}{1 - \pi(\mathbf{x})}\right) = \beta_0 + \sum_{j=1}^{p} \beta_j x_j,
+    \label{eq:logit}
+\end{equation}
+
+\noindent em que $\pi(\mathbf{x}) = P(Y = \mathrm{doente} \mid \mathbf{x})$ é a
+probabilidade de doença dado o vetor de preditores $\mathbf{x} = (x_1, \ldots, x_p)$,
+$p = 10$ é o número de preditores, $\beta_0$ é o intercepto e $\beta_j$ é o
+coeficiente do preditor $x_j$. Isolando-se $\pi(\mathbf{x})$ na
+Equação~\ref{eq:logit}, obtém-se a função logística, que restringe as previsões ao
+intervalo entre 0 e 1. Os coeficientes são estimados por máxima verossimilhança
+\cite{Hosmer2005Applied, elementsofstatiscal}. No \textit{pipeline}, o modelo foi
+ajustado em sua forma usual, sem penalização dos coeficientes, e, por isso, não possui
+hiperparâmetros a otimizar.
+
+A principal vantagem do modelo é a interpretação direta de seus parâmetros. Mantidos
+constantes os demais preditores, o aumento de uma unidade em $x_j$ multiplica a chance
+(\textit{odds}) de doença por $e^{\beta_j}$, quantidade denominada razão de chances
+(\textit{odds ratio}, OR) \cite{Hosmer2005Applied}. Valores de OR maiores que 1 indicam
+associação com maior chance de doença, e valores menores que 1, com menor chance. Como
+os preditores foram padronizados (Seção~\ref{sec:padronizacao}), a unidade de cada
+$x_j$ corresponde a um desvio-padrão da variável no conjunto de treino: as razões de
+chances expressam, portanto, o efeito do aumento de um desvio-padrão, e os
+coeficientes, por estarem na mesma escala, podem ser comparados entre si em
+magnitude. Para as cinco variáveis submetidas à transformação logarítmica, esse
+desvio-padrão refere-se à escala $\ln(1+x)$, e não à escala original do exame. Ao
+final do treinamento, foram extraídos os coeficientes estimados, as razões de chances
+correspondentes ($e^{\hat{\beta}_j}$) e os valores-$p$ do teste de Wald,
+considerando-se significativos os coeficientes com $p < 0{,}05$
+\cite{Hosmer2005Applied}.
+
+Duas ressalvas orientam a leitura desses coeficientes. A primeira é que a
+interpretação ``mantidos constantes os demais preditores'' é pouco realista para
+variáveis fortemente correlacionadas, como os pares identificados na análise de
+correlação (Figura~\ref{fig:eda_correlacao}): nesses casos, as estimativas dos
+coeficientes tornam-se instáveis e podem apresentar magnitude e até sinal diferentes
+dos esperados \cite{Dormann2012Collinearity}. A segunda é que, como o ajuste final
+também é feito sobre o treino balanceado pelo SMOTE (Seção~\ref{sec:validacao_cruzada}),
+que inclui observações sintéticas não independentes entre si, os erros-padrão tendem a
+ser subestimados, e os valores-$p$ devem, por isso, ser lidos como indicativos, e não
+como inferência estatística rigorosa; o intercepto, em particular, passa a refletir a
+proporção de classes do treino balanceado, e não a prevalência real
+(Seção~\ref{sec:metrica_selecao}). Por fim, por ser linear no \textit{logit}, o modelo
+não captura interações nem relações não monotônicas que não tenham sido especificadas
+explicitamente, o que não foi feito neste trabalho \cite{Hosmer2005Applied}. Essa é
+precisamente a limitação que os modelos baseados em árvores buscam superar.
+
+\subsection{\textit{Random Forest}}
+\label{sec:random_forest}
+
+O \textit{Random Forest} \cite{Breiman2001RandomForests} é um \textit{ensemble} de
+árvores de decisão que combina duas fontes de aleatoriedade. A primeira é o
+\textit{bagging} (\textit{bootstrap aggregating}): cada árvore é treinada em uma
+amostra \textit{bootstrap}, isto é, uma amostra de mesmo tamanho sorteada com
+reposição do conjunto de treino \cite{elementsofstatiscal}. A segunda é a seleção
+aleatória de preditores: a cada divisão de nó, apenas um subconjunto de \texttt{mtry}
+preditores, sorteado ao acaso, é considerado como candidato. Esse segundo mecanismo
+reduz a correlação entre as árvores e, com ela, a variância do conjunto, já que a
+média de variáveis aleatórias pouco correlacionadas tem variância menor do que a média
+de variáveis fortemente correlacionadas \cite{Breiman2001RandomForests,
+elementsofstatiscal}. As árvores são crescidas até grande profundidade, sem poda, o
+que lhes confere baixo viés individual, enquanto a agregação controla a variância
+\cite{Breiman2001RandomForests}.
+
+A probabilidade de doença atribuída a um paciente corresponde à fração das $B$ árvores
+que o classificam como doente:
+
+\begin{equation}
+    \hat{\pi}_{\mathrm{RF}}(\mathbf{x}) = \frac{1}{B} \sum_{b=1}^{B} I\left[T_b(\mathbf{x}) = \mathrm{doente}\right],
+    \label{eq:rf}
+\end{equation}
+
+\noindent em que $T_b(\mathbf{x})$ é a classe prevista pela $b$-ésima árvore e
+$I[\cdot]$ é a função indicadora, que vale 1 quando a condição é verdadeira e 0 caso
+contrário.
+
+Utilizou-se a implementação do pacote \texttt{randomForest} \cite{Liaw2002Classification},
+com $B = 500$ árvores, valor padrão da implementação. O número de árvores não foi
+otimizado porque seu aumento não provoca sobreajuste, apenas faz o erro de
+generalização convergir para um valor-limite \cite{Breiman2001RandomForests}. O único
+hiperparâmetro otimizado foi o \texttt{mtry}, que, com dez preditores, pode assumir no
+máximo dez valores distintos. Durante o treinamento, também foi calculada a
+importância por permutação de cada variável, definida como a queda na acurácia
+observada nas amostras \textit{out-of-bag}, isto é, nas observações não sorteadas no
+\textit{bootstrap} de cada árvore, quando os valores da variável são embaralhados
+aleatoriamente \cite{Breiman2001RandomForests}. Uma variante dessa medida, calculada
+separadamente para cada classe, é retomada na comparação entre os rankings de importância (Seção~\ref{sec:comparacao_importancias}).
+
+O \textit{Random Forest} foi incluído na comparação por ser um dos métodos de
+\textit{ensemble} mais consolidados como classificador de propósito geral, por exigir
+pouco ajuste de hiperparâmetros e por fornecer medidas próprias de importância das
+variáveis \cite{Biau2016Tour}.
+Além disso, ele representa a estratégia de \textit{bagging}, em contraste com os dois
+modelos de \textit{boosting} descritos a seguir.
+
+\subsection{XGBoost}
+\label{sec:xgboost}
+
+O XGBoost (\textit{eXtreme Gradient Boosting}) \cite{Chen2016XGBoost} é uma
+implementação otimizada e regularizada do \textit{gradient boosting} \cite{Friedman2001Greedy}.
+Diferentemente do \textit{bagging}, em que as árvores são construídas de forma
+independente, no \textit{boosting} elas são construídas sequencialmente: cada nova
+árvore é ajustada para corrigir os erros do conjunto atual, aproximando o gradiente
+negativo da função de perda em relação às previsões correntes
+\cite{elementsofstatiscal}. Para classificação binária, o modelo produz um escore
+aditivo na escala do logaritmo da razão de chances, convertido em probabilidade pela
+função logística:
+
+\begin{equation}
+    F(\mathbf{x}) = \sum_{m=1}^{M} f_m(\mathbf{x}),
+    \qquad
+    \hat{\pi}(\mathbf{x}) = \frac{1}{1 + e^{-F(\mathbf{x})}},
+    \label{eq:boosting}
+\end{equation}
+
+\noindent em que cada $f_m$ é uma árvore de regressão e $M$ é o número de iterações. Os
+valores das folhas de cada nova árvore são multiplicados por uma taxa de aprendizado
+$\eta \in (0, 1]$, que reduz o passo de cada iteração e, em geral, melhora a
+generalização, ao custo de exigir mais iterações \cite{elementsofstatiscal,
+Chen2016XGBoost}.
+
+Um dos diferenciais do XGBoost é a inclusão explícita de um termo de regularização na
+função objetivo do treinamento \cite{Chen2016XGBoost}:
+
+\begin{equation}
+    \mathcal{L} = \sum_{i=1}^{n} \ell\left(y_i, F(\mathbf{x}_i)\right) + \sum_{m=1}^{M} \Omega(f_m),
+    \qquad
+    \Omega(f) = \gamma T + \frac{1}{2} \lambda \sum_{t=1}^{T} w_t^2,
+    \label{eq:xgboost}
+\end{equation}
+
+\noindent em que $\ell$ é a perda logística (o negativo da log-verossimilhança
+binomial), $n$ é o número de observações de treino, $T$ é o número de folhas da
+árvore, $w_t$ é o valor atribuído à folha $t$, $\gamma$ penaliza a criação de novas
+folhas e $\lambda$ penaliza a magnitude dos valores das folhas (regularização $L_2$).
+Segundo os autores, essa penalização suaviza os valores aprendidos e reduz o risco de
+sobreajuste \cite{Chen2016XGBoost}. O algoritmo também permite sortear, para cada
+árvore, frações das observações e dos preditores, mecanismo semelhante ao do
+\textit{Random Forest}.
+
+Foram otimizados sete hiperparâmetros (Tabela~\ref{tab:espaco_busca}): o número de
+iterações (\texttt{nrounds}), que corresponde a $M$ na Equação~\ref{eq:boosting}; a
+profundidade máxima das árvores (\texttt{max\_depth}); a taxa de aprendizado
+(\texttt{eta}, o $\eta$ descrito acima); a redução mínima da perda exigida para
+realizar uma nova divisão (\texttt{gamma}, o $\gamma$ da Equação~\ref{eq:xgboost}); a
+fração de preditores sorteada para cada árvore (\texttt{colsample\_bytree}); a soma
+mínima dos pesos das observações, medidos pela segunda derivada da perda, exigida em
+cada nó-filho (\texttt{min\_child\_weight}); e a fração de observações sorteada para
+cada árvore (\texttt{subsample}). O parâmetro $\lambda$ foi mantido no valor padrão da
+biblioteca. O XGBoost foi incluído por ser um dos algoritmos mais utilizados em
+problemas com dados tabulares, com histórico de destaque em competições de aprendizado
+de máquina \cite{Chen2016XGBoost}, e por dispor de algoritmo exato e eficiente para o
+cálculo de valores SHAP \cite{Lundberg2020Trees}, o que o torna um dos objetos
+centrais da análise de interpretabilidade.
+
+\subsection{LightGBM}
+\label{sec:lightgbm}
+
+O LightGBM (\textit{Light Gradient Boosting Machine}) \cite{Ke2017LightGBM} é outra
+implementação de \textit{gradient boosting} com árvores de decisão e segue a mesma
+formulação aditiva da Equação~\ref{eq:boosting}. Seu diferencial está na eficiência
+computacional. Em vez de avaliar todos os pontos de divisão possíveis de cada
+preditor, o algoritmo agrupa os valores contínuos em um número limitado de faixas e
+constrói histogramas a partir delas, de modo que as divisões candidatas passam a ser
+avaliadas apenas entre as faixas, o que reduz o tempo de treinamento e o uso de
+memória. Os autores propuseram, ainda, duas técnicas voltadas a grandes volumes de
+dados: a amostragem unilateral baseada em gradiente (GOSS, \textit{Gradient-based
+One-Side Sampling}), que mantém as observações com maiores gradientes e amostra
+aleatoriamente as demais, e o agrupamento de preditores mutuamente exclusivos (EFB,
+\textit{Exclusive Feature Bundling}), útil em dados esparsos \cite{Ke2017LightGBM}.
+Neste trabalho, utilizou-se o modo de \textit{boosting} padrão da biblioteca, sem a
+amostragem GOSS, já que, com poucas centenas de pacientes, o custo computacional não
+é uma restrição relevante.
+
+Outra característica da implementação é o crescimento das árvores por folha
+(\textit{leaf-wise}, ou melhor-primeiro): em vez de expandir todos os nós de um mesmo
+nível, como no crescimento por nível (\textit{level-wise}), o algoritmo expande, a
+cada passo, a folha cuja divisão produz a maior redução da perda \cite{Shi2007BestFirst}.
+Para um mesmo número de folhas, essa estratégia tende a atingir perda menor, mas pode
+gerar árvores profundas e assimétricas, com maior risco de sobreajuste em bases
+pequenas como o ILPD. Por isso, a complexidade das árvores é controlada
+principalmente pelo número máximo de folhas (\texttt{num\_leaves}) e pelo número
+mínimo de observações em cada folha (\texttt{min\_data\_in\_leaf}), ambos incluídos na
+busca de hiperparâmetros, juntamente com a taxa de aprendizado
+(\texttt{learning\_rate}), o número de iterações (\texttt{nrounds}) e a fração de
+preditores sorteada para cada árvore (\texttt{feature\_fraction})
+(Tabela~\ref{tab:espaco_busca}). A taxa de aprendizado foi sorteada em escala
+logarítmica, entre 0,01 e cerca de 0,32, de modo que cada ordem de grandeza do
+intervalo tivesse a mesma probabilidade de ser explorada.
+
+Como o pacote \texttt{caret}, utilizado no treinamento
+(Seção~\ref{sec:treinamento_validacao}), não oferece suporte nativo ao LightGBM,
+implementou-se no \textit{pipeline} uma especificação de modelo customizada, que
+define as funções de ajuste, de predição de classes e de probabilidades, de
+importância das variáveis e de geração dos candidatos da busca aleatória exigidas
+pelo pacote. Essa integração garante que o LightGBM seja treinado e avaliado com as
+mesmas partições da validação cruzada, a mesma métrica de seleção e o mesmo
+balanceamento dos demais modelos, condição necessária para uma comparação justa. Para
+favorecer a reprodutibilidade, o treinamento foi executado com uma única linha de
+execução (\textit{thread}) e semente aleatória fixa \cite{Pineau2020Improving}. O
+LightGBM foi incluído como representante das implementações mais recentes de
+\textit{gradient boosting}, o que permite verificar se suas otimizações se traduzem
+em diferenças de desempenho ou de comportamento em relação ao XGBoost em uma base de
+pequeno porte.
+
+\section{Treinamento e Validação Cruzada}
+\label{sec:treinamento_validacao}
+
+Os quatro modelos foram treinados com o pacote \texttt{caret} \cite{Kuhn2008Building},
+que oferece uma interface unificada para o ajuste de diferentes algoritmos, a
+reamostragem e a otimização de hiperparâmetros. O mesmo protocolo foi aplicado a todos
+os modelos, sempre com ``doente'' como classe positiva, e todo o processo utilizou
+exclusivamente os 457 pacientes do conjunto de treino; o conjunto de teste foi
+reservado para a avaliação final (Seção~\ref{sec:avaliacao_desempenho}). Como a função
+\texttt{twoClassSummary} do \texttt{caret}, empregada no cálculo das métricas em cada
+partição, toma como evento o primeiro nível da variável-alvo (``saudável''), a
+sensibilidade e a especificidade por ela retornadas foram permutadas, de modo que
+também na validação cruzada ambas se refiram à classe ``doente''; a AUC-ROC, utilizada
+na seleção dos modelos, independe dessa convenção.
+
+\subsection{Validação Cruzada Repetida}
+\label{sec:validacao_cruzada}
+
+Na validação cruzada $k$-\textit{fold}, o conjunto de treino é dividido em $k$ partes
+(\textit{folds}) de tamanho aproximadamente igual; o modelo é ajustado $k$ vezes, cada
+vez com $k - 1$ partes, e avaliado na parte restante, e o desempenho estimado é a
+média das $k$ avaliações \cite{elementsofstatiscal}. Adotou-se $k = 5$, valor
+apontado como bom compromisso entre o viés da estimativa, que aumenta quando cada
+modelo é treinado com uma fração menor dos dados, e sua variância
+\cite{elementsofstatiscal}. Com 457 pacientes no treino, cada partição de validação
+contém pouco mais de 90 pacientes, o que preserva, em cada avaliação, um número
+razoável de pacientes saudáveis, a classe minoritária. As partições foram
+estratificadas pela variável-alvo, de modo que cada \textit{fold} mantém
+aproximadamente a proporção de classes do treino.
+
+Como a estimativa obtida em uma única rodada depende da forma particular como os
+pacientes foram distribuídos entre os \textit{folds}, o procedimento foi repetido três
+vezes, com partições diferentes, totalizando $5 \times 3 = 15$ ajustes e avaliações
+para cada combinação de hiperparâmetros. A média sobre as repetições reduz a
+variância associada à partição e torna mais estáveis tanto a estimativa de desempenho
+quanto a comparação entre modelos \cite{Kim2009Estimating}.
+Essa estabilidade é especialmente relevante em bases pequenas como o ILPD, nas quais a
+troca de poucos pacientes entre partições pode alterar sensivelmente as métricas.
+Antes do treinamento de cada modelo, a semente aleatória foi redefinida para o mesmo
+valor, o que faz com que os quatro modelos sejam avaliados exatamente nas mesmas 15
+partições. Esse pareamento permite comparar os modelos partição a partição
+(Seção~\ref{sec:comparacao_cv}) e contribui para a reprodutibilidade do experimento
+\cite{Pineau2020Improving}.
+
+Conforme antecipado na Seção~\ref{sec:balanceamento}, o SMOTE foi incorporado ao
+próprio procedimento de reamostragem: em cada uma das 15 iterações, as amostras
+sintéticas são geradas apenas a partir dos pacientes da partição de treino daquela
+iteração, e a partição de validação é avaliada com sua distribuição original de
+classes. O mesmo procedimento é aplicado ao ajuste do modelo final, sobre todo o
+conjunto de treino. Se o balanceamento fosse aplicado antes da divisão em
+\textit{folds}, uma amostra sintética poderia ser avaliada na partição de validação
+enquanto os pacientes reais que a originaram permanecem na partição de treino, ou o
+contrário, de modo que o modelo seria avaliado em dados quase idênticos aos que viu
+no treinamento. Isso configuraria vazamento de dados \cite{KaufmanScharRosset2012} e
+produziria estimativas de desempenho otimistas \cite{Santos2018CrossValidation}.
+
+O SMOTE gera cada amostra sintética por interpolação linear entre um paciente da
+classe minoritária e um de seus cinco vizinhos mais próximos da mesma classe,
+sorteando um ponto do segmento que os une \cite{smote}. Essa interpolação é adequada
+às variáveis contínuas, mas não à variável binária \textit{Gender}: quando os dois
+pacientes envolvidos são de sexos diferentes, o valor interpolado fica entre as duas
+categorias e não corresponde a nenhum sexo. Os próprios autores do SMOTE reconhecem
+essa limitação e propõem, para atributos nominais, a variante SMOTE-NC, que atribui à
+amostra sintética o valor mais frequente entre os vizinhos \cite{smote}. Neste
+trabalho, adotou-se uma solução mais simples e de mesmo propósito: após a geração das
+amostras sintéticas, o valor de \textit{Gender} de cada uma é substituído pela
+categoria válida mais próxima. Como o ponto sorteado é o mesmo para todas as
+variáveis, a amostra sintética herda o sexo do paciente de origem do qual está mais
+próxima no segmento de interpolação. As variáveis contínuas permanecem interpoladas,
+os pacientes reais não são alterados e a busca pelos vizinhos continua a considerar
+todas as variáveis padronizadas, inclusive \textit{Gender}. Como a diferença entre os
+dois valores padronizados dessa variável pesa na distância, os vizinhos mais próximos
+tendem a ser do mesmo sexo, e os pares de sexos diferentes, embora possíveis, são
+pouco frequentes. A correção vale para todas as iterações da validação cruzada e para
+o ajuste dos modelos finais. O diagnóstico do balanceamento sobre o conjunto de treino
+completo registra quantas amostras sintéticas precisaram ser corrigidas e verifica
+que todas contêm apenas os dois valores válidos dessa variável.
+
+\subsection{Otimização de Hiperparâmetros}
+\label{sec:otimizacao_hiperparametros}
+
+Hiperparâmetros são configurações do algoritmo que não são aprendidas diretamente dos
+dados, como a profundidade das árvores ou a taxa de aprendizado, e precisam ser
+escolhidos externamente. Para isso, adotou-se a busca aleatória (\textit{Random
+Search}): para cada modelo, foram sorteadas 30 combinações de hiperparâmetros dentro
+de um espaço de busca predefinido (Tabela~\ref{tab:espaco_busca}), e cada combinação
+foi avaliada pela validação cruzada repetida descrita na seção anterior.
+Selecionou-se a combinação com maior AUC-ROC média nas 15 partições
+(Seção~\ref{sec:metrica_selecao}), e o modelo final foi então reajustado com ela
+sobre todo o conjunto de treino.
+
+\begin{table}[htbp]
+\centering
+\caption{Espaço de busca dos hiperparâmetros na busca aleatória (30 sorteios por
+modelo).}
+\label{tab:espaco_busca}
+% Faixas do XGBoost e do Random Forest: função interna de busca aleatória do caret
+% (métodos "xgbTree" e "rf"), conferidas no código-fonte da versão 7.0-1; o log da
+% execução confirma as 10 combinações distintas de mtry testadas no Random Forest.
+% Faixas do LightGBM: especificação customizada do modelo definida no pipeline.
+\begin{tabular}{lll}
+\hline
+\textbf{Modelo} & \textbf{Hiperparâmetro} & \textbf{Valores sorteados} \\
+\hline
+\textit{Random Forest} & \texttt{mtry} & inteiros de 1 a 10 \\
+ & \texttt{ntree} & fixo em 500 \\
+\hline
+XGBoost & \texttt{nrounds} & inteiros de 1 a 1000 \\
+ & \texttt{max\_depth} & inteiros de 1 a 10 \\
+ & \texttt{eta} & $\mathcal{U}(0{,}001;\ 0{,}6)$ \\
+ & \texttt{gamma} & $\mathcal{U}(0;\ 10)$ \\
+ & \texttt{colsample\_bytree} & $\mathcal{U}(0{,}3;\ 0{,}7)$ \\
+ & \texttt{min\_child\_weight} & inteiros de 0 a 20 \\
+ & \texttt{subsample} & $\mathcal{U}(0{,}25;\ 1)$ \\
+\hline
+LightGBM & \texttt{num\_leaves} & $\{4;\ 7;\ 15;\ 31;\ 63\}$ \\
+ & \texttt{learning\_rate} & $10^{u}$, com $u \sim \mathcal{U}(-2;\ -0{,}5)$ \\
+ & \texttt{nrounds} & $\{50;\ 100;\ \ldots;\ 500\}$ \\
+ & \texttt{feature\_fraction} & $\mathcal{U}(0{,}5;\ 1)$ \\
+ & \texttt{min\_data\_in\_leaf} & $\{5;\ 10;\ 20;\ 40\}$ \\
+\hline
+\multicolumn{3}{l}{\footnotesize $\mathcal{U}(a;\ b)$: distribuição uniforme contínua
+entre $a$ e $b$. Inteiros e conjuntos entre chaves:} \\
+\multicolumn{3}{l}{\footnotesize sorteio equiprovável. A Regressão Logística não
+possui hiperparâmetros a otimizar.} \\
+\end{tabular}
+\end{table}
+
+A busca aleatória foi preferida à busca em grade (\textit{Grid Search}), que avalia
+todas as combinações de um conjunto discreto de valores, por dois motivos. O primeiro
+é o custo: o número de combinações da grade cresce exponencialmente com o número de
+hiperparâmetros, de modo que, no XGBoost, apenas três valores para cada um dos sete
+hiperparâmetros já resultariam em $3^7 = 2187$ combinações, cada uma avaliada em 15
+partições. O segundo é a eficiência: como, em geral, apenas alguns hiperparâmetros
+influenciam de fato o desempenho, a busca aleatória explora mais valores distintos de
+cada um deles com o mesmo número de avaliações e encontra configurações tão boas
+quanto ou melhores que as da busca em grade, com custo computacional muito menor
+\cite{Bergstra2012Random}.
+Além disso, a busca aleatória permite amostrar hiperparâmetros contínuos, como a taxa
+de aprendizado, em qualquer ponto do intervalo, e não apenas em valores pré-fixados.
+No \textit{Random Forest}, cujo único hiperparâmetro otimizado (\texttt{mtry}) assume
+valores inteiros entre 1 e 10, os sorteios repetidos são descartados, de modo que no
+máximo dez candidatos distintos são avaliados. A Regressão Logística, por não ter
+hiperparâmetros, foi avaliada uma única vez na validação cruzada.
+
+Como a mesma validação cruzada foi usada para escolher os hiperparâmetros e para
+estimar o desempenho, a AUC-ROC média da combinação selecionada tende a ser
+ligeiramente otimista: ao se escolher o melhor resultado entre muitos candidatos,
+escolhe-se também, em parte, o candidato mais favorecido pelas flutuações aleatórias
+das partições \cite{Cawley2010OverFitting}.
+Esse viés de seleção é uma das razões pelas quais o desempenho final é estimado em um
+conjunto de teste que não participou de nenhuma etapa do treinamento
+(Seção~\ref{sec:avaliacao_desempenho}).
+
+\subsection{Métrica de Seleção}
+\label{sec:metrica_selecao}
+
+A métrica usada para selecionar os hiperparâmetros e comparar os modelos na validação
+cruzada foi a área sob a curva ROC (AUC-ROC), calculada em cada partição de validação
+a partir das probabilidades previstas de doença. A escolha retoma o diagnóstico da
+análise exploratória: com cerca de 71\% de doentes na base
+(Figura~\ref{fig:eda_distribuicao_alvo}), um classificador que atribuísse a classe
+``doente'' a todos os pacientes atingiria acurácia semelhante a essa proporção, sem
+nenhuma capacidade de discriminação. A AUC-ROC não sofre desse problema, pois avalia
+a capacidade de ordenação do modelo em todos os limiares de decisão possíveis, e não
+apenas em um limiar fixo. Ela pode ser interpretada como a probabilidade de que um
+paciente doente sorteado ao acaso receba do modelo uma probabilidade prevista de
+doença maior do que a de um paciente saudável sorteado ao acaso: o valor 0,5
+corresponde a um classificador aleatório, e o valor 1, a uma separação perfeita entre
+as classes \cite{FAWCETT2006861}. Além disso, por ser construída a partir de taxas
+calculadas separadamente dentro de cada classe, a curva ROC é insensível a mudanças
+na proporção entre as classes \cite{FAWCETT2006861, imbalancedata}.
+
+Há ainda duas razões ligadas às demais decisões metodológicas. A primeira é que o
+SMOTE altera a proporção de classes vista pelos modelos durante o treinamento, de
+modo que as probabilidades previstas deixam de refletir a prevalência real de doença
+e tendem a superestimar a probabilidade da classe que foi ampliada artificialmente
+\cite{vandenGoorbergh2022Harm}.
+Nessas condições, o limiar de 0,5 perde seu significado natural, e uma métrica que
+dependa dele seria afetada pelo balanceamento. A AUC-ROC, por depender apenas da
+ordenação das previsões, permite selecionar os modelos pela capacidade de
+discriminação e deixar a escolha do limiar para uma etapa posterior e explícita
+(Seção~\ref{sec:limiar_decisao}). A segunda é que a otimização direta da
+sensibilidade, embora coerente com a prioridade clínica de evitar falsos negativos,
+favoreceria o classificador trivial que declara todos os pacientes doentes. Por isso,
+a AUC-ROC foi usada para selecionar o modelo com melhor ordenação dos pacientes, e a
+prioridade à sensibilidade foi tratada posteriormente, na escolha do limiar.
+
+\subsection{Comparação Estatística entre os Modelos}
+\label{sec:comparacao_cv}
+
+Ao final do treinamento, os quatro modelos foram comparados a partir das 15
+estimativas de AUC-ROC obtidas nas partições de validação, com a combinação de
+hiperparâmetros selecionada para cada um. A distribuição dessas estimativas foi
+resumida graficamente por \textit{boxplots}, que permitem visualizar tanto o nível
+quanto a variabilidade do desempenho de cada modelo entre as partições. Como os
+modelos foram avaliados nas mesmas partições, as diferenças foram analisadas de forma
+pareada: para cada par de modelos, calculou-se a diferença de AUC-ROC em cada uma das
+15 partições e aplicou-se o teste $t$ pareado, com hipótese nula de diferença média
+igual a zero. Como são realizadas seis comparações, uma para cada par de modelos, os
+valores-$p$ foram ajustados pela correção de Bonferroni, que multiplica cada
+valor-$p$ pelo número de comparações para controlar a probabilidade de ao menos um
+falso positivo no conjunto dos testes \cite{Demsar2006Statistical}.
+
+Esse procedimento deve ser interpretado com cautela. As 15 estimativas não são
+independentes, pois os conjuntos de treino das diferentes partições compartilham a
+maior parte dos pacientes, o que leva o teste $t$ a subestimar a variância das
+diferenças e a rejeitar a hipótese nula com frequência maior do que o nível nominal
+\cite{Nadeau2003Inference}.
+Por isso, o teste foi tratado como evidência complementar, a ser confrontada com a
+comparação no conjunto de teste independente (Seção~\ref{sec:comparacao_auc}).
+
+\section{Avaliação de Desempenho}
+\label{sec:avaliacao_desempenho}
+
+Após o treinamento, os quatro modelos finais foram avaliados no conjunto de teste,
+composto por 113 pacientes (81 doentes e 32 saudáveis) que não participaram do ajuste
+dos modelos, da seleção de hiperparâmetros nem do balanceamento. Esse conjunto nunca
+foi balanceado e preserva a distribuição real das classes, condição para que as
+métricas reflitam o desempenho esperado em dados com a mesma composição da base
+original. Para cada modelo, foram obtidas as probabilidades previstas de doença e as
+classes previstas pela regra padrão de cada algoritmo: corte de 0,5 na probabilidade
+prevista para a Regressão Logística, o XGBoost e o LightGBM, e voto majoritário das 500
+árvores no \textit{Random Forest}, com empates desfeitos aleatoriamente. Por isso, as
+métricas do \textit{Random Forest} obtidas por essa regra podem diferir ligeiramente das
+calculadas com o corte $P \geq 0{,}5$ na análise de limiares
+(Seção~\ref{sec:limiar_decisao}).
+
+\subsection{Matriz de Confusão e Métricas}
+\label{sec:metricas}
+
+A partir das classes previstas, construiu-se a matriz de confusão
+(Tabela~\ref{tab:matriz_confusao}), que cruza as classes previstas com as reais e
+define quatro tipos de resultado: verdadeiros positivos (VP), doentes classificados
+como doentes; falsos negativos (FN), doentes classificados como saudáveis; verdadeiros
+negativos (VN), saudáveis classificados como saudáveis; e falsos positivos (FP),
+saudáveis classificados como doentes \cite{FAWCETT2006861}.
+
+\begin{table}[htbp]
+\centering
+\caption{Matriz de confusão, com ``doente'' como classe positiva.}
+\label{tab:matriz_confusao}
+\begin{tabular}{llcc}
+\hline
+ & & \multicolumn{2}{c}{\textbf{Classe real}} \\
+ & & \textbf{Doente} & \textbf{Saudável} \\
+\hline
+\multirow{2}{*}{\textbf{Classe prevista}} & \textbf{Doente} & VP & FP \\
+ & \textbf{Saudável} & FN & VN \\
+\hline
+\end{tabular}
+\end{table}
+
+A partir dessas quantidades, foram calculadas as seguintes métricas:
+
+\begin{itemize}
+    \item \textbf{Acurácia}: proporção de classificações corretas,
+    $(\mathrm{VP} + \mathrm{VN}) / (\mathrm{VP} + \mathrm{FP} + \mathrm{FN} + \mathrm{VN})$;
+    \item \textbf{Sensibilidade} (\textit{recall}, ou taxa de verdadeiros positivos):
+    proporção de doentes corretamente identificados,
+    $\mathrm{VP} / (\mathrm{VP} + \mathrm{FN})$;
+    \item \textbf{Especificidade} (taxa de verdadeiros negativos): proporção de
+    saudáveis corretamente identificados, $\mathrm{VN} / (\mathrm{VN} + \mathrm{FP})$;
+    \item \textbf{Precisão} (valor preditivo positivo): proporção de doentes entre os
+    pacientes classificados como doentes, $\mathrm{VP} / (\mathrm{VP} + \mathrm{FP})$;
+    \item \textbf{F1}: média harmônica entre a precisão e a sensibilidade, que só é
+    elevada quando ambas são elevadas;
+    \item \textbf{Acurácia balanceada}: média aritmética entre a sensibilidade e a
+    especificidade, que atribui o mesmo peso ao desempenho em cada classe;
+    \item \textbf{Kappa de Cohen}: concordância entre as classes previstas e as reais
+    descontada a concordância esperada ao acaso, $\kappa = (p_o - p_e)/(1 - p_e)$, em
+    que $p_o$ é a acurácia observada e $p_e$ é a acurácia esperada caso as
+    classificações fossem independentes das classes reais, mantidas as proporções
+    marginais da matriz de confusão \cite{Cohen1960Coefficient};
+    \item \textbf{AUC-ROC}: área sob a curva ROC (Seção~\ref{sec:metrica_selecao}),
+    a única das métricas listadas que não depende do limiar de decisão.
+\end{itemize}
+
+A acurácia foi mantida por ser a métrica mais difundida, mas, em bases
+desbalanceadas, ela é dominada pela classe majoritária e pode ser enganosa quando
+usada isoladamente \cite{FAWCETT2006861, imbalancedata}. No conjunto de teste, um
+classificador que declarasse todos os pacientes doentes teria acurácia de cerca de
+72\% (81 de 113 pacientes) e sensibilidade de 100\%, mas especificidade nula, acurácia
+balanceada de 50\% e Kappa igual a zero. Por isso, a acurácia foi acompanhada de
+métricas que avaliam cada classe separadamente (sensibilidade e especificidade), que
+atribuem o mesmo peso às duas classes (acurácia balanceada), que equilibram precisão
+e sensibilidade na classe positiva (F1) e que descontam o acerto esperado ao acaso
+(Kappa).
+
+Para quantificar a incerteza da AUC-ROC estimada no teste, calculou-se seu intervalo
+de confiança de 95\% pelo método de DeLong \cite{DeLong1988Comparing},
+um procedimento não paramétrico, baseado na teoria das estatísticas $U$, que estima a
+variância da AUC-ROC sem supor nenhuma distribuição para as probabilidades previstas.
+As AUCs, seus intervalos de confiança, as curvas ROC e os testes de comparação
+descritos adiante foram calculados com o pacote \texttt{pROC} \cite{Robin2011pROC}.
+Com apenas 113 pacientes, dos quais 32 saudáveis, esses intervalos tendem a ser
+largos, o que deve ser considerado na interpretação das diferenças entre os modelos.
+
+\subsection{Curvas ROC e \textit{Precision-Recall}}
+\label{sec:curvas_roc_pr}
+
+A curva ROC (\textit{Receiver Operating Characteristic}) representa a sensibilidade em
+função da taxa de falsos positivos (1 $-$ especificidade) à medida que o limiar de
+decisão percorre todos os valores possíveis, e a AUC-ROC é a área sob essa curva
+\cite{FAWCETT2006861}. As curvas dos quatro modelos foram sobrepostas em um mesmo
+gráfico, junto com a diagonal que representa o desempenho de um classificador
+aleatório.
+
+Como complemento, construíram-se as curvas \textit{Precision-Recall} (PR), que
+representam a precisão em função da sensibilidade (\textit{recall}) para os mesmos
+limiares. Ao contrário dos eixos da curva ROC, calculados separadamente dentro de cada
+classe, a precisão depende diretamente da proporção entre as classes, o que torna a
+curva PR sensível ao desbalanceamento \cite{imbalancedata}. Por esse motivo, a curva PR
+é frequentemente recomendada como complemento, ou mesmo como alternativa mais
+informativa, à curva ROC na avaliação de classificadores em dados desbalanceados
+\cite{Saito2015Precision}.
+A linha de referência da curva PR é a prevalência da classe positiva no teste, que
+corresponde à precisão esperada de um classificador aleatório. Cabe observar, porém,
+que no ILPD a classe positiva é a majoritária, de modo que essa linha de referência é
+elevada (cerca de 0,72) e mesmo modelos pouco discriminativos apresentam precisão
+alta. Por isso, neste trabalho, a curva PR é usada sobretudo para examinar o custo,
+em precisão, de elevar a sensibilidade, aspecto central da análise de limiar descrita
+a seguir.
+
+\subsection{Análise do Limiar de Decisão}
+\label{sec:limiar_decisao}
+
+A classificação com limiar de 0,5 só minimiza o custo esperado dos erros quando as
+probabilidades previstas estão bem calibradas e os falsos positivos e os falsos
+negativos têm o mesmo custo \cite{Elkan2001Foundations}.
+Nenhuma das duas condições se verifica aqui: as probabilidades são afetadas pelo
+balanceamento do treino (Seção~\ref{sec:metrica_selecao}) e, em um cenário de triagem
+clínica, os dois erros têm consequências muito diferentes. Um falso negativo, isto é,
+um paciente doente classificado como saudável, pode atrasar o diagnóstico e o
+tratamento, enquanto um falso positivo tende a resultar na solicitação de exames
+complementares. Em testes de triagem, o ponto de corte deve, portanto, levar em conta
+o custo maior do falso negativo \cite{Habibzadeh2016Determining}.
+Por esse motivo, o falso negativo foi considerado o erro mais crítico, e a escolha do
+limiar foi tratada como uma decisão explícita, analisada de três formas para cada
+modelo:
+
+\begin{enumerate}
+    \item \textbf{Limiar de Youden}: limiar que maximiza o índice de Youden \cite{Youden1950Index},
+    \begin{equation}
+        J = \textrm{Sensibilidade} + \textrm{Especificidade} - 1,
+        \label{eq:youden}
+    \end{equation}
+    que corresponde ao ponto da curva ROC mais distante, na vertical, da diagonal do
+    classificador aleatório e atribui o mesmo peso à sensibilidade e à especificidade;
+    \item \textbf{Limiar clínico}: maior limiar que garante sensibilidade de pelo
+    menos 90\%, meta definida como parâmetro do \textit{pipeline} para representar um
+    cenário de triagem. Escolhe-se o maior limiar entre os que atingem a meta porque a
+    redução do limiar só pode aumentar ou manter a sensibilidade, à custa da
+    especificidade; o maior limiar viável é, portanto, o que atinge a meta com o menor
+    sacrifício de especificidade. Para esse limiar, registraram-se a sensibilidade, a
+    especificidade e a precisão resultantes no conjunto de teste, o que permite
+    comparar os modelos sob uma mesma exigência de sensibilidade e verificar se a meta
+    se mantém em pacientes que não participaram da escolha do limiar;
+    \item \textbf{Varredura de limiares}: para todos os modelos, calcularam-se, no
+    conjunto de teste, a sensibilidade, a especificidade, o F1 e os números absolutos
+    de falsos negativos e de falsos positivos nos limiares de 0,1 a 0,9, em passos de
+    0,1, o que torna explícito o compromisso entre os dois tipos de erro. Essa
+    varredura tem caráter apenas descritivo: nenhum limiar é escolhido a partir dela.
+\end{enumerate}
+
+Os limiares de Youden e clínico foram escolhidos exclusivamente com dados de treino, a
+partir das predições fora da partição (\textit{out-of-fold}) da validação cruzada
+(Seção~\ref{sec:validacao_cruzada}). Nessa reamostragem, cada paciente do treino
+recebe, em cada uma das três repetições, uma probabilidade prevista por um modelo
+ajustado sem ele, com a combinação de hiperparâmetros selecionada. As 1.371 predições
+resultantes (457 pacientes $\times$ 3 repetições) foram reunidas em uma única curva
+ROC, sobre a qual os dois limiares foram determinados. Em seguida, cada limiar foi
+aplicado, sem nenhum ajuste, às probabilidades previstas pelo modelo final no
+conjunto de teste, onde foram calculadas as métricas reportadas. Escolher o limiar
+nas próprias previsões do teste significaria ajustá-lo aos mesmos dados em que é
+avaliado: a sensibilidade e a especificidade obtidas nesse limiar seriam
+sistematicamente otimistas, e o viés é maior justamente em amostras pequenas como a
+deste trabalho \cite{Leeflang2008Bias}. Com a escolha feita na validação cruzada, o
+conjunto de teste preserva seu papel de estimativa independente, e a diferença entre
+a meta de 90\% e a sensibilidade efetivamente observada no teste passa a medir quanto
+o limiar se mantém em novos pacientes. Essa transferência é apenas aproximada, pois
+os modelos de cada partição são ajustados com cerca de 80\% do treino, enquanto o
+modelo final usa o treino completo; como ambos passam pelo mesmo balanceamento, porém,
+as escalas de probabilidade de uns e de outro tendem a ser semelhantes.
+
+\subsection{Comparação Estatística das AUCs}
+\label{sec:comparacao_auc}
+
+Para verificar se as diferenças de AUC-ROC observadas no conjunto de teste são
+estatisticamente significativas, aplicou-se o teste de DeLong para curvas ROC
+correlacionadas \cite{DeLong1988Comparing}.
+Como os quatro modelos são avaliados nos mesmos 113 pacientes, suas AUCs não são
+independentes: um paciente difícil de classificar tende a ser difícil para todos os
+modelos. O método de DeLong leva essa dependência em conta ao estimar a covariância
+entre as AUCs a partir das mesmas estatísticas $U$ usadas no intervalo de confiança,
+o que, em geral, torna o teste pareado mais poderoso do que a comparação entre
+intervalos de confiança isolados. O teste foi aplicado aos seis pares de modelos e,
+como na comparação feita na validação cruzada (Seção~\ref{sec:comparacao_cv}), os
+valores-$p$ foram ajustados pela correção de Bonferroni \cite{Demsar2006Statistical}:
+cada valor-$p$ é multiplicado por seis, com limite superior igual a 1, e comparado ao
+nível de significância de 5\%, o que equivale a exigir $p < 0{,}05/6 \approx 0{,}0083$
+no valor-$p$ original. Ambos os valores foram registrados. A correção é conservadora,
+pois reduz o poder de detectar diferenças reais, mas limita a 5\% a probabilidade de
+que ao menos uma das seis comparações seja declarada significativa apenas por acaso.
+
+\subsection{Avaliação Estratificada por Sexo}
+\label{sec:avaliacao_sexo}
+
+A análise exploratória mostrou que a base é composta majoritariamente por pacientes
+do sexo masculino, o que levanta a preocupação de que os modelos aprendam padrões
+mais representativos desse grupo e apresentem desempenho inferior para as pacientes
+do sexo feminino. Esse tipo de disparidade é uma forma de viés algorítmico com
+implicações diretas para a equidade em saúde \cite{Rajkomar2018Ensuring}. No próprio
+ILPD, \citeonline{investigatingbiashealth} observaram taxas de falsos negativos mais
+elevadas para as pacientes do sexo feminino. Por isso, o desempenho de cada modelo foi
+reavaliado separadamente nos dois subgrupos do conjunto de teste, compostos por 32
+pacientes do sexo feminino e 81 do sexo masculino.
+
+Para cada sexo, foram calculadas a prevalência de doença, a AUC-ROC com intervalo de
+confiança de 95\% pelo método de DeLong e, no limiar de 0,5, a sensibilidade, a
+especificidade, o F1 e a taxa de falsos negativos. Calcularam-se também a
+sensibilidade e a especificidade de cada sexo no limiar clínico do modelo, escolhido
+na validação cruzada (Seção~\ref{sec:limiar_decisao}), o que permite verificar se a
+meta de 90\% de sensibilidade, fixada para o conjunto dos pacientes, também é
+atingida em cada subgrupo. A diferença de AUC-ROC entre os sexos foi testada pelo
+teste de DeLong na versão para curvas não pareadas, já que os dois subgrupos são
+formados por pacientes diferentes. Como esse teste é repetido para os quatro modelos,
+os valores-$p$ também foram ajustados pela correção de Bonferroni, agora com quatro
+comparações. As diferenças de sensibilidade e de especificidade entre os sexos foram
+registradas como medidas descritivas da disparidade.
+
+Três cuidados orientam a interpretação dessa análise. Primeiro, os subgrupos são
+pequenos, especialmente o feminino, o que torna os intervalos de confiança largos e
+reduz o poder do teste, já diminuído pela correção para comparações múltiplas: a
+ausência de diferença significativa não deve ser tomada como evidência de equidade
+entre os sexos. Segundo, a precisão e o F1 dependem da
+prevalência, que pode diferir entre os subgrupos, de modo que a sensibilidade, a
+especificidade e a AUC-ROC são as medidas mais adequadas para comparar os sexos
+\cite{FAWCETT2006861}. Terceiro, uma disparidade de desempenho revela que o modelo
+erra mais em um grupo, mas não explica por quê. Essa investigação é aprofundada na
+análise de interpretabilidade, que examina se as variáveis que orientam as previsões
+diferem entre os sexos (Seção~\ref{sec:shap_sexo}).
+
+\section{Interpretabilidade com SHAP}
+\label{sec:shap}
+
+Os modelos de \textit{ensemble} descritos na Seção~\ref{sec:modelos_preditivos}
+tendem a apresentar bom desempenho preditivo, mas suas previsões resultam da
+combinação de dezenas a centenas de árvores, o que impede a inspeção direta do raciocínio que
+as produziu. Para explicá-las, utilizou-se o SHAP (\textit{SHapley Additive
+exPlanations}) \cite{Lundberg2017Unified},
+um método que atribui a cada variável uma contribuição para cada previsão individual,
+com base nos valores de Shapley da teoria dos jogos cooperativos. As explicações são
+locais, pois decompõem a previsão de cada paciente, mas podem ser agregadas para
+descrever o comportamento global do modelo \cite{Lundberg2020Trees}. Todos os
+valores SHAP foram calculados para os 113 pacientes do conjunto de teste, de modo que
+as explicações se referem a pacientes não vistos durante o treinamento.
+
+\subsection{Valores de Shapley}
+\label{sec:valores_shapley}
+
+Os valores de Shapley foram propostos no contexto dos jogos cooperativos, em que um
+conjunto de jogadores colabora para gerar um ganho total, e respondem à pergunta de
+como dividir esse ganho de forma justa entre os jogadores \cite{Shapley1953Value}.
+Sejam $\mathcal{P} = \{1, \ldots, p\}$ o conjunto de jogadores e $v(S)$ o ganho obtido
+por uma coalizão $S \subseteq \mathcal{P}$, chamado de função característica do jogo.
+O valor de Shapley do jogador $j$ é dado por:
+
+\begin{equation}
+    \phi_j = \sum_{S \subseteq \mathcal{P} \setminus \{j\}} \frac{|S|! \, (p - |S| - 1)!}{p!} \left[ v(S \cup \{j\}) - v(S) \right],
+    \label{eq:shapley}
+\end{equation}
+
+\noindent em que $|S|$ é o número de jogadores na coalizão $S$. O termo entre colchetes
+é a contribuição marginal de $j$ ao ingressar na coalizão $S$, e o peso que a
+multiplica equivale à probabilidade de que, em uma ordenação aleatória de todos os
+jogadores, exatamente os membros de $S$ antecedam $j$. O valor de Shapley é, portanto,
+a contribuição marginal média do jogador sobre todas as ordens possíveis de entrada
+na coalizão. Ele é a única forma de divisão que satisfaz simultaneamente quatro
+propriedades: eficiência (as contribuições somam o ganho total), simetria (jogadores
+com contribuições idênticas recebem o mesmo valor), jogador nulo (quem não altera o
+ganho de nenhuma coalizão recebe zero) e aditividade (o valor de uma soma de jogos é a
+soma dos valores).
+
+No SHAP, os jogadores são as variáveis preditoras, e o ganho a ser dividido é a
+diferença entre a previsão do modelo para um paciente e uma previsão de referência.
+A previsão é representada como uma soma de contribuições:
+
+\begin{equation}
+    f(\mathbf{x}) = \phi_0 + \sum_{j=1}^{p} \phi_j,
+    \label{eq:shap_aditivo}
+\end{equation}
+
+\noindent em que $f(\mathbf{x})$ é a saída do modelo para o paciente $\mathbf{x}$, na
+escala em que o modelo é explicado (probabilidade ou logaritmo da razão de chances),
+$\phi_0$ é o valor base, isto é, o valor esperado da saída do modelo sobre um conjunto
+de referência, e $\phi_j$ é o valor SHAP da variável $j$. Um valor positivo indica
+que, para aquele paciente, a variável elevou a previsão de doença em relação ao valor
+base, e um valor negativo, que a reduziu. Os autores mostraram que os valores de
+Shapley são a única atribuição aditiva que satisfaz três propriedades desejáveis
+para uma explicação: precisão local (a soma das contribuições reproduz a previsão),
+ausência (variáveis ausentes recebem contribuição nula) e consistência (se o modelo
+muda de forma que a contribuição de uma variável aumenta ou se mantém, seu valor SHAP
+não diminui).
+
+Para aplicar a Equação~\ref{eq:shapley}, é preciso definir a previsão do modelo
+quando apenas as variáveis de $S$ são conhecidas. No SHAP, $v(S)$ é o valor esperado
+da previsão quando as variáveis de $S$ são fixadas nos valores do paciente e as
+demais, denotadas por $\bar{S}$, são tratadas como desconhecidas. Há duas formas
+principais de calcular essa esperança. Na forma condicional,
+$v(S) = \mathrm{E}[f(\mathbf{X}) \mid \mathbf{X}_S = \mathbf{x}_S]$, as variáveis
+desconhecidas seguem sua distribuição condicional aos valores conhecidos. Na forma
+marginal, ou intervencional, elas são sorteadas de sua distribuição marginal,
+independentemente das variáveis de $S$. As duas abordagens respondem a perguntas
+diferentes: a marginal descreve o funcionamento do modelo, e a condicional, a relação
+entre as variáveis e a previsão tal como se manifesta nos dados
+\cite{Chen2020TrueToModel, Chen2023Algorithms}. A distinção é relevante neste
+trabalho porque, quando as variáveis são correlacionadas, como os pares identificados
+na Figura~\ref{fig:eda_correlacao}, a abordagem marginal avalia o modelo em
+combinações de valores pouco realistas, e a condicional tende a dividir a
+contribuição entre variáveis correlacionadas \cite{Aas2021Explaining}.
+
+\subsection{Estimação dos Valores SHAP}
+\label{sec:estimacao_shap}
+
+O cálculo direto da Equação~\ref{eq:shapley} exige avaliar $2^{p-1}$ coalizões para
+cada variável e cada paciente, além de estimar cada $v(S)$, o que é inviável na
+maioria das aplicações. Foram, por isso, utilizados dois métodos de estimação,
+conforme o modelo.
+
+Para os modelos de \textit{boosting} (o XGBoost e, caso fosse o modelo de maior AUC-ROC
+no teste, o LightGBM), utilizou-se o TreeSHAP \cite{Lundberg2020Trees}, algoritmo
+específico para modelos baseados em árvores que calcula os valores SHAP em tempo
+polinomial. Em vez de enumerar as coalizões, o algoritmo percorre recursivamente cada
+árvore e acumula, em uma única passagem, as contribuições de todas as coalizões;
+quando uma divisão envolve uma variável fora da coalizão, os dois ramos são
+ponderados pela proporção de observações de treino que seguiu cada um deles. O
+resultado é exato para essa formulação, que aproxima a esperança condicional a partir
+da própria estrutura das árvores, e foi obtido diretamente pelas funções nativas das
+bibliotecas XGBoost e LightGBM. Nesses modelos, os valores SHAP estão na escala
+do logaritmo da razão de chances, em que o modelo é aditivo
+(Equação~\ref{eq:boosting}). Como a interface \texttt{xgbTree} do \texttt{caret} codifica como positiva a classe
+``saudável'', primeiro nível da variável-alvo, o XGBoost ajustado modela internamente o
+logaritmo da razão de chances dessa classe; por isso, os valores
+foram multiplicados por $-1$ para que se refiram à classe ``doente''; a conversão é
+exata, pois o logaritmo da razão de chances de uma classe é o simétrico do da outra.
+
+Para o \textit{Random Forest}, cuja implementação não dispõe de cálculo nativo de
+valores SHAP no fluxo utilizado, empregou-se a estimação amostral por Monte Carlo
+proposta por \citeonline{Strumbelj2014Explaining},
+implementada no pacote \texttt{fastshap} \cite{Greenwell2024fastshap}.
+Para cada paciente $\mathbf{x}$ e cada variável $j$, sorteiam-se uma ordenação
+aleatória das variáveis e um paciente de referência $\mathbf{z}$ do conjunto de teste.
+A partir deles, constroem-se dois pacientes híbridos: $\mathbf{x}_{+j}$, que recebe os
+valores de $\mathbf{x}$ na variável $j$ e nas variáveis que a antecedem na ordenação,
+e os de $\mathbf{z}$ nas demais; e $\mathbf{x}_{-j}$, idêntico a $\mathbf{x}_{+j}$
+exceto na variável $j$, que passa a receber o valor de $\mathbf{z}$. O valor SHAP é
+estimado pela média das diferenças entre as previsões dos dois híbridos:
+
+\begin{equation}
+    \hat{\phi}_j = \frac{1}{n_{\mathrm{sim}}} \sum_{r=1}^{n_{\mathrm{sim}}} \left[ f\left(\mathbf{x}_{+j}^{(r)}\right) - f\left(\mathbf{x}_{-j}^{(r)}\right) \right],
+    \label{eq:shap_monte_carlo}
+\end{equation}
+
+\noindent em que $n_{\mathrm{sim}} = 100$ é o número de repetições adotado e o índice
+$(r)$ indica a $r$-ésima repetição. A previsão explicada é a probabilidade de doença,
+e o valor base corresponde à probabilidade média prevista pelo modelo no conjunto de
+teste. Duas diferenças em relação ao TreeSHAP devem ser destacadas. Primeiro, o
+estimador é aproximado: está sujeito a erro de Monte Carlo, que diminui com o número
+de repetições, e a soma das contribuições reproduz a previsão apenas
+aproximadamente. Por isso, a semente aleatória foi fixada antes da estimação.
+Segundo, como os valores do paciente de referência são inseridos sem considerar os
+valores conhecidos do paciente explicado, a estimativa trata as variáveis como
+independentes, o que corresponde à forma marginal descrita na
+Seção~\ref{sec:valores_shapley}, enquanto o TreeSHAP aproxima a distribuição
+condicional. Como, além disso, os valores do \textit{Random Forest} estão na escala de
+probabilidade, e os obtidos pelo TreeSHAP, na escala do logaritmo da razão de
+chances, as magnitudes não são diretamente comparáveis entre os modelos; as
+comparações concentram-se, por isso, na ordem de importância das variáveis e na
+direção de seus efeitos.
+
+\subsection{Modelos Explicados}
+\label{sec:modelos_explicados}
+
+Foram explicados sempre o XGBoost e o \textit{Random Forest}, representantes das
+estratégias de \textit{boosting} e de \textit{bagging}, além do modelo com maior
+AUC-ROC no conjunto de teste, caso este não seja um dos dois anteriores. Essa regra
+garante que a análise de interpretabilidade inclua o modelo que, na prática, seria o
+candidato à aplicação.
+
+A Regressão Logística não precisa de SHAP para ser interpretada, pois seus
+coeficientes já descrevem diretamente o efeito de cada variável
+(Seção~\ref{sec:regressao_logistica}). Em modelos lineares, inclusive, os valores SHAP
+na escala do logaritmo da razão de chances têm forma fechada, desde que as variáveis
+sejam tratadas como independentes: $\phi_j = \beta_j (x_j - \mathrm{E}[X_j])$
+\cite{Lundberg2017Unified},
+de modo que, com preditores padronizados e o treino como referência, a contribuição
+de cada variável é simplesmente o produto $\beta_j x_j$. Caso a Regressão Logística
+fosse o modelo de maior AUC-ROC no teste, ela seria explicada pelo mesmo estimador
+amostral usado no \textit{Random Forest}, na escala de probabilidade.
+
+\subsection{Análises Realizadas}
+\label{sec:analises_shap}
+
+Para cada modelo explicado, os valores SHAP dos pacientes do conjunto de teste foram
+organizados em uma matriz com uma linha por paciente e uma coluna por variável, a
+partir da qual foram produzidas as seguintes análises e visualizações:
+
+\begin{enumerate}
+    \item \textbf{Importância global}: a importância de cada variável foi definida
+    como a média dos valores absolutos de seus valores SHAP no conjunto de teste, ou
+    seja, a magnitude média de sua contribuição para as previsões, independentemente
+    do sentido. As variáveis foram ordenadas por essa medida e representadas em um
+    gráfico de barras; calcularam-se também a participação percentual de cada uma na
+    importância total, a participação acumulada e o número de variáveis necessárias
+    para atingir 80\% da importância total, o que indica o quanto as previsões se
+    concentram em poucas variáveis;
+    \item \textbf{Distribuição dos efeitos (\textit{beeswarm})}: cada paciente é
+    representado por um ponto na linha de cada variável, posicionado horizontalmente
+    pelo valor SHAP e colorido pelo valor da variável, do mais baixo ao mais alto. O
+    gráfico complementa a importância global ao mostrar a dispersão dos efeitos entre
+    os pacientes e o sentido da associação: se pontos com valores altos da variável se
+    concentram à direita, valores elevados aumentam a previsão de doença;
+    \item \textbf{Direção do efeito}: para resumir o sentido da associação, calculou-se,
+    para cada variável, a correlação de Pearson entre seus valores e seus valores
+    SHAP. Correlações acima de 0,3 foram interpretadas como indicativas de que valores
+    elevados da variável aumentam a probabilidade prevista de doença; abaixo de $-0{,}3$,
+    de que a reduzem; e, entre esses limites, de efeito fraco ou não monotônico. Variáveis com valores SHAP constantes (nulos, por não
+    serem utilizadas pelo modelo) têm correlação indefinida e foram classificadas como
+    ``sem variação''. Os pontos
+    de corte são uma convenção heurística, adotada apenas para resumir o padrão
+    observado \cite{Schober2018Correlation};
+    \item \textbf{Gráficos de dependência}: para as quatro variáveis mais importantes,
+    representou-se o valor SHAP em função do valor da variável, o que revela a forma da
+    relação aprendida pelo modelo, como limiares, saturações ou não linearidades. A cor
+    dos pontos corresponde a uma segunda variável, escolhida automaticamente entre as
+    que mais parecem modificar o efeito da primeira, o que permite identificar
+    possíveis interações. Os valores no eixo horizontal estão na escala padronizada,
+    e, nas variáveis transformadas, na escala logarítmica
+    (Seções~\ref{sec:estatisticas_descritivas_assimetria} e~\ref{sec:padronizacao});
+    \item \textbf{Explicações locais (\textit{waterfall})}: para três pacientes
+    selecionados, decompôs-se a previsão individual partindo do valor base e
+    acrescentando, uma a uma, as contribuições das variáveis até chegar à previsão
+    final. Foram selecionados o verdadeiro positivo com maior probabilidade prevista
+    de doença, o verdadeiro negativo com menor probabilidade prevista e o falso
+    negativo com menor probabilidade prevista, isto é, o paciente doente classificado
+    pelo modelo com maior confiança como saudável. Os dois primeiros ilustram o
+    raciocínio do modelo nos casos em que ele está mais seguro, e o terceiro, o tipo de
+    erro mais crítico neste contexto, permitindo examinar quais variáveis levaram o
+    modelo a subestimar o risco daquele paciente.
+\end{enumerate}
+
+Os gráficos foram produzidos com o pacote \texttt{shapviz} \cite{Mayer2026shapviz}.
+% TODO: confirmar no R a versão do shapviz usada no pipeline, com
+% packageVersion("shapviz"), e acrescentá-la ao campo note da entrada
+% Mayer2026shapviz do .bib, ajustando o ano à data de publicação dessa versão
+% (toBibtex(citation("shapviz")) fornece a referência completa).
+
+\subsection{Auditoria de Viés por Sexo}
+\label{sec:shap_sexo}
+
+Como aprofundamento da avaliação estratificada da Seção~\ref{sec:avaliacao_sexo},
+os valores SHAP foram analisados separadamente para os pacientes de cada sexo. Para
+cada modelo explicado, calculou-se a importância global das variáveis, definida como
+a média dos valores SHAP absolutos, dentro de cada subgrupo, e as importâncias foram
+representadas lado a lado em um gráfico de barras. A concordância entre os rankings de
+importância dos dois sexos foi medida pela correlação de postos de Spearman
+\cite{Schober2018Correlation}: valores próximos de 1 indicam que o modelo se apoia
+essencialmente nas mesmas variáveis para homens e mulheres, enquanto valores baixos
+sugerem que as previsões são orientadas por padrões distintos em cada grupo.
+
+Examinou-se também a contribuição da própria variável \textit{Gender}. Para cada
+sexo, calculou-se a média dos valores SHAP dessa variável, com sinal, e sua
+distribuição foi representada por sexo e classe real. Uma contribuição média
+sistematicamente positiva em um sexo e negativa no outro indica que o modelo desloca
+as previsões com base no sexo do paciente, independentemente dos exames
+laboratoriais. Essa análise complementa a auditoria de desempenho: enquanto a
+Seção~\ref{sec:avaliacao_sexo} verifica se o modelo erra mais em um dos sexos, a
+análise dos valores SHAP investiga se o sexo e as demais variáveis influenciam as
+previsões de forma diferente entre os grupos, um dos mecanismos pelos quais o viés
+pode se manifestar \cite{investigatingbiashealth}. Pelas mesmas limitações de tamanho
+amostral discutidas anteriormente, os resultados por sexo têm caráter descritivo.
+
+\subsection{Comparação das Importâncias entre os Modelos}
+\label{sec:comparacao_importancias}
+
+Por fim, verificou-se se os quatro modelos atribuem importâncias semelhantes às
+variáveis. Para isso, construiu-se um ranking de importância a partir de cada medida
+disponível: a importância SHAP global para os modelos explicados na
+Seção~\ref{sec:modelos_explicados}; a importância nativa do \textit{Random Forest},
+dada pela média, entre as duas classes, da importância por permutação específica de cada
+classe (a queda na taxa de acerto da classe nas amostras \textit{out-of-bag}, dividida
+por seu erro-padrão), reescalada para o intervalo de 0 a 100
+(Seção~\ref{sec:random_forest}), e a do LightGBM,
+dada pelo ganho acumulado nas divisões em que cada variável é utilizada, ambas
+calculadas independentemente de o modelo também ter sido explicado por SHAP; e o valor
+absoluto dos coeficientes para a Regressão Logística, comparáveis entre si porque os
+preditores estão padronizados. Assim, o \textit{Random Forest} contribui com dois
+rankings, um baseado em SHAP e outro em sua importância nativa, o que permite verificar
+também a concordância entre as duas medidas para um mesmo modelo. Variáveis
+não utilizadas por um modelo receberam importância nula e ocuparam as últimas posições
+de seu ranking; na importância nativa, reescalada de 0 a 100, a variável utilizada de
+menor importância também recebe o valor 0, mas permanece à frente das não utilizadas.
+Em todos os rankings, inclusive nos rankings por sexo da Seção~\ref{sec:shap_sexo},
+variáveis com importâncias exatamente iguais, como as não utilizadas por um mesmo
+modelo, receberam o posto médio das posições que ocupariam: duas variáveis empatadas
+nas posições 9 e 10, por exemplo, recebem ambas o posto 9,5. Evita-se, assim, que o
+empate seja desfeito pela ordem das colunas na base, que é arbitrária e alteraria as
+correlações calculadas. Os postos foram obtidos a partir dos valores de importância
+antes de qualquer arredondamento, de modo que apenas empates reais recebem o mesmo
+posto. A concordância entre todos os pares de rankings foi medida pela correlação de
+postos de Spearman, que, na presença de empates, corresponde à correlação de Pearson
+entre os postos médios.
+
+Como as medidas têm naturezas diferentes, a comparação baseia-se nas posições dos
+rankings, e não em suas magnitudes. Uma concordância elevada indica que a importância
+das variáveis é robusta à escolha do algoritmo, o que fortalece as conclusões da
+análise de interpretabilidade. Discordâncias, por outro lado, podem refletir tanto
+diferenças reais nos padrões aprendidos quanto propriedades das próprias medidas de
+importância, especialmente na presença de variáveis correlacionadas: a importância
+por permutação tende a favorecer variáveis correlacionadas \cite{Strobl2008Conditional},
+e a importância SHAP pode dividir o crédito entre elas \cite{Aas2021Explaining}. Os
+rankings obtidos também são confrontados com os resultados do teste de Welch
+(Tabela~\ref{tab:teste_welch}), o que permite verificar se as variáveis mais
+importantes para os modelos coincidem com as que apresentaram as maiores diferenças
+entre doentes e saudáveis na análise exploratória.
