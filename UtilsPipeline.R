@@ -91,15 +91,34 @@ salvar_csv <- function(df, caminho) {
 # treino do fold), evitando que amostras sinteticas correlacionadas caiam nas
 # particoes de validacao e inflem as metricas da CV.
 # ----------------------------------------------------------------------------
+# O SMOTE interpola linearmente TODOS os atributos. Para uma variavel binaria
+# (Gender: 0/1 antes da padronizacao), a interpolacao entre pacientes de sexos
+# diferentes geraria valores intermediarios sem significado. Apos o SMOTE, cada
+# valor sintetico e substituido pela categoria valida mais proxima, ou seja, a
+# amostra sintetica herda o sexo de um dos dois pacientes que a originaram.
+VARS_BINARIAS <- c("Gender")
+
+categoria_mais_proxima <- function(valores, categorias) {
+  vapply(valores, function(v) categorias[which.min(abs(categorias - v))], numeric(1))
+}
+
 aplicar_smote <- function(x, y, K = 5) {
+  x <- as.data.frame(x)   # o caret entrega uma matriz (interface de formula)
   positiva <- levels(y)[2]
   alvo <- ifelse(y == positiva, 1, 0)
-  res  <- suppressWarnings(smotefamily::SMOTE(X = as.data.frame(x), target = alvo,
-                                              K = K, dup_size = 0))
-  dados <- res$data
+  res  <- suppressWarnings(smotefamily::SMOTE(X = x, target = alvo, K = K, dup_size = 0))
+  # smotefamily devolve rbind(minoritaria original, sinteticas, majoritaria original)
+  dados      <- res$data
+  sinteticas <- res$syn_data
+  for (v in intersect(VARS_BINARIAS, names(x))) {
+    categorias      <- sort(unique(x[[v]]))
+    dados[[v]]      <- categoria_mais_proxima(dados[[v]], categorias)
+    sinteticas[[v]] <- categoria_mais_proxima(sinteticas[[v]], categorias)
+  }
   classe <- factor(ifelse(dados$class == 1, positiva, levels(y)[1]), levels = levels(y))
   dados$class <- NULL
-  list(x = dados, y = classe, n_sinteticas = nrow(res$syn_data))
+  sinteticas$class <- NULL
+  list(x = dados, y = classe, n_sinteticas = nrow(sinteticas), sinteticas = sinteticas)
 }
 
 smote_caret <- list(

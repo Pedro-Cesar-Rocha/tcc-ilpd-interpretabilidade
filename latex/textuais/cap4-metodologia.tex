@@ -775,6 +775,25 @@ contrário, de modo que o modelo seria avaliado em dados quase idênticos aos qu
 no treinamento. Isso configuraria vazamento de dados \cite{KaufmanScharRosset2012} e
 produziria estimativas de desempenho otimistas \cite{Santos2018CrossValidation}.
 
+O SMOTE gera cada amostra sintética por interpolação linear entre um paciente da
+classe minoritária e um de seus cinco vizinhos mais próximos da mesma classe,
+sorteando um ponto do segmento que os une \cite{smote}. Essa interpolação é adequada
+às variáveis contínuas, mas não à variável binária \textit{Gender}: quando os dois
+pacientes envolvidos são de sexos diferentes, o valor interpolado fica entre as duas
+categorias e não corresponde a nenhum sexo. Os próprios autores do SMOTE reconhecem
+essa limitação e propõem, para atributos nominais, a variante SMOTE-NC, que atribui à
+amostra sintética o valor mais frequente entre os vizinhos \cite{smote}. Neste
+trabalho, adotou-se uma solução mais simples e de mesmo propósito: após a geração das
+amostras sintéticas, o valor de \textit{Gender} de cada uma é substituído pela
+categoria válida mais próxima. Como o ponto sorteado é o mesmo para todas as
+variáveis, a amostra sintética herda o sexo do paciente de origem do qual está mais
+próxima no segmento de interpolação. As variáveis contínuas permanecem interpoladas,
+os pacientes reais não são alterados e a busca pelos vizinhos continua a considerar
+todas as variáveis padronizadas, inclusive \textit{Gender}. A correção vale para todas
+as iterações da validação cruzada e para o ajuste dos modelos finais, e o diagnóstico
+do balanceamento sobre o conjunto de treino completo verifica que as amostras
+sintéticas contêm apenas os dois valores válidos dessa variável.
+
 \subsection{Otimização de Hiperparâmetros}
 \label{sec:otimizacao_hiperparametros}
 
@@ -1051,20 +1070,36 @@ modelo:
     cenário de triagem. Escolhe-se o maior limiar entre os que atingem a meta porque a
     redução do limiar só pode aumentar ou manter a sensibilidade, à custa da
     especificidade; o maior limiar viável é, portanto, o que atinge a meta com o menor
-    sacrifício de especificidade. Para esse limiar, registraram-se a especificidade e
-    a precisão resultantes, o que permite comparar os modelos sob uma mesma exigência
-    de sensibilidade;
-    \item \textbf{Varredura de limiares}: para todos os modelos, calcularam-se a
-    sensibilidade, a especificidade, o F1 e os números absolutos de falsos negativos e
-    de falsos positivos nos limiares de 0,1 a 0,9, em passos de 0,1, o que torna
-    explícito o compromisso entre os dois tipos de erro.
+    sacrifício de especificidade. Para esse limiar, registraram-se a sensibilidade, a
+    especificidade e a precisão resultantes no conjunto de teste, o que permite
+    comparar os modelos sob uma mesma exigência de sensibilidade e verificar se a meta
+    se mantém em pacientes que não participaram da escolha do limiar;
+    \item \textbf{Varredura de limiares}: para todos os modelos, calcularam-se, no
+    conjunto de teste, a sensibilidade, a especificidade, o F1 e os números absolutos
+    de falsos negativos e de falsos positivos nos limiares de 0,1 a 0,9, em passos de
+    0,1, o que torna explícito o compromisso entre os dois tipos de erro. Essa
+    varredura tem caráter apenas descritivo: nenhum limiar é escolhido a partir dela.
 \end{enumerate}
 
-Ressalta-se que os limiares de Youden e clínico foram determinados a partir das
-próprias previsões no conjunto de teste. As métricas obtidas nesses limiares têm,
-portanto, caráter descritivo e tendem a ser otimistas, pois o limiar é ajustado aos
-mesmos dados em que é avaliado. Em uma aplicação prospectiva, o limiar deveria ser
-fixado com dados de treino ou de validação e confirmado em dados independentes.
+Os limiares de Youden e clínico foram escolhidos exclusivamente com dados de treino, a
+partir das predições fora da partição (\textit{out-of-fold}) da validação cruzada
+(Seção~\ref{sec:validacao_cruzada}). Nessa reamostragem, cada paciente do treino
+recebe, em cada uma das três repetições, uma probabilidade prevista por um modelo
+ajustado sem ele, com a combinação de hiperparâmetros selecionada. As 1.371 predições
+resultantes (457 pacientes $\times$ 3 repetições) foram reunidas em uma única curva
+ROC, sobre a qual os dois limiares foram determinados. Em seguida, cada limiar foi
+aplicado, sem nenhum ajuste, às probabilidades previstas pelo modelo final no
+conjunto de teste, onde foram calculadas as métricas reportadas. Escolher o limiar
+nas próprias previsões do teste significaria ajustá-lo aos mesmos dados em que é
+avaliado: a sensibilidade e a especificidade obtidas nesse limiar seriam
+sistematicamente otimistas, e o viés é maior justamente em amostras pequenas como a
+deste trabalho \cite{Leeflang2008Bias}. Com a escolha feita na validação cruzada, o
+conjunto de teste preserva seu papel de estimativa independente, e a diferença entre
+a meta de 90\% e a sensibilidade efetivamente observada no teste passa a medir quanto
+o limiar se mantém em novos pacientes. Essa transferência é apenas aproximada, pois
+os modelos de cada partição são ajustados com cerca de 80\% do treino, enquanto o
+modelo final usa o treino completo; como ambos passam pelo mesmo balanceamento, porém,
+as escalas de probabilidade de uns e de outro tendem a ser semelhantes.
 
 \subsection{Comparação Estatística das AUCs}
 \label{sec:comparacao_auc}
@@ -1077,12 +1112,14 @@ independentes: um paciente difícil de classificar tende a ser difícil para tod
 modelos. O método de DeLong leva essa dependência em conta ao estimar a covariância
 entre as AUCs a partir das mesmas estatísticas $U$ usadas no intervalo de confiança,
 o que, em geral, torna o teste pareado mais poderoso do que a comparação entre
-intervalos de confiança isolados. O teste foi aplicado aos seis pares de modelos, com
-nível de significância de 5\%. Diferentemente da comparação na validação cruzada, os
-valores-$p$ não foram ajustados para comparações múltiplas; um resultado
-significativo isolado deve, portanto, ser lido à luz das seis comparações
-realizadas, lembrando que a correção de Bonferroni equivaleria a exigir
-$p < 0{,}05/6 \approx 0{,}0083$.
+intervalos de confiança isolados. O teste foi aplicado aos seis pares de modelos e,
+como na comparação feita na validação cruzada (Seção~\ref{sec:comparacao_cv}), os
+valores-$p$ foram ajustados pela correção de Bonferroni \cite{Demsar2006Statistical}:
+cada valor-$p$ é multiplicado por seis, com limite superior igual a 1, e comparado ao
+nível de significância de 5\%, o que equivale a exigir $p < 0{,}05/6 \approx 0{,}0083$
+no valor-$p$ original. Ambos os valores foram registrados. A correção é conservadora,
+pois reduz o poder de detectar diferenças reais, mas limita a 5\% a probabilidade de
+que ao menos uma das seis comparações seja declarada significativa apenas por acaso.
 
 \subsection{Avaliação Estratificada por Sexo}
 \label{sec:avaliacao_sexo}
@@ -1100,19 +1137,21 @@ pacientes do sexo feminino e 81 do sexo masculino.
 Para cada sexo, foram calculadas a prevalência de doença, a AUC-ROC com intervalo de
 confiança de 95\% pelo método de DeLong e, no limiar de 0,5, a sensibilidade, a
 especificidade, o F1 e a taxa de falsos negativos. Calcularam-se também a
-sensibilidade e a especificidade de cada sexo no limiar clínico definido para o
-modelo no conjunto de teste completo (Seção~\ref{sec:limiar_decisao}), o que permite
-verificar se a meta de 90\% de sensibilidade, atingida no conjunto completo, também é
+sensibilidade e a especificidade de cada sexo no limiar clínico do modelo, escolhido
+na validação cruzada (Seção~\ref{sec:limiar_decisao}), o que permite verificar se a
+meta de 90\% de sensibilidade, fixada para o conjunto dos pacientes, também é
 atingida em cada subgrupo. A diferença de AUC-ROC entre os sexos foi testada pelo
 teste de DeLong na versão para curvas não pareadas, já que os dois subgrupos são
-formados por pacientes diferentes, e as diferenças de sensibilidade e de
-especificidade entre os sexos foram registradas como medidas descritivas da
-disparidade.
+formados por pacientes diferentes. Como esse teste é repetido para os quatro modelos,
+os valores-$p$ também foram ajustados pela correção de Bonferroni, agora com quatro
+comparações. As diferenças de sensibilidade e de especificidade entre os sexos foram
+registradas como medidas descritivas da disparidade.
 
 Três cuidados orientam a interpretação dessa análise. Primeiro, os subgrupos são
 pequenos, especialmente o feminino, o que torna os intervalos de confiança largos e
-reduz o poder do teste: a ausência de diferença significativa não deve ser tomada
-como evidência de equidade entre os sexos. Segundo, a precisão e o F1 dependem da
+reduz o poder do teste, já diminuído pela correção para comparações múltiplas: a
+ausência de diferença significativa não deve ser tomada como evidência de equidade
+entre os sexos. Segundo, a precisão e o F1 dependem da
 prevalência, que pode diferir entre os subgrupos, de modo que a sensibilidade, a
 especificidade e a AUC-ROC são as medidas mais adequadas para comparar os sexos
 \cite{FAWCETT2006861}. Terceiro, uma disparidade de desempenho revela que o modelo
@@ -1378,11 +1417,18 @@ preditores estão padronizados. Assim, o \textit{Random Forest} contribui com do
 rankings, um baseado em SHAP e outro em sua importância nativa, o que permite verificar
 também a concordância entre as duas medidas para um mesmo modelo. Variáveis
 não utilizadas por um modelo receberam importância nula e ocuparam as últimas posições
-de seu ranking: nos rankings SHAP, os empates entre elas foram desfeitos pela ordem das
-colunas, sem atribuição de postos médios, enquanto, na importância nativa do LightGBM,
-as variáveis ausentes receberam todas a última posição. Esses empates devem ser
-considerados na interpretação das correlações. A concordância entre todos os pares de rankings foi medida pela
-correlação de postos de Spearman.
+de seu ranking; na importância nativa, reescalada de 0 a 100, a variável utilizada de
+menor importância também recebe o valor 0, mas permanece à frente das não utilizadas.
+Em todos os rankings, inclusive nos rankings por sexo da Seção~\ref{sec:shap_sexo},
+variáveis com importâncias exatamente iguais, como as não utilizadas por um mesmo
+modelo, receberam o posto médio das posições que ocupariam: duas variáveis empatadas
+nas posições 9 e 10, por exemplo, recebem ambas o posto 9,5. Evita-se, assim, que o
+empate seja desfeito pela ordem das colunas na base, que é arbitrária e alteraria as
+correlações calculadas. Os postos foram obtidos a partir dos valores de importância
+antes de qualquer arredondamento, de modo que apenas empates reais recebem o mesmo
+posto. A concordância entre todos os pares de rankings foi medida pela correlação de
+postos de Spearman, que, na presença de empates, corresponde à correlação de Pearson
+entre os postos médios.
 
 Como as medidas têm naturezas diferentes, a comparação baseia-se nas posições dos
 rankings, e não em suas magnitudes. Uma concordância elevada indica que a importância
