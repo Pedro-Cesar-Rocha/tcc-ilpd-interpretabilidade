@@ -391,6 +391,7 @@ os coeficientes obtidos aqui, com mais de 500 observações. Além disso, o par
 \textit{Total\_Proteins} × \textit{Albumin} envolve variáveis aproximadamente
 simétricas.
 
+
 \section{Pré-processamento}
 
 \subsection{Remoção de Duplicatas}
@@ -401,7 +402,11 @@ e a base passou de 583 para 570 registros.
 \subsection{Transformação Logarítmica}
 
 Às cinco variáveis assimétricas identificadas na análise exploratória aplicou-se a 
-transformação $x' = \ln(1 + x)$ (Seção~\ref{sec:estatisticas_descritivas_assimetria}) \cite{logtransformation}. O logaritmo comprime a cauda da
+transformação $x' = \ln(1 + x)$ (Seção~\ref{sec:estatisticas_descritivas_assimetria}). 
+Embora a transformação logarítmica seja amplamente usada para dados assimétricos, não 
+há garantia de que ela reduza a assimetria, podendo em alguns casos agravá-la, e seus 
+resultados podem depender da constante somada aos dados \cite{logtransformation}. Por 
+isso, o efeito foi verificado empiricamente. O logaritmo comprime a cauda da
 distribuição sem alterar a ordem entre as observações: na 
 \textit{Aspartate\_Aminotransferase}, por exemplo, o máximo, que era mais de 
 cem vezes maior que a mediana na escala original, passa a ser cerca de duas 
@@ -429,9 +434,11 @@ parâmetros}: o valor transformado de cada observação depende exclusivamente
 dela mesma, e não de nenhuma estatística do conjunto. Por isso, aplicá-la antes 
 da divisão treino/teste, como foi feito neste trabalho, não introduz vazamento 
 de dados, pois nenhuma informação do conjunto de teste é usada para definir a 
-transformação \cite{KaufmanScharRosset2012}. O mesmo não valeria, por exemplo, 
+transformação, o que é coerente com a definição de vazamento como a introdução de 
+informação que não deveria estar legitimamente disponível durante a modelagem 
+\cite{KaufmanScharRosset2012}. O mesmo não valeria, por exemplo, 
 para uma transformação de Box-Cox, cujo expoente $\lambda$ é estimado a partir 
-dos dados e, portanto, deveria ser ajustado apenas no treino.
+dos dados \cite{Bishara2015Reducing} e, portanto, deveria ser ajustado apenas no treino.
 
 \begin{table}[htbp]
 \centering
@@ -473,8 +480,9 @@ estratificada pela variável-alvo, preservando a proporção das classes em ambo
 os conjuntos. Uma semente aleatória fixa, definida uma única vez no início do
 \textit{pipeline}, garante a reprodutibilidade dessa partição. Essa divisão
 ocorre antes da imputação e da padronização, de modo que os parâmetros dessas
-duas etapas sejam estimados exclusivamente no conjunto de treino, evitando o
-vazamento de informação do conjunto de teste \cite{KaufmanScharRosset2012}.
+duas etapas sejam estimados exclusivamente no conjunto de treino, evitando que
+informação do conjunto de teste chegue ao treinamento, o que caracterizaria
+vazamento \cite{KaufmanScharRosset2012}.
 
 \subsection{Imputação de Valores Ausentes}
 
@@ -484,29 +492,35 @@ ambos os conjuntos (Seção~\ref{sec:divisao_treino_teste}).
 \subsection{Padronização}
 \label{sec:padronizacao}
 
-Após a imputação, os preditores foram padronizados pela transformação
+Após a imputação, os preditores, inclusive a variável binária \textit{Gender},
+codificada numericamente, foram padronizados pela transformação
 \textit{z-score}, com centralização (\textit{center}) e escalonamento
 (\textit{scale}). As médias e os desvios-padrão foram estimados exclusivamente
 no conjunto de treino e, em seguida, aplicados tanto ao treino quanto ao teste,
 mantendo a separação entre os dados usados para ajustar os parâmetros e os
-usados para avaliação. Essa etapa é particularmente relevante para a Regressão
-Logística, um modelo linear sensível às escalas dos preditores; para os modelos
-baseados em árvores, que realizam divisões pela ordem dos valores, a
-padronização tende a ser menos relevante.
+usados para avaliação. Essa etapa coloca todos os preditores na mesma escala, o que
+permite comparar entre si os coeficientes da Regressão Logística
+(Seção~\ref{sec:regressao_logistica}). Para os modelos baseados em árvores, que
+realizam divisões pela ordem dos valores, a padronização tende a ser menos
+relevante \cite{elementsofstatiscal}.
 
 \subsection{Balanceamento de Classes (SMOTE)}
 \label{sec:balanceamento}
 
 Para lidar com o desbalanceamento das classes, utilizou-se o SMOTE
-(\textit{Synthetic Minority Over-sampling Technique})\cite{smote}, que gera amostras
-sintéticas da classe minoritária a partir de observações existentes. O
+(\textit{Synthetic Minority Over-sampling Technique}) \cite{smote}, que gera amostras
+sintéticas da classe minoritária por interpolação entre uma observação existente e
+seus vizinhos mais próximos dentro da própria classe. O
 balanceamento é aplicado somente aos dados de treino; o conjunto de teste
 mantém sua distribuição original e nunca é balanceado. Durante o treinamento
 com validação cruzada, o SMOTE é aplicado independentemente dentro de cada
 partição de treino de cada \textit{fold}, após a separação dos \textit{folds}.
 Assim, as amostras sintéticas não contaminam as partições de validação — o que
-poderia ocorrer se o balanceamento fosse feito antes da divisão — nem inflacionam
-artificialmente as métricas de desempenho.
+poderia ocorrer se o balanceamento fosse feito antes da divisão
+\cite{Santos2018CrossValidation} — nem inflacionam artificialmente as métricas de
+desempenho. Como a interpolação não é adequada à variável binária \textit{Gender}, o
+tratamento dado a ela na geração das amostras sintéticas é descrito na
+Seção~\ref{sec:validacao_cruzada}.
 
 \section{Modelos Preditivos}
 \label{sec:modelos_preditivos}
