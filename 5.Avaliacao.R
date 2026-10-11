@@ -33,7 +33,7 @@ log_kv(paste0("Classe ", levels(teste$Dataset)),
 log_kv(paste0("Sexo ", levels(genero)),
        sprintf("%d (%.1f%%)", table(genero), 100 * prop.table(table(genero))))
 
-# Menor limiar que garante sensibilidade >= alvo (prioriza reduzir falsos negativos)
+# Maior limiar que ainda garante sensibilidade >= alvo (menor custo em especificidade)
 limiar_recall <- function(roc_o, alvo) {
   co <- coords(roc_o, "all", ret = c("threshold", "sensitivity", "specificity", "precision"))
   co <- co[is.finite(co$threshold) & co$sensitivity >= alvo, ]
