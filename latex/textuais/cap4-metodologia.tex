@@ -311,11 +311,11 @@ saudáveis, o que motiva o uso de modelos multivariados.
 
 \subsection{Análise de Correlação}
 
-Por fim, calculou-se a matriz de correlação de Pearson entre as variáveis numéricas 
+Por fim, calculou-se a matriz de correlação de Pearson entre as variáveis numéricas
 (Figura~\ref{fig:eda_correlacao}). As observações com valores ausentes foram excluídas apenas para esse
-cálculo. O objetivo foi identificar \textbf{multicolinearidade}, ou seja, pares de 
-variáveis que carregam praticamente a mesma informação. Adotou-se $|r| > 0{,}7$ como 
-limiar de correlação forte \cite{Dormann2012Collinearity, Mukaka2012Statistics}.
+cálculo. O objetivo foi identificar \textbf{multicolinearidade}, ou seja, pares de
+variáveis que carregam praticamente a mesma informação. Adotou-se $|r| > 0{,}7$ como
+limiar de correlação forte \cite{Dormann2013Collinearity, Mukaka2012Statistics}.
 
 \begin{figure}[htbp]
 \centering
@@ -324,54 +324,69 @@ limiar de correlação forte \cite{Dormann2012Collinearity, Mukaka2012Statistics
 \label{fig:eda_correlacao}
 \end{figure}
 
-Encontrou-se correlação forte nos pares \textit{Total\_Bilirubin} × 
-\textit{Direct\_Bilirubin} ($r = 0{,}874$), \textit{Alamine\_Aminotransferase} × 
-\textit{Aspartate\_Aminotransferase} ($r = 0{,}792$) e \textit{Total\_Proteins} × 
-\textit{Albumin} ($r = 0{,}783$). Essas correlações têm explicação fisiológica: 
-a bilirrubina direta é uma das frações que compõem a bilirrubina total 
-\cite{Fevery2008Bilirubin, Kwo2016ACG}, e a razão albumina/globulina é derivada 
-da albumina e das proteínas totais, uma vez que a globulina é obtida pela 
-diferença entre as duas \cite{Busher1990Albumin, Newsome2018Guidelines}.
+Encontrou-se correlação forte nos pares \textit{Total\_Bilirubin} ×
+\textit{Direct\_Bilirubin} ($r = 0{,}874$), \textit{Alamine\_Aminotransferase} ×
+\textit{Aspartate\_Aminotransferase} ($r = 0{,}792$) e \textit{Total\_Proteins} ×
+\textit{Albumin} ($r = 0{,}783$). Essas correlações têm explicação fisiológica. A
+bilirrubina direta é uma das frações que compõem a bilirrubina total
+\cite{Kwo2016ACG}. A ALT e a AST são enzimas liberadas pelos hepatócitos em
+resposta à lesão hepatocelular, e por isso se elevam em conjunto nesse padrão de
+lesão \cite{Kwo2016ACG, Newsome2018Guidelines}. Já a albumina responde por mais da
+metade das proteínas séricas totais, sendo o restante composto pelas globulinas
+\cite{Busher1990Albumin}. A razão albumina/globulina deriva dessas duas medidas,
+pois a globulina é obtida pela diferença entre proteínas totais e albumina
+\cite{Busher1990Albumin}.
 
-Mesmo com essa redundância, optou-se por \textbf{manter todas as variáveis}. A decisão 
+Mesmo com essa redundância, optou-se por \textbf{manter todas as variáveis}. A decisão
 tem três motivos:
 \begin{enumerate}
-    \item Os modelos baseados em árvores (\textit{Random Forest}, XGBoost e LightGBM) 
-    são, em geral, robustos à multicolinearidade quanto ao desempenho preditivo 
-    \cite{Breiman2001RandomForests, Chen2016XGBoost, Ke2017LightGBM}. Em estudo de 
-    simulação com diferentes níveis de colinearidade, \citeonline{Dormann2012Collinearity} 
-    observaram que \textit{Random Forest} e árvores com \textit{boosting} mantiveram 
-    desempenho estável em dados de teste, degradando apenas sob correlações extremas 
-    ou quando a estrutura de correlação muda entre treino e teste, situação que não 
-    se aplica a este trabalho, pois treino e teste provêm da mesma base;
-    \item Excluir variáveis clinicamente relevantes contraria o objetivo de 
-    interpretabilidade deste trabalho, que é entender como os modelos usam os exames 
+    \item Os modelos baseados em árvores costumam manter bom desempenho preditivo na
+    presença de variáveis correlacionadas. Em estudo de simulação com diferentes
+    níveis de colinearidade, \citeonline{Dormann2013Collinearity} observaram que
+    \textit{Random Forest} e árvores com \textit{boosting} mantiveram desempenho
+    estável em dados de teste com a mesma estrutura de correlação do treino. A
+    degradação ocorreu apenas quando a estrutura de correlação mudou
+    substancialmente entre treino e teste, situação que não se aplica a este
+    trabalho, pois treino e teste provêm da mesma base;
+    \item Excluir variáveis clinicamente relevantes contraria o objetivo de
+    interpretabilidade deste trabalho, que é entender como os modelos usam os exames
     laboratoriais disponíveis;
-    \item A multicolinearidade afeta principalmente a \textit{interpretação} dos 
-    modelos, não sua capacidade preditiva \cite{Strobl2008Conditional, Dormann2012Collinearity}. 
-    No caso do método SHAP, a presença de variáveis correlacionadas pode levar à 
-    divisão da importância entre elas: como o modelo pode usar qualquer uma das 
-    variáveis redundantes para capturar a mesma informação, o crédito atribuído a 
-    cada uma individualmente tende a se diluir \cite{Aas2021Explaining, Chen2023Algorithms, Verdinelli2024Feature}. 
-    Esse efeito é particularmente relevante na variante do TreeSHAP utilizada 
-    neste trabalho para o XGBoost e o LightGBM, que estima as contribuições a 
-    partir da estrutura das próprias árvores e das frequências de passagem pelos 
-    nós, aproximando a distribuição condicional das variáveis 
-    \cite{Lundberg2020Trees, Chen2023Algorithms}. Já para o \textit{Random Forest}, 
-    cujos valores SHAP foram estimados por amostragem de Monte Carlo com permutação 
-    marginal, as variáveis são tratadas como independentes, o que evita a divisão 
-    de crédito mas pode avaliar o modelo em combinações de valores pouco plausíveis 
-    quando há dependência \cite{Chen2020TrueToModel}. Essa diferença entre 
+    \item A multicolinearidade afeta principalmente a \textit{interpretação} dos
+    modelos, e não sua capacidade preditiva dentro da mesma estrutura de
+    correlação \cite{Strobl2008Conditional, Dormann2013Collinearity}. Na
+    importância por permutação do \textit{Random Forest}, por exemplo, variáveis
+    correlacionadas tendem a ser favorecidas \cite{Strobl2008Conditional}. No
+    caso do método SHAP, a presença de variáveis correlacionadas pode levar à
+    divisão da importância entre elas: valores de Shapley condicionais
+    distribuem o crédito entre variáveis correlacionadas
+    \cite{Chen2023Algorithms, Verdinelli2024Feature}, e ignorar a dependência
+    pode produzir explicações distorcidas \cite{Aas2021Explaining}. Esse efeito
+    é relevante na variante do TreeSHAP utilizada neste trabalho para o XGBoost
+    e o LightGBM, que dispensa conjunto de referência e estima as contribuições
+    a partir da estrutura das árvores e da proporção de observações de treino
+    que passa por cada nó, aproximando de forma imperfeita os valores de Shapley
+    condicionais \cite{Lundberg2020Trees, Chen2023Algorithms}. Já para o
+    \textit{Random Forest}, cujos valores SHAP foram estimados por amostragem
+    de Monte Carlo com permutação marginal, o crédito não é distribuído por
+    causa da correlação, mas o método pode avaliar o modelo em combinações de
+    valores pouco plausíveis quando há dependência \cite{Chen2020TrueToModel}.
+    Ainda assim, a divisão de crédito pode ocorrer quando o próprio modelo usa
+    variáveis redundantes de forma intercambiável
+    \cite{Chen2020TrueToModel, Chen2023Algorithms}. Essa diferença entre
     estimadores é considerada explicitamente na discussão dos resultados.
 \end{enumerate}
 
-Como limitação, o coeficiente de Pearson mede apenas associações lineares e é 
-sensível a valores extremos: um único ponto atípico pode alterar substancialmente a 
-magnitude e até o sinal do coeficiente \cite{Schober2018Correlation}. 
-Como as correlações foram calculadas na escala original, a presença de variáveis 
-muito assimétricas pode ter influenciado a magnitude dos coeficientes, uma vez que 
-distribuições com caudas pesadas tendem a inflar o valor de $r$ 
-\cite{Bishara2015Reducing}.
+Como limitação, o coeficiente de Pearson mede apenas associações lineares e é
+sensível a valores extremos, que podem alterar substancialmente sua magnitude
+\cite{Schober2018Correlation, Mukaka2012Statistics}. Como as correlações foram
+calculadas na escala original, a forte assimetria e os valores extremos de algumas
+variáveis (Tabela~\ref{tab:descritivas}) podem inflar o coeficiente, efeito
+associado à curtose excessiva \cite{Bishara2015Reducing}. Esse viés é relevante
+sobretudo em amostras pequenas e tende a ser desprezível a partir de cerca de 160
+observações \cite{Bishara2015Reducing}, de modo que é pouco provável que comprometa
+os coeficientes obtidos aqui, com mais de 500 observações. Além disso, o par
+\textit{Total\_Proteins} × \textit{Albumin} envolve variáveis aproximadamente
+simétricas.
 
 \section{Pré-processamento}
 
@@ -571,7 +586,7 @@ interpretação ``mantidos constantes os demais preditores'' é pouco realista p
 variáveis fortemente correlacionadas, como os pares identificados na análise de
 correlação (Figura~\ref{fig:eda_correlacao}): nesses casos, as estimativas dos
 coeficientes tornam-se instáveis e podem apresentar magnitude e até sinal diferentes
-dos esperados \cite{Dormann2012Collinearity}. A segunda é que, como o ajuste final
+dos esperados \cite{Dormann2013Collinearity}. A segunda é que, como o ajuste final
 também é feito sobre o treino balanceado pelo SMOTE (Seção~\ref{sec:validacao_cruzada}),
 que inclui observações sintéticas não independentes entre si, os erros-padrão tendem a
 ser subestimados, e os valores-$p$ devem, por isso, ser lidos como indicativos, e não
