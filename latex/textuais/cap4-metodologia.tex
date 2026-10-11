@@ -1433,7 +1433,10 @@ posições 8 a 10, recebem todas o posto 9. Evita-se, assim, que o
 empate seja desfeito pela ordem das colunas na base, que é arbitrária e alteraria as
 correlações calculadas. Os postos foram obtidos a partir dos valores de importância
 antes de qualquer arredondamento, de modo que apenas empates reais recebem o mesmo
-posto. A concordância entre todos os pares de rankings foi medida pela correlação de
+posto. A única exceção é o ranking da Regressão Logística, obtido a partir dos
+coeficientes arredondados para quatro casas decimais; como esses valores não
+apresentam empates, o arredondamento não altera os postos. A concordância entre todos
+os pares de rankings foi medida pela correlação de
 postos de Spearman, que, na presença de empates, corresponde à correlação de Pearson
 entre os postos médios.
 
