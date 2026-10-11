@@ -23,6 +23,21 @@ suppressWarnings(suppressPackageStartupMessages({
 log_section("ETAPA 6 - EXPLICABILIDADE (SHAP)")
 t0 <- timer_start()
 
+# --- Registro da versao e da citacao do pacote shapviz ----------------------
+# Usado para corrigir a entrada @manual{Mayer2026shapviz,...} em
+# latex/postextuais/bibliografia3.bib: o campo "year" dessa entrada estava
+# provisorio (2026, data futura/placeholder) e deve ser substituido pelo ano
+# real de publicacao da versao efetivamente usada no pipeline, obtido abaixo.
+log_subsection("Versao e citacao do pacote shapviz (para o .bib)")
+shapviz_versao <- as.character(utils::packageVersion("shapviz"))
+log_info("shapviz instalado: versao %s", shapviz_versao)
+shapviz_citacao <- utils::citation("shapviz")
+log_info("Saida de citation(\"shapviz\") (copiar os dados corretos para o .bib):")
+print(shapviz_citacao)
+log_info("Entrada BibTeX equivalente (toBibtex):")
+print(utils::toBibtex(shapviz_citacao))
+log_info("Apos conferir ano/autor/url acima, atualizar a entrada 'Mayer2026shapviz' em latex/postextuais/bibliografia3.bib (chave pode ser renomeada para refletir o ano correto, ex.: Mayer2024shapviz).")
+
 if (!requireNamespace("fastshap", quietly = TRUE)) {
   log_warn("fastshap nao instalado; etapa 6 sera ignorada.")
 } else {
