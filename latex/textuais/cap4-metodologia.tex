@@ -240,16 +240,23 @@ decidiu-se \textbf{não remover os \textit{outliers}} dessas variáveis.
 
 \subsection{Comparação entre Classes}
 
-Para uma primeira avaliação do poder discriminativo de cada variável, compararam-se 
-as médias dos grupos de pacientes doentes e saudáveis com o \textbf{teste $t$ de 
-Welch}. Esse teste foi escolhido no lugar do teste $t$ de Student clássico porque não 
-supõe que as variâncias dos dois grupos sejam iguais. Essa suposição seria pouco 
-plausível aqui, dada a maior dispersão dos exames no grupo de doentes e a diferença 
-de tamanho entre os grupos \cite{psychologists}. Considerou-se o nível de significância de 5\%.
+Para uma primeira avaliação do poder discriminativo de cada variável, compararam-se
+as médias dos grupos de pacientes doentes e saudáveis com o \textbf{teste $t$ de
+Welch}. Esse teste foi escolhido no lugar do teste $t$ de Student clássico porque não
+supõe que as variâncias dos dois grupos sejam iguais. Essa suposição seria pouco
+plausível aqui: os grupos são pré-existentes (definidos pelo diagnóstico, e não por
+atribuição aleatória), têm tamanhos diferentes (416 doentes e 167 saudáveis) e vários
+exames, como as bilirrubinas, a fosfatase alcalina e as aminotransferases, apresentam
+maior dispersão no grupo de doentes \cite{psychologists}. É quando variâncias e
+tamanhos diferem ao mesmo tempo que o teste de Student pode produzir valores-$p$
+inadequados. Nessas variáveis, a maior variância está no grupo maior, e o efeito
+esperado seria o de um teste conservador, que rejeita a hipótese nula menos vezes do
+que o nível nominal \cite{psychologists}. Considerou-se o nível de significância de
+5\%.
 
-Das nove variáveis analisadas, oito apresentaram diferença estatisticamente 
-significativa entre as classes ($p < 0{,}05$), e apenas a variável 
-\textit{Total\_Proteins} não apresentou diferença significativa 
+Das nove variáveis analisadas, oito apresentaram diferença estatisticamente
+significativa entre as classes ($p < 0{,}05$), e apenas a variável
+\textit{Total\_Proteins} não apresentou diferença significativa
 ($p = 0{,}393$), conforme detalhado na Tabela~\ref{tab:teste_welch}.
 
 \begin{table}[htbp]
@@ -273,14 +280,21 @@ AG\_Ratio                   & 0,91   & 1,03  & $<0{,}001$ & sim \\
 \end{tabular}
 \end{table}
 
-Essa análise é univariada: avalia cada variável isoladamente e não considera 
-interações nem efeitos combinados, que são justamente o que os modelos de aprendizado 
-de máquina conseguem capturar. Além disso, por causa da forte assimetria de algumas 
-variáveis, os resultados do teste devem ser lidos com cautela. Ainda assim, o teste 
-de Welch tende a ser robusto a desvios de normalidade em amostras deste tamanho, 
-pelo Teorema Central do Limite \cite{theimportanceofnormality}. Os resultados servem como referência para 
-comparar, no Capítulo de Resultados, com as importâncias de atributos obtidas por 
-meio dos valores SHAP.
+Essa análise é univariada: avalia cada variável isoladamente e não considera
+interações nem efeitos combinados, que são justamente o que os modelos de aprendizado
+de máquina conseguem capturar. Além disso, algumas variáveis apresentam forte
+assimetria e valores extremos (Figura~\ref{fig:eda_boxplots}), o que exige cautela na
+leitura dos resultados. Em amostras grandes, o teste de Welch não depende da
+normalidade dos dados, pois a distribuição da diferença entre as médias se aproxima da
+normal pelo Teorema Central do Limite \cite{theimportanceofnormality}. No entanto, essa
+aproximação exige amostras maiores quando há valores extremos ou assimetria acentuada
+\cite{theimportanceofnormality}, e o grupo saudável, com 167 pacientes, é o menor dos
+dois. Por isso, nas variáveis mais assimétricas (bilirrubinas, fosfatase alcalina e
+aminotransferases), os valores-$p$ devem ser lidos como indicativos, e não como medidas
+exatas. Ainda assim, todas elas apresentaram $p < 0{,}001$, de modo que a conclusão de
+que há diferença entre as classes dificilmente seria alterada por pequenas imprecisões
+dessa aproximação. Os resultados servem como referência para comparar, no Capítulo de
+Resultados, com as importâncias de atributos obtidas por meio dos valores SHAP.
 
 Também foram gerados \textit{boxplots} de cada variável numérica, separados por 
 classe (Figura~\ref{fig:eda_boxplots}). Eles permitem inspecionar visualmente a sobreposição entre as
