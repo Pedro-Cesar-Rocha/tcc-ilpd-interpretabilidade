@@ -391,54 +391,55 @@ os coeficientes obtidos aqui, com mais de 500 observações. Além disso, o par
 \textit{Total\_Proteins} × \textit{Albumin} envolve variáveis aproximadamente
 simétricas.
 
-
 \section{Pré-processamento}
 
 \subsection{Remoção de Duplicatas}
 
-Os 13 registros duplicados identificados na análise exploratória foram removidos, 
-e a base passou de 583 para 570 registros.
+Os 13 registros duplicados identificados na análise exploratória foram removidos,
+e a base passou de 583 para 570 registros. A remoção é feita antes da divisão
+treino/teste para que um mesmo paciente não apareça simultaneamente nos dois
+conjuntos, o que tornaria a avaliação artificialmente favorável.
 
 \subsection{Transformação Logarítmica}
 
-Às cinco variáveis assimétricas identificadas na análise exploratória aplicou-se a 
-transformação $x' = \ln(1 + x)$ (Seção~\ref{sec:estatisticas_descritivas_assimetria}). 
-Embora a transformação logarítmica seja amplamente usada para dados assimétricos, não 
-há garantia de que ela reduza a assimetria, podendo em alguns casos agravá-la, e seus 
-resultados podem depender da constante somada aos dados \cite{logtransformation}. Por 
-isso, o efeito foi verificado empiricamente. O logaritmo comprime a cauda da
-distribuição sem alterar a ordem entre as observações: na 
-\textit{Aspartate\_Aminotransferase}, por exemplo, o máximo, que era mais de 
-cem vezes maior que a mediana na escala original, passa a ser cerca de duas 
-vezes maior na escala transformada. Após a transformação, calculada sobre a 
-base já sem os registros duplicados ($n = 570$), os coeficientes de 
-assimetria passaram a variar entre 1,24 e 1,72, todos abaixo do limiar 
-adotado (Tabela~\ref{tab:assimetria_log}). A soma de uma unidade antes do 
-logaritmo garante que a transformação seja bem definida para valores 
-próximos de zero, como os da \textit{Direct\_Bilirubin} (mínimo de 0,1 mg/dL).
+Às cinco variáveis assimétricas identificadas na análise exploratória aplicou-se a
+transformação $x' = \ln(1 + x)$
+(Seção~\ref{sec:estatisticas_descritivas_assimetria}) \cite{logtransformation}.
+O logaritmo comprime a cauda da distribuição sem alterar a ordem entre as
+observações: na \textit{Aspartate\_Aminotransferase}, por exemplo, o máximo, que
+era mais de cem vezes maior que a mediana na escala original, passa a ser cerca de
+duas vezes maior na escala transformada. A soma de uma unidade antes do logaritmo
+garante que a transformação seja bem definida para valores próximos de zero, como
+os da \textit{Direct\_Bilirubin} (mínimo de 0,1 mg/dL). Essa constante, porém, não
+é neutra: em variáveis com valores pequenos, como as bilirrubinas, ela altera a
+forma da transformação, e a literatura adverte que a transformação logarítmica não
+garante, por si só, a redução da assimetria e que o resultado pode depender da
+constante adicionada \cite{logtransformation}. Por isso, o efeito foi verificado
+empiricamente. Calculados sobre a base já sem os registros duplicados
+($n = 570$), os coeficientes de assimetria passaram a variar entre 1,24 e 1,72
+(Tabela~\ref{tab:assimetria_log}), todos abaixo do limiar de 2 adotado, embora
+ainda indiquem assimetria residual moderada.
 
-Observe-se que os valores da coluna ``Antes'' da Tabela~\ref{tab:assimetria_log} 
-diferem ligeiramente dos apresentados na Tabela~\ref{tab:descritivas}. A diferença 
-não é um erro: a Tabela~\ref{tab:descritivas} descreve a base original completa 
-($n = 583$), enquanto a Tabela~\ref{tab:assimetria_log} foi calculada após a 
-remoção dos 13 registros duplicados ($n = 570$), que é a base efetivamente usada 
-no pré-processamento. Como o coeficiente de assimetria é sensível à composição 
-exata da amostra, a exclusão de poucas observações já produz pequenas variações 
+Observe-se que os valores da coluna ``Antes'' da Tabela~\ref{tab:assimetria_log}
+diferem ligeiramente dos apresentados na Tabela~\ref{tab:descritivas}. A diferença
+não é um erro: a Tabela~\ref{tab:descritivas} descreve a base original completa
+($n = 583$), enquanto a Tabela~\ref{tab:assimetria_log} foi calculada após a
+remoção dos 13 registros duplicados ($n = 570$), que é a base efetivamente usada
+no pré-processamento. Como o coeficiente de assimetria é sensível à composição
+exata da amostra, a exclusão de poucas observações já produz pequenas variações
 nas casas decimais, sem alterar nenhuma das conclusões.
 
-Cabe ainda um esclarecimento sobre o momento em que essa transformação é aplicada. 
-Diferentemente da imputação pela mediana e da padronização, que dependem de 
-parâmetros estimados a partir dos dados (mediana, média e desvio-padrão do 
-treino), a transformação $\ln(1+x)$ é \textbf{determinística e livre de 
-parâmetros}: o valor transformado de cada observação depende exclusivamente 
-dela mesma, e não de nenhuma estatística do conjunto. Por isso, aplicá-la antes 
-da divisão treino/teste, como foi feito neste trabalho, não introduz vazamento 
-de dados, pois nenhuma informação do conjunto de teste é usada para definir a 
-transformação, o que é coerente com a definição de vazamento como a introdução de 
-informação que não deveria estar legitimamente disponível durante a modelagem 
-\cite{KaufmanScharRosset2012}. O mesmo não valeria, por exemplo, 
-para uma transformação de Box-Cox, cujo expoente $\lambda$ é estimado a partir 
-dos dados \cite{Bishara2015Reducing} e, portanto, deveria ser ajustado apenas no treino.
+Cabe ainda um esclarecimento sobre o momento em que essa transformação é aplicada.
+Diferentemente da imputação pela mediana e da padronização, que dependem de
+parâmetros estimados a partir dos dados (mediana, média e desvio-padrão do
+treino), a transformação $\ln(1+x)$ é \textbf{determinística e livre de
+parâmetros}: o valor transformado de cada observação depende exclusivamente
+dela mesma, e não de nenhuma estatística do conjunto. Por isso, aplicá-la antes
+da divisão treino/teste, como foi feito neste trabalho, não introduz vazamento
+de dados, pois nenhuma informação do conjunto de teste é usada para definir a
+transformação \cite{KaufmanScharRosset2012}. O mesmo não valeria, por exemplo,
+para uma transformação de Box-Cox, cujo expoente $\lambda$ é estimado a partir
+dos dados e, portanto, deveria ser ajustado apenas no treino.
 
 \begin{table}[htbp]
 \centering
@@ -457,17 +458,18 @@ Aspartate\_Aminotransferase & 10,50 & 1,24 \\
 \end{tabular}
 \end{table}
 
-A transformação é especialmente relevante para a Regressão Logística, que 
-assume relação linear entre os preditores e o logaritmo da razão de chances 
-e é sensível a observações extremas \cite{Hosmer2005Applied}. Na escala logarítmica, o efeito 
-de cada exame passa a depender de variações proporcionais, como dobrar o 
-valor de uma enzima, o que é mais coerente com a interpretação clínica desses 
-marcadores. Já os modelos baseados em árvores de decisão são, em princípio, 
-invariantes a transformações monotônicas, pois suas divisões dependem apenas 
-da ordem dos valores \cite{elementsofstatiscal}. Ainda assim, a transformação foi aplicada a 
-todos os modelos, para que fossem comparados sobre a mesma representação dos 
-dados, o que também facilita a leitura dos gráficos de dependência SHAP, nos 
-quais os pacientes passam a se distribuir de forma mais uniforme ao longo do 
+A transformação é especialmente relevante para a Regressão Logística, que
+assume relação linear entre os preditores e o logaritmo da razão de chances
+\cite{Hosmer2005Applied}, e cujas estimativas podem ser influenciadas por
+observações extremas. Na escala logarítmica, o efeito de cada exame passa a
+depender de variações proporcionais, como dobrar o valor de uma enzima, o que é
+mais coerente com a interpretação clínica desses marcadores. Já os modelos
+baseados em árvores de decisão são, em princípio, invariantes a transformações
+monotônicas dos preditores, pois suas divisões dependem apenas da ordem dos
+valores \cite{elementsofstatiscal}. Ainda assim, a transformação foi aplicada a
+todos os modelos, para que fossem comparados sobre a mesma representação dos
+dados, o que também facilita a leitura dos gráficos de dependência SHAP, nos
+quais os pacientes passam a se distribuir de forma mais uniforme ao longo do
 eixo horizontal.
 
 \subsection{Divisão Treino/Teste}
@@ -475,52 +477,62 @@ eixo horizontal.
 
 Após as transformações determinísticas, os dados foram divididos em conjuntos
 de treino e teste na proporção de 80\% e 20\%, respectivamente, por meio da
-função \texttt{createDataPartition} do pacote \texttt{caret}. A divisão foi
-estratificada pela variável-alvo, preservando a proporção das classes em ambos
-os conjuntos. Uma semente aleatória fixa, definida uma única vez no início do
-\textit{pipeline}, garante a reprodutibilidade dessa partição. Essa divisão
-ocorre antes da imputação e da padronização, de modo que os parâmetros dessas
-duas etapas sejam estimados exclusivamente no conjunto de treino, evitando que
-informação do conjunto de teste chegue ao treinamento, o que caracterizaria
-vazamento \cite{KaufmanScharRosset2012}.
+função \texttt{createDataPartition} do pacote \texttt{caret}, resultando em 457
+pacientes no treino e 113 no teste. A divisão foi estratificada pela
+variável-alvo, preservando a proporção das classes em ambos os conjuntos
+(71,1\% de pacientes doentes no treino e 71,7\% no teste). Uma semente
+aleatória fixa, definida uma única vez no início do \textit{pipeline}, garante a
+reprodutibilidade dessa partição. Essa divisão ocorre antes da imputação e da
+padronização, de modo que os parâmetros dessas duas etapas sejam estimados
+exclusivamente no conjunto de treino, evitando o vazamento de informação do
+conjunto de teste \cite{KaufmanScharRosset2012}.
 
 \subsection{Imputação de Valores Ausentes}
 
-A mediana foi calculada exclusivamente no conjunto de treino e depois aplicada a 
-ambos os conjuntos (Seção~\ref{sec:divisao_treino_teste}).
+O único atributo com valores ausentes é o \textit{AG\_Ratio}, com quatro
+registros (0,69\% da base). Todos eles caíram no conjunto de treino, e foram
+substituídos pela mediana desse atributo (1,00), calculada exclusivamente no
+treino. Essa mesma mediana seria aplicada ao conjunto de teste, caso ele
+apresentasse valores ausentes (Seção~\ref{sec:divisao_treino_teste}).
 
 \subsection{Padronização}
 \label{sec:padronizacao}
 
-Após a imputação, os preditores, inclusive a variável binária \textit{Gender},
-codificada numericamente, foram padronizados pela transformação
+Após a imputação, os preditores foram padronizados pela transformação
 \textit{z-score}, com centralização (\textit{center}) e escalonamento
 (\textit{scale}). As médias e os desvios-padrão foram estimados exclusivamente
 no conjunto de treino e, em seguida, aplicados tanto ao treino quanto ao teste,
 mantendo a separação entre os dados usados para ajustar os parâmetros e os
-usados para avaliação. Essa etapa coloca todos os preditores na mesma escala, o que
-permite comparar entre si os coeficientes da Regressão Logística
-(Seção~\ref{sec:regressao_logistica}). Para os modelos baseados em árvores, que
-realizam divisões pela ordem dos valores, a padronização tende a ser menos
-relevante \cite{elementsofstatiscal}.
+usados para avaliação. A variável binária \textit{Gender}, codificada
+numericamente (masculino $=1$, feminino $=0$), também foi padronizada, de modo
+que seus dois valores passam a ser números reais distintos e não mais 0 e 1.
+Essa etapa é particularmente relevante para a Regressão Logística, um modelo
+linear sensível às escalas dos preditores; para os modelos baseados em árvores,
+que realizam divisões pela ordem dos valores \cite{elementsofstatiscal}, a
+padronização tende a ser menos relevante.
 
-\subsection{Balanceamento de Classes (SMOTE)}
+\subsection{Reamostragem com SMOTE}
 \label{sec:balanceamento}
 
 Para lidar com o desbalanceamento das classes, utilizou-se o SMOTE
-(\textit{Synthetic Minority Over-sampling Technique}) \cite{smote}, que gera amostras
-sintéticas da classe minoritária por interpolação entre uma observação existente e
-seus vizinhos mais próximos dentro da própria classe. O
-balanceamento é aplicado somente aos dados de treino; o conjunto de teste
-mantém sua distribuição original e nunca é balanceado. Durante o treinamento
-com validação cruzada, o SMOTE é aplicado independentemente dentro de cada
-partição de treino de cada \textit{fold}, após a separação dos \textit{folds}.
-Assim, as amostras sintéticas não contaminam as partições de validação — o que
-poderia ocorrer se o balanceamento fosse feito antes da divisão
-\cite{Santos2018CrossValidation} — nem inflacionam artificialmente as métricas de
-desempenho. Como a interpolação não é adequada à variável binária \textit{Gender}, o
-tratamento dado a ela na geração das amostras sintéticas é descrito na
-Seção~\ref{sec:validacao_cruzada}.
+(\textit{Synthetic Minority Over-sampling Technique}) \cite{smote}, que gera
+amostras sintéticas da classe minoritária por interpolação entre observações
+existentes e seus vizinhos mais próximos (neste trabalho, cinco). A reamostragem
+é aplicada somente aos dados de treino; o conjunto de teste mantém sua
+distribuição original e nunca é reamostrado. Durante o treinamento com validação
+cruzada, o SMOTE é aplicado independentemente dentro da partição de treino de
+cada \textit{fold}, após a separação dos \textit{folds}. Assim, as amostras
+sintéticas não contaminam as partições de validação, o que poderia ocorrer se a
+reamostragem fosse feita antes da divisão, nem inflacionam artificialmente as
+métricas de desempenho \cite{Santos2018CrossValidation}.
+
+Com o número de amostras sintéticas definido automaticamente pelo pacote, o
+procedimento reduz o desbalanceamento, mas não o elimina: no conjunto de treino
+completo, a razão entre as classes passou de cerca de 2,5:1 (325 doentes e 132
+saudáveis) para cerca de 1,2:1 (325 doentes e 264 saudáveis, sendo 132
+sintéticas). Como a interpolação não é adequada à variável binária
+\textit{Gender}, o tratamento dado a ela na geração das amostras sintéticas é
+descrito na Seção~\ref{sec:validacao_cruzada}.
 
 \section{Modelos Preditivos}
 \label{sec:modelos_preditivos}
@@ -603,16 +615,13 @@ interpretação ``mantidos constantes os demais preditores'' é pouco realista p
 variáveis fortemente correlacionadas, como os pares identificados na análise de
 correlação (Figura~\ref{fig:eda_correlacao}): nesses casos, as estimativas dos
 coeficientes tornam-se instáveis e podem apresentar magnitude e até sinal diferentes
-dos esperados \cite{Dormann2013Collinearity}. A segunda é que, como o ajuste final
-também é feito sobre o treino balanceado pelo SMOTE (Seção~\ref{sec:validacao_cruzada}),
-que inclui observações sintéticas não independentes entre si, os erros-padrão tendem a
-ser subestimados, e os valores-$p$ devem, por isso, ser lidos como indicativos, e não
-como inferência estatística rigorosa; o intercepto, em particular, passa a refletir a
-proporção de classes do treino balanceado, e não a prevalência real
-(Seção~\ref{sec:metrica_selecao}). Por fim, por ser linear no \textit{logit}, o modelo
-não captura interações nem relações não monotônicas que não tenham sido especificadas
-explicitamente, o que não foi feito neste trabalho \cite{Hosmer2005Applied}. Essa é
-precisamente a limitação que os modelos baseados em árvores buscam superar.
+dos esperados \cite{Dormann2013Collinearity}. A segunda é que, como o ajuste final também é feito sobre o treino reamostrado pelo
+SMOTE (Seção~\ref{sec:validacao_cruzada}), que inclui observações sintéticas não
+independentes entre si, os erros-padrão tendem a ser subestimados, e os valores-$p$
+devem, por isso, ser lidos como indicativos, e não como inferência estatística
+rigorosa; o intercepto, em particular, passa a refletir a proporção de classes do
+treino reamostrado (cerca de 1,2:1), e não a prevalência real
+(Seção~\ref{sec:metrica_selecao}).
 
 \subsection{\textit{Random Forest}}
 \label{sec:random_forest}
@@ -834,24 +843,24 @@ sorteando um ponto do segmento que os une \cite{smote}. Essa interpolação é a
 às variáveis contínuas, mas não à variável binária \textit{Gender}: quando os dois
 pacientes envolvidos são de sexos diferentes, o valor interpolado fica entre as duas
 categorias e não corresponde a nenhum sexo. Os próprios autores do SMOTE reconhecem
-essa limitação e propõem, para atributos nominais, a variante SMOTE-NC, que atribui à
-amostra sintética o valor mais frequente entre os vizinhos \cite{smote}. Neste
-trabalho, adotou-se uma solução mais simples e de mesmo propósito: após a geração das
-amostras sintéticas, o valor de \textit{Gender} de cada uma é substituído pela
-categoria válida mais próxima. Como o ponto sorteado é o mesmo para todas as
-variáveis, a amostra sintética herda o sexo do paciente de origem do qual está mais
-próxima no segmento de interpolação. As variáveis contínuas permanecem interpoladas,
-os pacientes reais não são alterados e a busca pelos vizinhos continua a considerar
-todas as variáveis padronizadas, inclusive \textit{Gender}. Como a diferença entre os
-dois valores padronizados dessa variável pesa na distância, os vizinhos mais próximos
-tendem a ser do mesmo sexo, e os pares de sexos diferentes, embora possíveis, são
-pouco frequentes. A correção vale para todas as iterações da validação cruzada e para
-o ajuste dos modelos finais. No diagnóstico do balanceamento sobre o conjunto de treino
-completo, o SMOTE gerou 132 amostras sintéticas, uma para cada paciente saudável do
-treino, e apenas uma delas apresentou valor intermediário de \textit{Gender} e precisou
-ser corrigida, o que confirma a baixa frequência dos pares de sexos diferentes. Após a
-correção, todas as amostras sintéticas contêm apenas os dois valores válidos dessa
-variável.
+essa limitação e propõem, para atributos nominais, a variante SMOTE-NC, na qual o
+valor nominal da amostra sintética é o mais frequente entre os vizinhos e a diferença
+entre categorias é penalizada no cálculo da distância \cite{smote}. Neste trabalho,
+adotou-se uma solução mais simples e de mesmo propósito: após a geração das amostras
+sintéticas, o valor de \textit{Gender} de cada uma é substituído pela categoria válida
+mais próxima. Como o ponto sorteado é o mesmo para todas as variáveis, a amostra
+sintética herda o sexo do paciente de origem (o paciente original ou o vizinho) do
+qual está mais próxima no segmento de interpolação. As variáveis contínuas
+permanecem interpoladas, os pacientes reais não são alterados e a busca pelos
+vizinhos continua a considerar todas as variáveis padronizadas, inclusive
+\textit{Gender}. A correção vale para todas as iterações da validação cruzada e para
+o ajuste dos modelos finais. No diagnóstico da reamostragem sobre o conjunto de
+treino completo (457 pacientes, dos quais 132 saudáveis), o SMOTE gerou 132 amostras
+sintéticas, uma para cada paciente saudável, e apenas uma delas apresentou valor
+intermediário de \textit{Gender} e precisou ser corrigida; as demais tinham origem em
+pacientes do mesmo sexo, o que mostra a baixa frequência dos pares de sexos
+diferentes. Após a correção, todas as amostras sintéticas contêm apenas os dois
+valores válidos dessa variável.
 
 \subsection{Otimização de Hiperparâmetros}
 \label{sec:otimizacao_hiperparametros}
