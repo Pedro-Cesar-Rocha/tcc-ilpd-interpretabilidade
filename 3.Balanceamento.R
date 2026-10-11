@@ -31,7 +31,7 @@ set.seed(PIPELINE_SEED)
 res <- aplicar_smote(treino %>% select(-Dataset), treino$Dataset, K = 5)
 df_bal <- cbind(res$x, Dataset = res$y)
 n_sinteticas <- res$n_sinteticas
-sinteticas <- tail(res$x, n_sinteticas)   # smotefamily anexa as sinteticas ao final
+sinteticas <- res$sinteticas
 log_ok("SMOTE concluido: %d amostras sinteticas geradas para a classe minoritaria.", n_sinteticas)
 
 # --- Distribuicao depois ------------------------------------------------------
@@ -53,6 +53,10 @@ comp <- data.frame(
 )
 log_table(comp, digits = 3)
 log_info("Amostras sinteticas devem ter medias proximas as da classe minoritaria original ('%s').", minoritaria)
+categorias_gender <- sort(unique(treino$Gender))   # valores padronizados: Feminino < 0 < Masculino
+log_info("Gender nas sinteticas: %d Feminino, %d Masculino | apenas categorias validas (sem valores intermediarios): %s",
+         sum(sinteticas$Gender == categorias_gender[1]), sum(sinteticas$Gender == categorias_gender[2]),
+         if (all(sinteticas$Gender %in% categorias_gender)) "sim" else "NAO")
 
 # --- Grafico comparativo ------------------------------------------------------
 df_plot <- bind_rows(
