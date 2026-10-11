@@ -10,8 +10,7 @@
 #   - graficos de dependencia para as variaveis mais importantes
 #   - explicacao local (waterfall) de pacientes individuais
 #   - importancia SHAP estratificada por sexo (auditoria de vies)
-# Ao final, compara os rankings de importancia entre modelos. Em todos os
-# rankings, variaveis empatadas recebem o posto medio (nao a ordem das colunas).
+# Ao final, compara os rankings de importancia entre modelos.
 # =============================================================================
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
@@ -99,11 +98,10 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     timer_end(ti, sprintf("Calculo SHAP (%s)", nome))
     log_info("Valor base (media das previsoes na escala %s): %.4f", res$escala, get_baseline(sv))
 
-    # Importancia global (posto calculado antes do arredondamento; empates -> posto medio)
+    # Importancia global
     imp <- colMeans(abs(S))
-    imp_df <- data.frame(Variavel = names(imp), Importancia_SHAP = round(imp, 4),
-                         Rank = rank(-imp, ties.method = "average"), row.names = NULL) %>%
-      arrange(Rank) %>%
+    imp_df <- data.frame(Variavel = names(imp), Importancia_SHAP = round(imp, 4), row.names = NULL) %>%
+      arrange(desc(Importancia_SHAP)) %>%
       mutate(Percentual = round(100 * Importancia_SHAP / sum(Importancia_SHAP), 1),
              Acumulado  = cumsum(Percentual))
     log_info("Importancia global (media de |SHAP|):")
@@ -169,17 +167,14 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     imp_sexo <- map_dfr(levels(genero), function(g) {
       idx <- genero == g
       data.frame(Sexo = g, Variavel = colnames(S),
-                 Importancia_SHAP = colMeans(abs(S[idx, , drop = FALSE])),
-                 SHAP_Medio = colMeans(S[idx, , drop = FALSE]), row.names = NULL)
+                 Importancia_SHAP = round(colMeans(abs(S[idx, , drop = FALSE])), 4),
+                 SHAP_Medio = round(colMeans(S[idx, , drop = FALSE]), 4), row.names = NULL)
     })
     imp_sexo_w <- imp_sexo %>%
       select(Sexo, Variavel, Importancia_SHAP) %>%
       pivot_wider(names_from = Sexo, values_from = Importancia_SHAP, names_prefix = "Imp_") %>%
-      mutate(Rank_Feminino  = rank(-Imp_Feminino,  ties.method = "average"),
-             Rank_Masculino = rank(-Imp_Masculino, ties.method = "average"),
-             across(starts_with("Imp_"), ~round(.x, 4))) %>%
+      mutate(Rank_Feminino = rank(-Imp_Feminino), Rank_Masculino = rank(-Imp_Masculino)) %>%
       arrange(Rank_Masculino)
-    imp_sexo <- imp_sexo %>% mutate(across(c(Importancia_SHAP, SHAP_Medio), ~round(.x, 4)))
     log_table(imp_sexo_w, digits = 4)
     log_info("Concordancia dos rankings entre sexos (Spearman): %.3f",
              cor(imp_sexo_w$Rank_Feminino, imp_sexo_w$Rank_Masculino, method = "spearman"))
@@ -208,7 +203,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
       theme_minimal() + theme(legend.position = "bottom")
     salvar_plot(p_bee_sexo, sprintf("plots/shap_gender_por_sexo_%s.png", slug), width = 6, height = 4.5)
 
-    imp_df %>% transmute(Variavel, Imp = Importancia_SHAP, Rank) %>%
+    imp_df %>% transmute(Variavel, Imp = Importancia_SHAP, Rank = row_number()) %>%
       rename_with(~paste0(.x, "_SHAP_", slug), c(Imp, Rank))
   }
 
@@ -217,15 +212,11 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
 
   # --- Comparacao dos rankings de importancia entre modelos -------------------
   log_subsection("Comparacao dos rankings de importancia entre modelos")
-  # Importancia nativa do caret (escalonada 0-100). Variaveis nunca usadas pelo
-  # modelo nao aparecem no varImp: recebem importancia 0 e empatam (posto medio)
-  # na ultima posicao, abaixo de qualquer variavel usada.
   rank_nativo <- function(caminho, sufixo) {
     m   <- readRDS(caminho)
     imp <- varImp(m, scale = TRUE)$importance
-    v   <- unname(setNames(imp[, 1], rownames(imp))[names(X_teste)])
-    data.frame(Variavel = names(X_teste), Imp = round(replace_na(v, 0), 2),
-               Rank = rank(-replace_na(v, -Inf), ties.method = "average"), row.names = NULL) %>%
+    data.frame(Variavel = rownames(imp), Imp = round(imp[, 1], 2), row.names = NULL) %>%
+      arrange(desc(Imp)) %>% mutate(Rank = row_number()) %>%
       rename_with(~paste0(.x, "_nativa_", sufixo), c(Imp, Rank))
   }
   comp <- reduce(importancias, full_join, by = "Variavel") %>%
@@ -234,11 +225,13 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   # Regressao logistica: ranking pelo |coeficiente padronizado| (baseline interpretavel)
   coef_lr <- read.csv("results/coeficientes_regressao_logistica.csv") %>%
     filter(Variavel != "(Intercept)") %>%
-    transmute(Variavel, Coef_abs_lr = abs(Coeficiente))
+    arrange(desc(abs(Coeficiente))) %>%
+    transmute(Variavel, Coef_abs_lr = abs(Coeficiente), Rank_lr = row_number())
+  comp <- comp %>% left_join(coef_lr, by = "Variavel")
+  # Variavel nao usada em nenhuma arvore: importancia 0 e ultima posicao no ranking
   comp <- comp %>%
-    left_join(coef_lr, by = "Variavel") %>%
-    mutate(Rank_lr = rank(-replace_na(Coef_abs_lr, -Inf), ties.method = "average"),
-           Coef_abs_lr = replace_na(Coef_abs_lr, 0)) %>%
+    mutate(across(starts_with("Rank_"), ~replace_na(.x, n())),
+           across(-c(Variavel, starts_with("Rank_")), ~replace_na(.x, 0))) %>%
     arrange(Rank_SHAP_xgb)
   log_table(comp)
 
