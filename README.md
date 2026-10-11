@@ -41,7 +41,7 @@ CSV bruto ──► EDA ──► Pré-processamento (split 80/20 ──► impu
 | Explicabilidade | SHAP: **TreeSHAP exato** (XGBoost/LightGBM) e `fastshap` (Random Forest), visualização com `shapviz` |
 | Auditoria de viés | Métricas, ROC e SHAP **estratificados por sexo** |
 | Reprodutibilidade | Seed global `42` em todas as etapas |
-| Tempo total de execução | ≈ 8–10 min (dominado pelo tuning do XGBoost) |
+| Tempo total de execução | ≈ 7–8 min (dominado pelo tuning do XGBoost, ≈ 4,5 min) |
 
 ---
 
@@ -80,14 +80,14 @@ Características relevantes descobertas na EDA:
 - **4 valores ausentes** em `AG_Ratio`.
 - **13 linhas duplicadas**.
 - **Forte assimetria** (skewness > 2) nas bilirrubinas e nas enzimas — típico de exames laboratoriais, onde poucos pacientes têm valores extremamente altos.
-- **Alta correlação** entre `Total_Bilirubin` × `Direct_Bilirubin` e entre `ALT` × `AST` (esperado: medem processos fisiológicos relacionados).
+- **Alta correlação** (|r| > 0,7) entre `Total_Bilirubin` × `Direct_Bilirubin`, `ALT` × `AST` e `Total_Proteins` × `Albumin` (esperado: medem processos fisiológicos relacionados).
 
 ---
 
 ## 4. Estrutura do projeto
 
 ```
-workspace/
+tcc-ilpd-interpretabilidade/
 ├── ExecutarTudo.R              # Orquestrador: roda tudo, cronometra e grava log
 ├── UtilsPipeline.R             # Log, persistência, SMOTE p/ caret (por fold) e wrapper LightGBM
 ├── 0.InstalarPacotes.R         # Verifica/instala dependências (versões fixadas)
@@ -113,9 +113,11 @@ workspace/
 │   ├── modelo_xgb.rds
 │   └── modelo_lgb.rds
 │
-├── results/                    # tabelas em CSV prontas para o texto do TCC
+├── results/                    # tabelas (CSV) e citações (BibTeX) prontas para o texto do TCC
+│   ├── citacoes.bib                        # BibTeX do R e dos pacotes tidyverse e corrplot
 │   ├── estatisticas_descritivas.csv
 │   ├── comparacao_medias_por_classe.csv
+│   ├── pares_alta_correlacao.csv           # pares de variáveis com |r| > 0,7
 │   ├── coeficientes_regressao_logistica.csv
 │   ├── cv_auc_por_modelo.csv               # AUC, Sens e Spec médias na CV
 │   ├── metricas_teste.csv                  # inclui limiar de Youden e limiar clínico (Sens ≥ 90 %)
@@ -142,8 +144,12 @@ workspace/
 │   ├── shap_waterfall_<m>_<caso>.png
 │   └── shap_importancia_por_sexo_<m>.png / shap_gender_por_sexo_<m>.png
 │
-└── logs/
-    └── pipeline_<timestamp>.log   # cópia integral do console de cada execução
+├── logs/
+│   └── pipeline_<timestamp>.log   # cópia integral do console de cada execução
+│                                  # (execução de referência: pipeline_20261011_003612.log)
+│
+├── latex/                      # monografia do TCC (abnTeX2): monografia.tex, textuais/, postextuais/bibliografia3.bib
+└── documents/                  # proposta do TC
 ```
 
 ---
@@ -203,13 +209,14 @@ Verifica cada dependência e instala apenas o que falta. Registra no log a vers�
 
 ### Etapa 1 — Carregamento e análise exploratória
 
+- Gera `results/citacoes.bib` com as entradas BibTeX oficiais do R e dos pacotes `tidyverse` e `corrplot` (já incorporadas, com chaves, em `latex/postextuais/bibliografia3.bib`).
 - Leitura do CSV com nomes de colunas explícitos.
 - Tipos das variáveis, contagem de `NA` e duplicatas.
 - Distribuição da variável alvo e razão de desbalanceamento.
 - Tabela cruzada sexo × classe.
 - Estatísticas descritivas (média, DP, mín, mediana, máx, **assimetria**) → `results/estatisticas_descritivas.csv`.
 - **Teste t de Welch** comparando a média de cada exame entre doentes e saudáveis → identifica quais variáveis já discriminam as classes univariadamente.
-- Matriz de correlação de Pearson com alerta para pares com |r| > 0,7.
+- Matriz de correlação de Pearson com alerta para pares com |r| > 0,7 → `results/pares_alta_correlacao.csv`.
 - Gráficos: distribuição do alvo, boxplots por classe, heatmap de correlação.
 
 ### Etapa 2 — Pré-processamento
@@ -307,22 +314,13 @@ Aplicada ao **XGBoost**, ao **Random Forest** e ao **melhor modelo do teste** (s
 | `comparacao_importancia_modelos.csv` | Rankings SHAP (XGB, RF) × importância nativa (RF, LightGBM) × \|coeficiente\| da regressão logística |
 | `concordancia_rankings_spearman.csv` | Matriz de correlação de Spearman entre todos os rankings |
 
-> **Empates nos rankings:** em todos os rankings (SHAP global, SHAP por sexo, importância nativa e coeficientes), variáveis com importância exatamente igual — tipicamente as que um modelo não usa — recebem o **posto médio** (ex.: empate nas posições 9 e 10 → 9,5 para ambas), calculado antes do arredondamento. Assim o empate não é desfeito pela ordem das colunas, e o Spearman é calculado sobre os postos médios. Variáveis ausentes do `varImp` do LightGBM recebem importância 0 e empatam no fim do ranking.
+> **Empates nos rankings:** em todos os rankings (SHAP global, SHAP por sexo, importância nativa e coeficientes), variáveis com importância exatamente igual — tipicamente as que um modelo não usa — recebem o **posto médio**, calculado antes do arredondamento (ex.: as três variáveis que o XGBoost não usa empatam nas posições 8 a 10 e recebem posto 9). Assim o empate não é desfeito pela ordem das colunas, e o Spearman é calculado sobre os postos médios. Na importância nativa (escala 0–100 do caret, em que a variável usada menos importante vale 0), variáveis ausentes do `varImp` — nunca usadas pelo modelo, como `Gender` no LightGBM — aparecem com importância 0, mas ficam abaixo de qualquer variável usada e, se houver mais de uma, empatam entre si no fim do ranking. A exceção é o ranking da regressão logística, calculado sobre os coeficientes já arredondados a 4 casas (`coeficientes_regressao_logistica.csv`) — nesta execução, sem empates.
 
 ---
 
 ## 7. Resultados obtidos
 
-> Valores da execução de referência (`logs/pipeline_20260912_224913.log`). Podem variar levemente entre máquinas por diferenças de paralelismo, mas a seed fixa (`42`) garante reprodutibilidade na mesma máquina. Todas as tabelas estão em `results/` e todas as figuras em `plots/`.
-
-> ⚠️ **Resultados a regenerar.** Os números abaixo são da execução de 12/09/2026, **anterior** a quatro correções metodológicas do pipeline (descritas na Seção 6):
->
-> 1. o `Gender` das amostras sintéticas do SMOTE volta à categoria válida mais próxima — **muda os dados de treino de cada fold e, portanto, pode alterar todos os modelos e os números das Seções 7.3 a 7.6**. A mudança deve ser pequena: no diagnóstico da etapa 3, só 1 das 132 sintéticas tinha `Gender` intermediário. A tabela de médias desse diagnóstico, por outro lado, muda bastante, porque antes ela usava, por engano, pacientes reais da classe majoritária em vez das amostras sintéticas;
-> 2. os limiares de Youden e clínico (Sens ≥ 90 %) passam a ser escolhidos nas predições *out-of-fold* da CV e só aplicados ao teste — muda a tabela de limiares da Seção 7.4 e as métricas por sexo no limiar clínico;
-> 3. os testes de DeLong (entre modelos e entre sexos) ganham p-valores com correção de Bonferroni;
-> 4. empates nos rankings de importância recebem postos médios — muda as posições empatadas da Seção 7.5 e as correlações de Spearman.
->
-> A Seção 7.1 (análise exploratória) e as contagens de classe da Seção 7.2 não mudam. Reexecute `ExecutarTudo.R` e atualize esta seção.
+> Valores da execução de referência (`logs/pipeline_20261011_003612.log`, de 11/10/2026). Podem variar levemente entre máquinas por diferenças de paralelismo, mas a seed fixa (`42`) garante reprodutibilidade na mesma máquina. Todas as tabelas estão em `results/` e todas as figuras em `plots/`.
 
 ### 7.1 Análise exploratória
 
@@ -377,6 +375,8 @@ Após remover 13 duplicatas e separar o teste, o treino tem 457 observações (*
 
 Note que o balanceamento **não é perfeito** (55% / 45%). Essa foi uma escolha deliberada: com `dup_size = 0` o `smotefamily` gera o menor número inteiro de cópias sintéticas que aproxima as classes, evitando inflar demais o treino com dados artificiais.
 
+Verificação de integridade das 132 sintéticas: suas médias ficam a no máximo 0,05 DP das médias da classe saudável original em todas as variáveis (ex.: `Age` −0,26 vs −0,23; `Albumin` 0,31 vs 0,27, em escala padronizada). Só **1** sintética tinha `Gender` intermediário (pacientes de origem de sexos diferentes) e foi devolvida à categoria mais próxima; ao final, o `Gender` sintético tem apenas valores válidos (33 mulheres / 99 homens).
+
 > **Nota metodológica:** este gráfico é apenas ilustrativo. No treino real (etapa 4) o SMOTE é reaplicado **dentro de cada um dos 15 folds**, somente à partição de treino do fold. As partições de validação e o conjunto de teste (113 pacientes, 71,7% doentes) contêm apenas pacientes reais.
 
 ### 7.3 Treinamento e validação cruzada
@@ -387,12 +387,12 @@ Note que o balanceamento **não é perfeito** (55% / 45%). Essa foi uma escolha 
 
 | Modelo | AUC média | DP | AUC mín | AUC máx | Sens. média | Spec. média |
 |---|---|---|---|---|---|---|
-| **Regressão Logística** | **0,753** | 0,054 | 0,656 | 0,836 | 0,667 | **0,697** |
+| **Regressão Logística** | **0,753** | 0,054 | 0,654 | 0,836 | 0,667 | **0,694** |
 | XGBoost | 0,725 | 0,064 | 0,616 | 0,827 | 0,701 | 0,639 |
-| Random Forest | 0,723 | 0,074 | 0,572 | 0,811 | **0,743** | 0,507 |
+| Random Forest | 0,722 | 0,075 | 0,575 | 0,807 | **0,735** | 0,510 |
 | LightGBM | 0,720 | 0,064 | 0,607 | 0,792 | 0,685 | 0,659 |
 
-> Sensibilidade e especificidade referem-se à classe positiva `doente`. O `twoClassSummary` do caret toma o primeiro nível do desfecho (`saudavel`) como evento, por isso o pipeline usa um *wrapper* (`resumo_doente`) que troca as duas métricas; a AUC não é afetada. No log de 12/09/2026, gerado antes dessa correção, as linhas de Sens/Spec da CV aparecem com os rótulos trocados.
+> Sensibilidade e especificidade referem-se à classe positiva `doente`. O `twoClassSummary` do caret toma o primeiro nível do desfecho (`saudavel`) como evento, por isso o pipeline usa um *wrapper* (`resumo_doente`) que troca as duas métricas; a AUC não é afetada.
 
 Com o SMOTE aplicado corretamente dentro de cada fold, o quadro muda em relação ao que se obtém com SMOTE *antes* da CV (onde os modelos de árvore atingiam AUC ≈ 0,85–0,87 e a regressão logística ≈ 0,77):
 
@@ -404,14 +404,16 @@ Com o SMOTE aplicado corretamente dentro de cada fold, o quadro muda em relaçã
 
 | Comparação | Δ AUC | p-valor ajustado | Significativo? |
 |---|---|---|---|
-| Reg. Logística vs Random Forest | +0,030 | 0,060 | não (marginal) |
+| Reg. Logística vs Random Forest | +0,031 | 0,021 | **sim** |
 | Reg. Logística vs XGBoost | +0,028 | 0,007 | **sim** |
-| Reg. Logística vs LightGBM | +0,033 | 0,008 | **sim** |
-| Random Forest vs XGBoost | −0,001 | 1,000 | não |
-| Random Forest vs LightGBM | +0,003 | 1,000 | não |
+| Reg. Logística vs LightGBM | +0,033 | 0,007 | **sim** |
+| Random Forest vs XGBoost | −0,003 | 1,000 | não |
+| Random Forest vs LightGBM | +0,001 | 1,000 | não |
 | XGBoost vs LightGBM | +0,004 | 1,000 | não |
 
-**Conclusão da CV:** a regressão logística é estatisticamente superior ao XGBoost e ao LightGBM (p < 0,01) e marginalmente superior ao Random Forest. Os três modelos de árvore são indistinguíveis entre si. Em um dataset com 457 observações de treino e relações majoritariamente monotônicas entre exames e desfecho, a flexibilidade extra dos ensembles não compensa o custo em variância.
+**Conclusão da CV:** a regressão logística é estatisticamente superior aos três modelos de árvore (p ajustado = 0,021 contra o Random Forest e 0,007 contra XGBoost e LightGBM), e os três modelos de árvore são indistinguíveis entre si. Em um dataset com 457 observações de treino e relações majoritariamente monotônicas entre exames e desfecho, a flexibilidade extra dos ensembles não compensa o custo em variância.
+
+> **Cautela:** as 15 estimativas não são independentes — os conjuntos de treino das partições compartilham a maior parte dos pacientes —, o que leva o teste t a subestimar a variância e a rejeitar a hipótese nula com frequência maior que a nominal (Nadeau & Bengio, 2003). Por isso ele é tratado como evidência complementar ao teste de DeLong no conjunto de teste (Seção 7.4).
 
 #### Hiperparâmetros selecionados (Random Search, 30 combinações)
 
@@ -429,22 +431,22 @@ Como as variáveis estão padronizadas, cada coeficiente representa o efeito de 
 
 | Variável | Coeficiente | Odds Ratio | p-valor | Interpretação |
 |---|---|---|---|---|
-| Total_Proteins | +2,06 | **7,84** | < 0,001 | +1 DP multiplica a chance de doença por ~8 |
+| Total_Proteins | +2,06 | **7,85** | < 0,001 | +1 DP multiplica a chance de doença por ~8 |
 | AG_Ratio | +1,34 | 3,81 | 0,002 | efeito positivo (surpreendente — ver abaixo) |
 | Alamine_Aminotransferase | +0,58 | 1,79 | 0,009 | ALT alta ≈ +79 % na chance |
 | Alkaline_Phosphotase | +0,43 | 1,53 | 0,004 | |
 | Age | +0,32 | 1,37 | 0,002 | cada DP (~16 anos) aumenta 37 % |
-| Gender (masculino) | −0,21 | 0,81 | 0,036 | homens têm chance ~19 % menor, **ajustado pelos exames** |
+| Gender (masculino) | −0,21 | 0,81 | 0,037 | homens têm chance ~19 % menor, **ajustado pelos exames** |
 | **Albumin** | **−2,85** | **0,058** | < 0,001 | +1 DP reduz a chance em ~94 % — o efeito protetor mais forte |
-| Direct_Bilirubin | +0,38 | 1,46 | 0,52 | não significativo (colinear com Total_Bilirubin) |
-| Total_Bilirubin | +0,28 | 1,32 | 0,65 | não significativo |
-| Aspartate_Aminotransferase | +0,28 | 1,32 | 0,20 | não significativo (colinear com ALT) |
+| Direct_Bilirubin | +0,38 | 1,46 | 0,525 | não significativo (colinear com Total_Bilirubin) |
+| Total_Bilirubin | +0,28 | 1,32 | 0,646 | não significativo |
+| Aspartate_Aminotransferase | +0,28 | 1,32 | 0,202 | não significativo (colinear com ALT) |
 
-Dois pontos merecem discussão no texto do TCC:
+Três pontos merecem discussão no texto do TCC:
 
 1. **`Total_Proteins` e `Albumin` com sinais opostos e magnitudes enormes.** Como as duas têm r = 0,78, o modelo está efetivamente usando a *diferença* entre elas — que é aproximadamente a **globulina**. Globulina alta com albumina baixa é o padrão clássico de doença hepática crônica. A regressão logística "descobriu" isso sozinha.
 2. **`AG_Ratio` com OR > 1** contradiz o teste univariado (doentes têm AG_Ratio *menor*). É um efeito de supressão: uma vez controlado por albumina e proteínas totais, o coeficiente muda de sinal. Isso ilustra por que coeficientes de regressão múltipla **não** devem ser interpretados isoladamente quando há multicolinearidade.
-3. **`Gender` é significativo (p = 0,036) e protetor para homens.** Isso é o oposto da prevalência bruta (79 % dos homens do teste são doentes vs 53 % das mulheres): o modelo aprende que, *para o mesmo perfil laboratorial*, uma mulher tem risco ligeiramente maior. Esse é exatamente o tipo de efeito que a análise estratificada por sexo (Seção 7.4) precisa auditar.
+3. **`Gender` é significativo (p = 0,037) e protetor para homens.** Isso é o oposto da prevalência bruta (79 % dos homens do teste são doentes vs 53 % das mulheres): o modelo aprende que, *para o mesmo perfil laboratorial*, uma mulher tem risco ligeiramente maior. Esse é exatamente o tipo de efeito que a análise estratificada por sexo (Seção 7.4) precisa auditar.
 
 ### 7.4 Avaliação no conjunto de teste
 
@@ -457,13 +459,13 @@ Dois pontos merecem discussão no texto do TCC:
 | **Random Forest** | **0,781** | [0,694 ; 0,868] | **0,753** | 0,625 | 0,836 | **0,792** | 0,689 | 0,352 |
 | LightGBM | 0,761 | [0,671 ; 0,851] | 0,691 | 0,656 | 0,836 | 0,757 | 0,674 | 0,307 |
 | XGBoost | 0,745 | [0,650 ; 0,840] | 0,716 | **0,719** | **0,866** | 0,784 | **0,717** | **0,384** |
-| Regressão Logística | 0,737 | [0,644 ; 0,829] | 0,728 | 0,563 | 0,808 | 0,766 | 0,645 | 0,270 |
+| Regressão Logística | 0,736 | [0,644 ; 0,829] | 0,728 | 0,563 | 0,808 | 0,766 | 0,645 | 0,270 |
 
 Lendo o gráfico:
 
 - As quatro curvas estão **claramente acima da diagonal**, mas **entrelaçadas** — nenhuma domina as outras em toda a extensão. As curvas são "serrilhadas" porque há apenas 113 pacientes no teste.
-- **No teste, o ranking se inverte em relação à CV**: o Random Forest, último na CV, tem a maior AUC; a regressão logística, primeira na CV, tem a menor. As diferenças, porém, estão todas dentro dos intervalos de confiança (largura ≈ 0,18) — o que a Seção seguinte formaliza.
-- A comparação CV → teste é agora **coerente**: RL 0,753 → 0,737 (−0,016), XGBoost 0,725 → 0,745 (+0,020), RF 0,723 → 0,781 (+0,058), LightGBM 0,720 → 0,761 (+0,041). Nenhum modelo "despenca" no teste, sinal de que a CV com SMOTE por fold é uma estimativa honesta.
+- **No teste, o ranking se inverte em relação à CV**: o Random Forest, terceiro na CV, tem a maior AUC; a regressão logística, primeira na CV, tem a menor. As diferenças, porém, estão todas dentro dos intervalos de confiança (largura ≈ 0,18) — o que a Seção seguinte formaliza.
+- A comparação CV → teste é agora **coerente**: RL 0,753 → 0,736 (−0,017), XGBoost 0,725 → 0,745 (+0,020), RF 0,722 → 0,781 (+0,060), LightGBM 0,720 → 0,761 (+0,041). Nenhum modelo "despenca" no teste, sinal de que a CV com SMOTE por fold é uma estimativa honesta.
 
 #### Matrizes de confusão (limiar 0,5)
 
@@ -478,16 +480,16 @@ Dos 81 doentes no teste, o Random Forest deixa passar **20 (24,7 %)** no limiar 
 
 #### Comparação estatística das AUCs (teste de DeLong)
 
-| Comparação | AUC A | AUC B | p-valor |
-|---|---|---|---|
-| Reg. Logística vs Random Forest | 0,737 | 0,781 | 0,159 |
-| Random Forest vs XGBoost | 0,781 | 0,745 | 0,223 |
-| Random Forest vs LightGBM | 0,781 | 0,761 | 0,360 |
-| Reg. Logística vs LightGBM | 0,737 | 0,761 | 0,433 |
-| XGBoost vs LightGBM | 0,745 | 0,761 | 0,556 |
-| Reg. Logística vs XGBoost | 0,737 | 0,745 | 0,785 |
+| Comparação | AUC A | AUC B | p-valor | p ajustado (Bonferroni) |
+|---|---|---|---|---|
+| Reg. Logística vs Random Forest | 0,736 | 0,781 | 0,152 | 0,909 |
+| Random Forest vs XGBoost | 0,781 | 0,745 | 0,223 | 1,000 |
+| Random Forest vs LightGBM | 0,781 | 0,761 | 0,360 | 1,000 |
+| Reg. Logística vs LightGBM | 0,736 | 0,761 | 0,418 | 1,000 |
+| XGBoost vs LightGBM | 0,745 | 0,761 | 0,556 | 1,000 |
+| Reg. Logística vs XGBoost | 0,736 | 0,745 | 0,764 | 1,000 |
 
-**Nenhuma diferença é significativa no teste.** Combinado com a CV (onde a única diferença significativa favorece a regressão logística), o resultado do trabalho é claro: **neste dataset, os modelos de caixa-preta não oferecem ganho preditivo demonstrável sobre o modelo linear interpretável.** Esse achado é central para o objetivo 6 da proposta (trade-off desempenho × interpretabilidade).
+**Nenhuma diferença é significativa no teste** — nem mesmo antes da correção de Bonferroni (menor p-valor bruto = 0,15). Combinado com a CV (onde as únicas diferenças significativas favorecem a regressão logística), o resultado do trabalho é claro: **neste dataset, os modelos de caixa-preta não oferecem ganho preditivo demonstrável sobre o modelo linear interpretável.** Esse achado é central para o objetivo 6 da proposta (trade-off desempenho × interpretabilidade).
 
 #### Curvas Precision-Recall
 
@@ -503,20 +505,24 @@ A linha tracejada horizontal em **0,717** é a prevalência de doentes no teste 
 
 ![Trade-off por limiar](plots/limiar_sens_spec_modelos.png)
 
-A proposta pede atenção especial ao Recall. Em vez de otimizar Recall diretamente (o que leva ao modelo trivial "todos doentes"), cada modelo foi avaliado no **maior limiar que ainda garante Sens ≥ 90 %** — isto é, no ponto em que no máximo 8 dos 81 doentes escapam:
+A proposta pede atenção especial ao Recall. Em vez de otimizar Recall diretamente (o que leva ao modelo trivial "todos doentes"), cada modelo foi avaliado no **maior limiar que garante Sens ≥ 90 % nas predições *out-of-fold* da CV** (1.371 predições por modelo). O limiar é escolhido sem olhar o teste e depois aplicado, fixo, aos 113 pacientes do teste; por isso a sensibilidade no teste pode ficar abaixo de 90 % (no teste, 90 % significa no máximo 8 dos 81 doentes não detectados). O limiar de Youden segue o mesmo procedimento:
 
-| Modelo | Limiar clínico | Sensibilidade | Especificidade | Precisão | Limiar de Youden (Sens / Spec) |
-|---|---|---|---|---|---|
-| **Random Forest** | 0,369 | 0,901 | **0,313** | **0,768** | 0,572 (0,704 / 0,781) |
-| LightGBM | 0,358 | 0,901 | 0,281 | 0,760 | 0,702 (0,568 / 0,938) |
-| XGBoost | 0,342 | 0,901 | 0,188 | 0,737 | 0,512 (0,716 / 0,781) |
-| Regressão Logística | 0,319 | 0,901 | 0,188 | 0,737 | 0,722 (0,568 / 0,906) |
+| Modelo | Limiar clínico (CV) | Spec na CV | Sens no teste | Spec no teste | Precisão no teste | FN / FP no teste | Limiar de Youden (CV) → Sens / Spec no teste |
+|---|---|---|---|---|---|---|---|
+| **Random Forest** | 0,373 | 0,260 | 0,901 | **0,312** | **0,768** | **8 / 22** | 0,663 → 0,605 / 0,781 |
+| LightGBM | 0,360 | 0,220 | 0,901 | 0,281 | 0,760 | 8 / 23 | 0,629 → 0,617 / 0,844 |
+| XGBoost | 0,361 | 0,215 | **0,840** ⚠️ | **0,312** | 0,756 | 13 / 22 | 0,569 → 0,630 / 0,812 |
+| Regressão Logística | 0,320 | 0,318 | 0,901 | 0,188 | 0,737 | 8 / 26 | 0,642 → 0,580 / 0,844 |
 
 Leitura:
 
-- **Garantir 90 % de sensibilidade custa muita especificidade** em todos os modelos: o melhor (RF) ainda rotula 69 % dos saudáveis como doentes. Isso caracteriza os modelos como ferramentas de **triagem** (alta sensibilidade, seguida de exame confirmatório), não de diagnóstico.
-- No regime de alta sensibilidade o Random Forest é o melhor: mesma sensibilidade com **10 falsos positivos a menos** (Spec 0,31 vs 0,19) que RL e XGBoost.
+- **Garantir 90 % de sensibilidade custa muita especificidade** em todos os modelos: o melhor (RF) ainda rotula 69 % dos saudáveis como doentes (22 de 32). Isso caracteriza os modelos como ferramentas de **triagem** (alta sensibilidade, seguida de exame confirmatório), não de diagnóstico.
+- **A meta de 90 % se manteve no teste para RF, LightGBM e RL** (8 FN). **No XGBoost, não:** o limiar 0,361, que dava Sens 0,902 na CV, deu 0,840 no teste (13 FN). Escolher o limiar fora do teste deixa essa variação visível, em vez de escondê-la com um limiar ajustado ao próprio teste (Leeflang et al., 2008).
+- No regime de alta sensibilidade o **Random Forest é o melhor**: mesma sensibilidade de RL e LightGBM com menos falsos positivos (22 vs 26 e 23) e mesma especificidade do XGBoost com 5 falsos negativos a menos (8 vs 13).
+- O **limiar de Youden** escolhido na CV fica acima de 0,5 em todos os modelos (0,57–0,66) e, no teste, troca sensibilidade (0,58–0,63) por especificidade (0,78–0,84) — o oposto do que se busca em triagem.
 - A tabela completa por limiar (0,1 a 0,9, com contagem de FN e FP para cada modelo) está em `results/analise_limiar_modelos.csv`. Para o Random Forest, por exemplo: limiar 0,4 → Sens 0,877 / Spec 0,406 (10 FN, 19 FP); limiar 0,5 → 0,765 / 0,625 (19 FN, 12 FP); limiar 0,6 → 0,642 / 0,781 (29 FN, 7 FP).
+
+> **19 ou 20 FN no limiar 0,5?** A grade de limiares e a análise por sexo classificam como doente quem tem `prob ≥ limiar`; a matriz de confusão e as métricas da tabela principal usam a classe prevista pelo `caret`. Para RL, XGBoost e LightGBM as duas regras coincidem. No Random Forest, um paciente doente recebeu probabilidade de exatamente 0,5 (empate de votos entre as 500 árvores): conta como doente na grade (19 FN, Sens 0,765) e como saudável na matriz de confusão (20 FN, Sens 0,753).
 
 #### Análise estratificada por sexo (auditoria de viés)
 
@@ -526,19 +532,22 @@ Leitura:
 
 O teste tem **32 mulheres (17 doentes, 53 %)** e **81 homens (64 doentes, 79 %)**. Como a prevalência difere muito, uma métrica agregada pode esconder desempenho desigual.
 
-| Modelo | AUC ♀ | AUC ♂ | Δ AUC (♂−♀) | p DeLong | Sens ♀ | Sens ♂ | Spec ♀ | Spec ♂ | Taxa FN ♀ | Taxa FN ♂ |
+| Modelo | AUC ♀ | AUC ♂ | Δ AUC (♂−♀) | p DeLong (bruto / Bonferroni) | Sens ♀ | Sens ♂ | Spec ♀ | Spec ♂ | Taxa FN ♀ | Taxa FN ♂ |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Regressão Logística | 0,729 | 0,748 | +0,019 | 0,87 | 0,765 | 0,719 | 0,467 | 0,647 | 0,235 | 0,281 |
-| **Random Forest** | 0,782 | 0,774 | −0,008 | 0,94 | 0,765 | 0,766 | 0,667 | 0,588 | 0,235 | 0,234 |
-| XGBoost | 0,733 | 0,743 | +0,009 | 0,93 | **0,647** | 0,734 | 0,733 | 0,706 | **0,353** | 0,266 |
-| LightGBM | 0,780 | 0,737 | −0,043 | 0,68 | 0,706 | 0,688 | 0,800 | 0,529 | 0,294 | 0,313 |
+| Regressão Logística | 0,729 | 0,748 | +0,019 | 0,87 / 1 | 0,765 | 0,719 | 0,467 | 0,647 | 0,235 | 0,281 |
+| **Random Forest** | 0,782 | 0,774 | −0,008 | 0,94 / 1 | 0,765 | 0,766 | 0,667 | 0,588 | 0,235 | 0,234 |
+| XGBoost | 0,733 | 0,743 | +0,009 | 0,93 / 1 | **0,647** | 0,734 | 0,733 | 0,706 | **0,353** | 0,266 |
+| LightGBM | 0,780 | 0,737 | −0,043 | 0,68 / 1 | 0,706 | 0,688 | 0,800 | 0,529 | 0,294 | 0,313 |
+
+Sensibilidade, especificidade e taxa de FN no limiar 0,5.
 
 Leitura:
 
-- **Nenhuma diferença de AUC entre sexos é significativa** (todos p > 0,6), e as AUCs por sexo estão sempre a menos de 0,05 uma da outra. Não há evidência de que os modelos discriminem pior em um dos grupos.
+- **Nenhuma diferença de AUC entre sexos é significativa** (p brutos > 0,6; ajustados por Bonferroni = 1), e as AUCs por sexo estão sempre a menos de 0,05 uma da outra. Não há evidência de que os modelos discriminem pior em um dos grupos.
 - **O Random Forest é o mais equânime**: sensibilidade praticamente idêntica (0,765 vs 0,766) e taxa de FN igual (≈ 23,5 %) nos dois sexos.
 - **O XGBoost é o menos equânime em sensibilidade**: perde **35 % das mulheres doentes** contra 27 % dos homens doentes (Δ Sens = +0,087 a favor dos homens). Com 17 mulheres doentes, isso corresponde a 6 vs ~4,5 casos — a diferença não é significativa, mas é exatamente o padrão que Straw & Wu (2022) alertam: modelos treinados em populações majoritariamente masculinas (75 % dos pacientes do ILPD) podem ter falsos negativos concentrados nas mulheres.
 - A **regressão logística e o LightGBM têm especificidade muito diferente entre sexos** (Δ = +0,18 e −0,27), ou seja, o mesmo limiar produz taxas de falso positivo distintas para homens e mulheres. Em um sistema real, isso sugere **calibrar o limiar por sexo**.
+- **No limiar clínico** (escolhido na CV), a sensibilidade das mulheres fica acima da dos homens na RL, no RF e no LightGBM (0,94–1,00 vs 0,88–0,89), e o gap do XGBoost praticamente desaparece (0,82 vs 0,84). O custo recai na especificidade, baixa nos dois sexos (0,13–0,41): na RL, só 2 das 15 mulheres saudáveis são reconhecidas como saudáveis (`results/metricas_por_sexo.csv`).
 
 > **Cautela:** o grupo feminino tem apenas 32 pacientes; os ICs das AUCs femininas têm largura ≈ 0,35. Os gaps aqui são indicativos, não conclusivos.
 
@@ -561,9 +570,11 @@ Foram explicados o **XGBoost** (TreeSHAP exato, escala log-odds) e o **Random Fo
 | 5 | Age | 0,108 | 7,9 | Alamine_Aminotransferase | 0,037 | 11,2 |
 | 6 | AG_Ratio | 0,080 | 5,8 | AG_Ratio | 0,025 | 7,5 |
 | 7 | Alamine_Aminotransferase | 0,076 | 5,6 | Age | 0,024 | 7,3 |
-| 8 | Gender | **0,000** | 0,0 | Albumin | 0,019 | 5,6 |
-| 9 | Direct_Bilirubin | **0,000** | 0,0 | Total_Proteins | 0,016 | 4,9 |
-| 10 | Albumin | **0,000** | 0,0 | Gender | 0,009 | 2,8 |
+| 8 | Gender † | **0,000** | 0,0 | Albumin | 0,019 | 5,6 |
+| 9 | Direct_Bilirubin † | **0,000** | 0,0 | Total_Proteins | 0,016 | 4,9 |
+| 10 | Albumin † | **0,000** | 0,0 | Gender | 0,009 | 2,8 |
+
+† Empatadas (média |SHAP| = 0): nos CSVs e na comparação de rankings, as três recebem o posto médio 9.
 
 Dois perfis muito diferentes de "raciocínio":
 
@@ -633,22 +644,22 @@ Os gráficos de dependência mostram a **forma funcional** da relação (eixo X 
 
 | Variável | SHAP XGB | SHAP RF | Nativa RF | Nativa LightGBM | \|coef.\| RL |
 |---|---|---|---|---|---|
-| Total_Bilirubin | **1** | 3 | 5 | 3 | 8 |
+| Total_Bilirubin | **1** | 3 | 5 | 3 | 9 |
 | Alkaline_Phosphotase | 2 | **1** | **1** | 2 | 5 |
 | Total_Proteins | 3 | 9 | 10 | 9 | **2** |
-| Aspartate_Aminotransferase | 4 | 4 | 2 | 4 | 7 |
-| Age | 5 | 7 | 6 | 5 | 6 |
+| Aspartate_Aminotransferase | 4 | 4 | 2 | 4 | 8 |
+| Age | 5 | 7 | 6 | 5 | 7 |
 | AG_Ratio | 6 | 6 | 7 | 7 | 3 |
 | Alamine_Aminotransferase | 7 | 5 | 4 | 6 | 4 |
-| Gender | 8 | 10 | 9 | 10 | 10 |
-| Direct_Bilirubin | 9 | 2 | 3 | **1** | 9 |
-| Albumin | 10 | 8 | 8 | 8 | **1** |
+| Gender | 9 (empate) | 10 | 9 | 10 (não usada) | 10 |
+| Direct_Bilirubin | 9 (empate) | 2 | 3 | **1** | 6 |
+| Albumin | 9 (empate) | 8 | 8 | 8 | **1** |
 
 Correlação de Spearman entre rankings (`results/concordancia_rankings_spearman.csv`):
 
 | | SHAP XGB | SHAP RF | Nativa RF | Nativa LGB | \|coef.\| RL |
 |---|---|---|---|---|---|
-| SHAP XGB | 1 | 0,36 | 0,26 | 0,31 | −0,25 |
+| SHAP XGB | 1 | 0,39 | 0,28 | 0,34 | −0,14 |
 | SHAP RF | | 1 | **0,92** | **0,95** | −0,16 |
 | Nativa RF | | | 1 | 0,88 | −0,26 |
 | Nativa LGB | | | | 1 | −0,26 |
@@ -656,17 +667,17 @@ Correlação de Spearman entre rankings (`results/concordancia_rankings_spearman
 Três leituras:
 
 1. **SHAP do RF, importância nativa do RF e do LightGBM concordam fortemente (ρ ≥ 0,88)**: os modelos de árvore "olham" para os mesmos exames — fosfatase alcalina, bilirrubinas e transaminases.
-2. **O XGBoost diverge (ρ ≈ 0,3)** não porque discorde da direção dos efeitos (Seção anterior), mas porque sua regularização eliminou variáveis redundantes e concentrou o crédito em `Total_Bilirubin`. É a mesma informação, atribuída de forma diferente.
-3. **A regressão logística tem ranking negativamente correlacionado com todos os outros (ρ ≈ −0,2)**. `Albumin` e `Total_Proteins` são #1 e #2 pelo |coeficiente| mas estão no fundo das árvores; `Total_Bilirubin` é #1 no XGBoost mas #8 na RL. Isso **não** significa que a RL usa informação diferente: seus coeficientes gigantes e opostos em `Albumin`/`Total_Proteins` são um artefato da multicolinearidade (Seção 7.3). É a demonstração empírica de que **coeficientes de um modelo linear com preditores correlacionados não são uma medida confiável de importância** — e de por que o SHAP é preferível mesmo quando se compara com um modelo "interpretável".
+2. **O XGBoost diverge (ρ entre 0,28 e 0,39)** não porque discorde da direção dos efeitos (Seção anterior), mas porque sua regularização eliminou variáveis redundantes e concentrou o crédito em `Total_Bilirubin`. É a mesma informação, atribuída de forma diferente.
+3. **A regressão logística tem ranking negativamente correlacionado com todos os outros (ρ entre −0,26 e −0,14)**. `Albumin` e `Total_Proteins` são #1 e #2 pelo |coeficiente| mas, exceto `Total_Proteins` no XGBoost, estão no fundo das árvores; `Total_Bilirubin` é #1 no XGBoost mas #9 na RL. Isso **não** significa que a RL usa informação diferente: seus coeficientes gigantes e opostos em `Albumin`/`Total_Proteins` são um artefato da multicolinearidade (Seção 7.3). É a demonstração empírica de que **coeficientes de um modelo linear com preditores correlacionados não são uma medida confiável de importância** — e de por que o SHAP é preferível mesmo quando se compara com um modelo "interpretável".
 
 ### 7.6 Síntese dos resultados
 
 1. **Todos os modelos superam o acaso** (AUC 0,74–0,78 no teste; nenhum IC 95% inclui 0,5), mas nenhum é excelente. O dataset é pequeno e o problema é genuinamente difícil.
-2. **Não há evidência de que os modelos de caixa-preta superem a regressão logística.** Na CV honesta (SMOTE por fold) a RL é a melhor (0,753) e estatisticamente superior a XGBoost e LightGBM; no teste o RF lidera (0,781) mas nenhuma diferença é significativa (DeLong, todos p > 0,15). Para o objetivo 6 da proposta, o trade-off desempenho × interpretabilidade **favorece o modelo interpretável** neste dataset.
+2. **Não há evidência de que os modelos de caixa-preta superem a regressão logística.** Na CV honesta (SMOTE por fold) a RL é a melhor (0,753) e estatisticamente superior aos três ensembles (teste t pareado, p ajustado ≤ 0,021); no teste o RF lidera (0,781) mas nenhuma diferença é significativa (DeLong, todos p > 0,15 antes e ≥ 0,91 após Bonferroni). Para o objetivo 6 da proposta, o trade-off desempenho × interpretabilidade **favorece o modelo interpretável** neste dataset.
 3. **O SMOTE antes da CV inflava a AUC dos ensembles em ~0,13** e produzia um ranking enganoso (árvores ≫ RL). Aplicá-lo dentro de cada fold é indispensável para uma comparação justa.
 4. **O Random Search escolheu as configurações mais regularizadas** para os três ensembles — coerente com o sinal essencialmente aditivo dos dados.
-5. **Perfil operacional é de triagem.** Garantir Sens ≥ 90 % custa Spec ≤ 0,31 em todos os modelos; o RF é o melhor nesse regime (10 FP a menos que RL/XGB). O limiar deve ser escolhido pelo custo relativo dos erros, não fixado em 0,5.
-6. **Não há evidência de viés discriminatório por sexo na AUC** (todos p > 0,6), mas há **assimetrias de sensibilidade** — o XGBoost perde 35 % das mulheres doentes vs 27 % dos homens. O SHAP mostra que isso não vem do uso da variável `Gender` (irrelevante em todos os modelos), e sim das distribuições laboratoriais distintas entre sexos, sugerindo limiares específicos por sexo.
+5. **Perfil operacional é de triagem.** Buscar Sens ≥ 90 % (limiar escolhido na CV) custa Spec ≤ 0,31 no teste em todos os modelos; o RF é o melhor nesse regime (22 FP contra 23–26 do LightGBM e da RL, e 5 FN a menos que o XGBoost, que ficou abaixo da meta no teste: Sens 0,84). O limiar deve ser escolhido pelo custo relativo dos erros, não fixado em 0,5.
+6. **Não há evidência de viés discriminatório por sexo na AUC** (p brutos > 0,6; ajustados = 1), mas há **assimetrias de sensibilidade** — no limiar 0,5, o XGBoost perde 35 % das mulheres doentes vs 27 % dos homens (no limiar clínico a diferença praticamente some: Sens 0,82 vs 0,84). O SHAP mostra que isso não vem do uso da variável `Gender` (que o XGBoost nem usa e que fica em último ou penúltimo lugar de importância em todos os modelos), e sim das distribuições laboratoriais distintas entre sexos, sugerindo limiares específicos por sexo.
 7. **O SHAP confirma a plausibilidade clínica** dos modelos (bilirrubinas, fosfatase alcalina e transaminases ↑ risco; albumina e razão A/G ↓ risco) e recupera a direção correta de `AG_Ratio`, que o coeficiente da RL inverte por multicolinearidade.
 8. **Os erros mais graves (falsos negativos) são pacientes com exames normais** — uma limitação dos dados, não do algoritmo. O SHAP permite fazer essa distinção caso a caso.
 
@@ -750,11 +761,12 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 
 **Limitações**
 
-- Amostra pequena (113 pacientes de teste; 32 mulheres) → intervalos de confiança largos; nenhuma diferença entre modelos, nem entre sexos, foi significativa.
+- Amostra pequena (113 pacientes de teste; 32 mulheres) → intervalos de confiança largos; no teste, nenhuma diferença entre modelos, nem entre sexos, foi significativa.
 - Dataset de uma única região geográfica — generalização para outras populações não é garantida.
 - O rótulo "doente" agrupa diferentes patologias hepáticas.
 - SMOTE gera amostras por interpolação linear, o que pode criar pacientes fisiologicamente implausíveis (o `Gender` é devolvido a uma categoria válida, mas as variáveis contínuas continuam interpoladas).
-- Os limiares escolhidos na CV vêm de modelos ajustados com ~80 % do treino; aplicá-los ao modelo final (ajustado no treino completo) é uma aproximação, e a sensibilidade no teste pode ficar abaixo da meta de 90 %.
+- Os limiares escolhidos na CV vêm de modelos ajustados com ~80 % do treino; aplicá-los ao modelo final (ajustado no treino completo) é uma aproximação, e a sensibilidade no teste pode ficar abaixo da meta de 90 % — foi o que ocorreu com o XGBoost (0,84).
+- O teste t pareado da CV usa 15 estimativas não independentes e tende a ser liberal (Nadeau & Bengio, 2003); a superioridade da RL na CV deve ser lida junto com o DeLong no teste, que não a confirma.
 - O "melhor modelo", que define qual modelo extra a etapa 6 explica, ainda é escolhido pela AUC no teste. Isso não altera nenhuma métrica reportada, mas é uma escolha feita olhando o teste.
 - Random Search com 30 combinações explora o espaço de hiperparâmetros de forma limitada; a seleção do modelo ainda é feita na mesma CV usada para o tuning (sem CV aninhada), o que pode manter leve otimismo.
 - Os valores SHAP do Random Forest são aproximados (Monte Carlo) e estão em escala diferente (probabilidade) dos de XGBoost/LightGBM (log-odds).
@@ -789,3 +801,4 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 - Lundberg, S. M., Erion, G. G., & Lee, S.-I. (2018). Consistent Individualized Feature Attribution for Tree Ensembles. *arXiv:1802.03888* (TreeSHAP).
 - Straw, I., & Wu, H. (2022). Investigating for bias in healthcare algorithms: a sex-stratified analysis of supervised machine learning models in liver disease prediction. *BMJ Health & Care Informatics*, 29(1), e100457.
 - Santos, M. S., Soares, J. P., Abreu, P. H., Araújo, H., & Santos, J. (2018). Cross-Validation for Imbalanced Datasets: Avoiding Overoptimistic and Overfitting Approaches. *IEEE Computational Intelligence Magazine*, 13(4), 59–76.
+- Nadeau, C., & Bengio, Y. (2003). Inference for the Generalization Error. *Machine Learning*, 52(3), 239–281.

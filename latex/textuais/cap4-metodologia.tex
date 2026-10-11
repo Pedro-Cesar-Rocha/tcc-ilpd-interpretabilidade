@@ -793,9 +793,12 @@ todas as variáveis padronizadas, inclusive \textit{Gender}. Como a diferença e
 dois valores padronizados dessa variável pesa na distância, os vizinhos mais próximos
 tendem a ser do mesmo sexo, e os pares de sexos diferentes, embora possíveis, são
 pouco frequentes. A correção vale para todas as iterações da validação cruzada e para
-o ajuste dos modelos finais. O diagnóstico do balanceamento sobre o conjunto de treino
-completo registra quantas amostras sintéticas precisaram ser corrigidas e verifica
-que todas contêm apenas os dois valores válidos dessa variável.
+o ajuste dos modelos finais. No diagnóstico do balanceamento sobre o conjunto de treino
+completo, o SMOTE gerou 132 amostras sintéticas, uma para cada paciente saudável do
+treino, e apenas uma delas apresentou valor intermediário de \textit{Gender} e precisou
+ser corrigida, o que confirma a baixa frequência dos pares de sexos diferentes. Após a
+correção, todas as amostras sintéticas contêm apenas os dois valores válidos dessa
+variável.
 
 \subsection{Otimização de Hiperparâmetros}
 \label{sec:otimizacao_hiperparametros}
@@ -1424,12 +1427,16 @@ de seu ranking; na importância nativa, reescalada de 0 a 100, a variável utili
 menor importância também recebe o valor 0, mas permanece à frente das não utilizadas.
 Em todos os rankings, inclusive nos rankings por sexo da Seção~\ref{sec:shap_sexo},
 variáveis com importâncias exatamente iguais, como as não utilizadas por um mesmo
-modelo, receberam o posto médio das posições que ocupariam: duas variáveis empatadas
-nas posições 9 e 10, por exemplo, recebem ambas o posto 9,5. Evita-se, assim, que o
+modelo, receberam o posto médio das posições que ocupariam. É o caso das três
+variáveis não utilizadas pelo XGBoost, cuja importância SHAP é nula: empatadas nas
+posições 8 a 10, recebem todas o posto 9. Evita-se, assim, que o
 empate seja desfeito pela ordem das colunas na base, que é arbitrária e alteraria as
 correlações calculadas. Os postos foram obtidos a partir dos valores de importância
 antes de qualquer arredondamento, de modo que apenas empates reais recebem o mesmo
-posto. A concordância entre todos os pares de rankings foi medida pela correlação de
+posto. A única exceção é o ranking da Regressão Logística, obtido a partir dos
+coeficientes arredondados para quatro casas decimais; como esses valores não
+apresentam empates, o arredondamento não altera os postos. A concordância entre todos
+os pares de rankings foi medida pela correlação de
 postos de Spearman, que, na presença de empates, corresponde à correlação de Pearson
 entre os postos médios.
 
