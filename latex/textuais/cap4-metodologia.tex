@@ -560,13 +560,16 @@ custo de perder a interpretabilidade direta do modelo resultante, que passa a fu
 como uma caixa-preta (\textit{black box}). É essa perda que motiva o uso dos valores
 SHAP, descritos na Seção~\ref{sec:shap}.
 
-A inclusão da Regressão Logística como referência tem justificativa prática e
-conceitual. Do ponto de vista prático, revisões sistemáticas de modelos de predição
-clínica indicam que métodos de aprendizado de máquina nem sempre superam a regressão
-logística \cite{Christodoulou2019Systematic}.
+Do ponto de vista prático, uma revisão sistemática de modelos de predição clínica não
+encontrou evidência de desempenho superior do aprendizado de máquina em relação à
+regressão logística nas comparações com baixo risco de viés
+\cite{Christodoulou2019Systematic}.
 Do ponto de vista conceitual, defende-se que, em decisões de alto risco, como as
 clínicas, modelos interpretáveis sejam preferidos sempre que apresentarem desempenho
-comparável ao de modelos opacos \cite{Rudin2019Stop}.
+comparável ao de modelos opacos \cite{Rudin2019Stop}. Essa mesma autora adverte que explicações \textit{post-hoc} de modelos opacos podem não
+ser fiéis ao modelo original \cite{Rudin2019Stop}. Por isso, neste trabalho, os valores
+SHAP são tratados como um instrumento de auditoria dos modelos de árvore, e a
+Regressão Logística é mantida como referência interpretável.
 Assim, a complexidade adicional dos modelos de árvore só se justifica se resultar em
 ganho de desempenho em relação à Regressão Logística, o que é verificado
 estatisticamente nas Seções~\ref{sec:comparacao_cv} e~\ref{sec:comparacao_auc}.
@@ -661,15 +664,19 @@ máximo dez valores distintos. Durante o treinamento, também foi calculada a
 importância por permutação de cada variável, definida como a queda na acurácia
 observada nas amostras \textit{out-of-bag}, isto é, nas observações não sorteadas no
 \textit{bootstrap} de cada árvore, quando os valores da variável são embaralhados
-aleatoriamente \cite{Breiman2001RandomForests}. Uma variante dessa medida, calculada
-separadamente para cada classe, é retomada na comparação entre os rankings de importância (Seção~\ref{sec:comparacao_importancias}).
+aleatoriamente \cite{Breiman2001RandomForests}. A implementação utilizada disponibiliza ainda outras medidas de importância
+\cite{Liaw2002Classification}, que são retomadas na comparação entre os rankings de
+importância (Seção~\ref{sec:comparacao_importancias}).
 
 O \textit{Random Forest} foi incluído na comparação por ser um dos métodos de
-\textit{ensemble} mais consolidados como classificador de propósito geral, por exigir
-pouco ajuste de hiperparâmetros e por fornecer medidas próprias de importância das
-variáveis \cite{Biau2016Tour}.
-Além disso, ele representa a estratégia de \textit{bagging}, em contraste com os dois
-modelos de \textit{boosting} descritos a seguir.
+\textit{ensemble} mais consolidados como classificador de propósito geral, figurando
+entre os de melhor desempenho em um benchmark em larga escala
+\cite{FernandezDelgado2014Hundreds}, embora a superioridade sobre as máquinas de vetores
+de suporte não seja estatisticamente significativa nesse estudo e a metodologia do
+benchmark tenha sido criticada \cite{Wainberg2016Random}. Além disso, o método costuma
+apresentar bom desempenho com os valores padrão dos hiperparâmetros e ganhos modestos com
+o ajuste \cite{Probst2019Hyperparameters}, e fornece medidas próprias de importância das
+variáveis \cite{Breiman2001RandomForests}.
 
 \subsection{XGBoost}
 \label{sec:xgboost}
@@ -725,11 +732,17 @@ fração de preditores sorteada para cada árvore (\texttt{colsample\_bytree}); 
 mínima dos pesos das observações, medidos pela segunda derivada da perda, exigida em
 cada nó-filho (\texttt{min\_child\_weight}); e a fração de observações sorteada para
 cada árvore (\texttt{subsample}). O parâmetro $\lambda$ foi mantido no valor padrão da
-biblioteca. O XGBoost foi incluído por ser um dos algoritmos mais utilizados em
-problemas com dados tabulares, com histórico de destaque em competições de aprendizado
-de máquina \cite{Chen2016XGBoost}, e por dispor de algoritmo exato e eficiente para o
-cálculo de valores SHAP \cite{Lundberg2020Trees}, o que o torna um dos objetos
-centrais da análise de interpretabilidade.
+biblioteca. O XGBoost foi incluído por ser uma referência consolidada em problemas com dados
+tabulares: benchmarks independentes o encontram entre os métodos de melhor desempenho
+médio frente a redes neurais
+\cite{Borisov2021Deep, Grinsztajn2022Why, ShwartzZiv2021Tabular}, e com menor esforço de
+ajuste de hiperparâmetros \cite{ShwartzZiv2021Tabular}. Esses estudos, porém, usam bases
+de tamanho médio ou grande, com cerca de 10 mil observações ou mais, muito maiores que o
+ILPD, e os próprios autores deixam em aberto o comportamento em bases muito pequenas
+\cite{Grinsztajn2022Why}. O XGBoost também teve destaque em competições de aprendizado de
+máquina \cite{Chen2016XGBoost} e dispõe de um algoritmo eficiente (TreeSHAP) para o
+cálculo de valores SHAP \cite{Lundberg2020Trees}, o que o torna um dos objetos centrais da
+análise de interpretabilidade.
 
 \subsection{LightGBM}
 \label{sec:lightgbm}
@@ -753,18 +766,20 @@ amostragem GOSS, já que, com poucas centenas de pacientes, o custo computaciona
 Outra característica da implementação é o crescimento das árvores por folha
 (\textit{leaf-wise}, ou melhor-primeiro): em vez de expandir todos os nós de um mesmo
 nível, como no crescimento por nível (\textit{level-wise}), o algoritmo expande, a
-cada passo, a folha cuja divisão produz a maior redução da perda \cite{Shi2007BestFirst}.
-Para um mesmo número de folhas, essa estratégia tende a atingir perda menor, mas pode
-gerar árvores profundas e assimétricas, com maior risco de sobreajuste em bases
-pequenas como o ILPD. Por isso, a complexidade das árvores é controlada
-principalmente pelo número máximo de folhas (\texttt{num\_leaves}) e pelo número
-mínimo de observações em cada folha (\texttt{min\_data\_in\_leaf}), ambos incluídos na
-busca de hiperparâmetros, juntamente com a taxa de aprendizado
-(\texttt{learning\_rate}), o número de iterações (\texttt{nrounds}) e a fração de
-preditores sorteada para cada árvore (\texttt{feature\_fraction})
-(Tabela~\ref{tab:espaco_busca}). A taxa de aprendizado foi sorteada em escala
-logarítmica, entre 0,01 e cerca de 0,32, de modo que cada ordem de grandeza do
-intervalo tivesse a mesma probabilidade de ser explorada.
+cada passo, a folha cuja divisão produz a maior redução da perda
+\cite{Shi2007BestFirst, Ke2017LightGBM}. A documentação da biblioteca adverte que esse
+tipo de crescimento pode causar sobreajuste quando o número de observações é pequeno
+\cite{LightGBMDocsFeatures}, e descreve o número mínimo de observações por folha como
+um parâmetro muito importante para evitá-lo em árvores desse tipo
+\cite{LightGBMDocsTuning}. Por esse motivo, e por se tratar de uma base pequena como o
+ILPD, incluíram-se na busca de hiperparâmetros os parâmetros que limitam a
+complexidade das árvores: o número máximo de folhas (\texttt{num\_leaves}) e o número
+mínimo de observações em cada folha (\texttt{min\_data\_in\_leaf}). A busca
+considerou também a taxa de aprendizado (\texttt{learning\_rate}), o número de
+iterações (\texttt{nrounds}) e a fração de preditores sorteada para cada árvore
+(\texttt{feature\_fraction}) (Tabela~\ref{tab:espaco_busca}). A taxa de aprendizado
+foi sorteada em escala logarítmica, entre 0,01 e cerca de 0,32, de modo que cada
+ordem de grandeza do intervalo tivesse a mesma probabilidade de ser explorada.
 
 Como o pacote \texttt{caret}, utilizado no treinamento
 (Seção~\ref{sec:treinamento_validacao}), não oferece suporte nativo ao LightGBM,
@@ -772,10 +787,12 @@ implementou-se no \textit{pipeline} uma especificação de modelo customizada, q
 define as funções de ajuste, de predição de classes e de probabilidades, de
 importância das variáveis e de geração dos candidatos da busca aleatória exigidas
 pelo pacote. Essa integração garante que o LightGBM seja treinado e avaliado com as
-mesmas partições da validação cruzada, a mesma métrica de seleção e o mesmo
-balanceamento dos demais modelos, condição necessária para uma comparação justa. Para
-favorecer a reprodutibilidade, o treinamento foi executado com uma única linha de
-execução (\textit{thread}) e semente aleatória fixa \cite{Pineau2020Improving}. O
+mesmas partições da validação cruzada, a mesma métrica de seleção e a mesma
+reamostragem (SMOTE aplicado dentro de cada \textit{fold}) dos demais modelos,
+condição necessária para uma comparação justa. Para favorecer a reprodutibilidade, o
+treinamento foi executado com uma única linha de execução (\textit{thread}) e semente
+aleatória fixa, medida relevante porque os resultados de modelos de aprendizado de
+máquina podem variar com a inicialização aleatória \cite{Pineau2020Improving}. O
 LightGBM foi incluído como representante das implementações mais recentes de
 \textit{gradient boosting}, o que permite verificar se suas otimizações se traduzem
 em diferenças de desempenho ou de comportamento em relação ao XGBoost em uma base de
