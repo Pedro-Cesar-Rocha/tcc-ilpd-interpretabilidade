@@ -122,7 +122,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
                    is.na(r)  ~ "sem variacao",
                    r >  0.3  ~ "valores altos -> maior risco de doenca",
                    r < -0.3  ~ "valores altos -> menor risco de doenca",
-                   TRUE      ~ "efeito nao monotonico / fraco"))
+                   TRUE      ~ "efeito nao linear / fraco"))
     }) %>% arrange(desc(abs(Correlacao)))
     log_info("Direcao do efeito (correlacao valor da variavel x SHAP):")
     log_table(direcao)
