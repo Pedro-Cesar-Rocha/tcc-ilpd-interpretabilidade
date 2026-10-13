@@ -1506,12 +1506,12 @@ postos de Spearman, que, na presença de empates, corresponde à correlação de
 entre os postos médios.
 
 Como as medidas têm naturezas diferentes, a comparação baseia-se nas posições dos
-rankings, e não em suas magnitudes. Uma concordância elevada indica que a importância
-das variáveis é robusta à escolha do algoritmo, o que fortalece as conclusões da
-análise de interpretabilidade. Discordâncias, por outro lado, podem refletir tanto
+rankings, e não em suas magnitudes. Uma concordância elevada sugere que a importância
+das variáveis é pouco sensível à escolha do algoritmo, o que aumenta a confiança nas
+conclusões da análise de interpretabilidade. Discordâncias, por outro lado, podem refletir tanto
 diferenças reais nos padrões aprendidos quanto propriedades das próprias medidas de
 importância, especialmente na presença de variáveis correlacionadas: a importância
-por permutação tende a favorecer variáveis correlacionadas \cite{Strobl2008Conditional},
+por permutação do \textit{Random Forest} tende a favorecer variáveis correlacionadas \cite{Strobl2008Conditional},
 e a importância SHAP pode dividir o crédito entre elas \cite{Chen2023Algorithms, Verdinelli2024Feature}. Os
 rankings obtidos também são confrontados com os resultados do teste de Welch
 (Tabela~\ref{tab:teste_welch}), o que permite verificar se as variáveis mais
