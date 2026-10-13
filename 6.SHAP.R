@@ -2,7 +2,7 @@
 # 6.SHAP.R
 # Explicabilidade com valores SHAP para os modelos de caixa-preta:
 #   - XGBoost  : TreeSHAP exato (predcontrib nativo, escala log-odds)
-#   - LightGBM : TreeSHAP exato (quando for o melhor modelo no teste)
+#   - LightGBM : TreeSHAP exato (somente se for o melhor modelo no teste)
 #   - Random Forest : SHAP amostral (fastshap, Monte Carlo, escala de probabilidade)
 # Sempre sao explicados o XGBoost, o Random Forest e o melhor modelo pela AUC
 # no teste (etapa 5). Para cada um:
@@ -11,6 +11,10 @@
 #   - explicacao local (waterfall) de pacientes individuais
 #   - importancia SHAP estratificada por sexo (auditoria de vies)
 # Ao final, compara os rankings de importancia entre modelos.
+# Postos: calculados a partir dos valores de importancia SEM arredondar; empates
+# reais recebem o posto medio (rank com ties.method = "average"), e o arredondamento
+# ocorre apenas na exportacao dos CSV. Variavel usada com importancia nativa minima
+# (0 apos a reescala) fica a frente das variaveis nao usadas.
 # =============================================================================
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
@@ -167,13 +171,15 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     imp_sexo <- map_dfr(levels(genero), function(g) {
       idx <- genero == g
       data.frame(Sexo = g, Variavel = colnames(S),
-                 Importancia_SHAP = round(colMeans(abs(S[idx, , drop = FALSE])), 4),
-                 SHAP_Medio = round(colMeans(S[idx, , drop = FALSE]), 4), row.names = NULL)
-    })
+                 Importancia_SHAP = colMeans(abs(S[idx, , drop = FALSE])),
+                 SHAP_Medio = colMeans(S[idx, , drop = FALSE]), row.names = NULL)
+    }) %>%
+      mutate(Importancia_SHAP = ifelse(Importancia_SHAP < 1e-12, 0, Importancia_SHAP))
     imp_sexo_w <- imp_sexo %>%
       select(Sexo, Variavel, Importancia_SHAP) %>%
       pivot_wider(names_from = Sexo, values_from = Importancia_SHAP, names_prefix = "Imp_") %>%
-      mutate(Rank_Feminino = rank(-Imp_Feminino), Rank_Masculino = rank(-Imp_Masculino)) %>%
+      mutate(Rank_Feminino  = rank(-Imp_Feminino,  ties.method = "average"),
+             Rank_Masculino = rank(-Imp_Masculino, ties.method = "average")) %>%
       arrange(Rank_Masculino)
     log_table(imp_sexo_w, digits = 4)
     log_info("Concordancia dos rankings entre sexos (Spearman): %.3f",
@@ -182,7 +188,8 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     log_info("Contribuicao media da variavel Gender: Feminino = %+.4f | Masculino = %+.4f (escala %s)",
              shap_gen$SHAP_Medio[shap_gen$Sexo == "Feminino"], shap_gen$SHAP_Medio[shap_gen$Sexo == "Masculino"], res$escala)
     log_info("Valores de sinal oposto indicam que o sexo, por si so, desloca a previsao de risco entre os grupos.")
-    salvar_csv(imp_sexo, sprintf("results/shap_importancia_por_sexo_%s.csv", slug))
+    salvar_csv(imp_sexo %>% mutate(across(c(Importancia_SHAP, SHAP_Medio), ~round(.x, 4))),
+               sprintf("results/shap_importancia_por_sexo_%s.csv", slug))
 
     p_sexo <- imp_sexo %>%
       mutate(Variavel = factor(Variavel, levels = rev(imp_df$Variavel))) %>%
@@ -203,8 +210,10 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
       theme_minimal() + theme(legend.position = "bottom")
     salvar_plot(p_bee_sexo, sprintf("plots/shap_gender_por_sexo_%s.png", slug), width = 6, height = 4.5)
 
-    imp_df %>% transmute(Variavel, Imp = Importancia_SHAP, Rank = row_number()) %>%
-      rename_with(~paste0(.x, "_SHAP_", slug), c(Imp, Rank))
+    # Importancia sem arredondar (postos calculados depois, com posto medio nos empates)
+    tibble(Variavel = names(imp), Imp = as.numeric(imp)) %>%
+      mutate(Imp = ifelse(Imp < 1e-12, 0, Imp)) %>%
+      rename_with(~paste0(.x, "_SHAP_", slug), Imp)
   }
 
   importancias <- map(a_explicar, explicar)
@@ -215,31 +224,39 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   rank_nativo <- function(caminho, sufixo) {
     m   <- readRDS(caminho)
     imp <- varImp(m, scale = TRUE)$importance
-    data.frame(Variavel = rownames(imp), Imp = round(imp[, 1], 2), row.names = NULL) %>%
-      arrange(desc(Imp)) %>% mutate(Rank = row_number()) %>%
-      rename_with(~paste0(.x, "_nativa_", sufixo), c(Imp, Rank))
+    tibble(Variavel = rownames(imp), Imp = imp[, 1]) %>%
+      rename_with(~paste0(.x, "_nativa_", sufixo), Imp)
   }
   comp <- reduce(importancias, full_join, by = "Variavel") %>%
     left_join(rank_nativo("models/modelo_rf.rds",  "rf"),  by = "Variavel") %>%
     left_join(rank_nativo("models/modelo_lgb.rds", "lgb"), by = "Variavel")
-  # Regressao logistica: ranking pelo |coeficiente padronizado| (baseline interpretavel)
+  # Regressao logistica: ranking pelo |coeficiente padronizado| (baseline interpretavel).
+  # Os coeficientes vem do CSV da etapa 4, ja arredondados a 4 casas (sem empates).
   coef_lr <- read.csv("results/coeficientes_regressao_logistica.csv") %>%
     filter(Variavel != "(Intercept)") %>%
-    arrange(desc(abs(Coeficiente))) %>%
-    transmute(Variavel, Coef_abs_lr = abs(Coeficiente), Rank_lr = row_number())
+    transmute(Variavel, Coef_abs_lr = abs(Coeficiente))
   comp <- comp %>% left_join(coef_lr, by = "Variavel")
-  # Variavel nao usada em nenhuma arvore: importancia 0 e ultima posicao no ranking
-  comp <- comp %>%
-    mutate(across(starts_with("Rank_"), ~replace_na(.x, n())),
-           across(-c(Variavel, starts_with("Rank_")), ~replace_na(.x, 0))) %>%
-    arrange(Rank_SHAP_xgb)
+
+  # Postos: a partir dos valores sem arredondar; empates reais recebem o posto medio.
+  # Variavel ausente da medida (nao usada em nenhuma arvore) recebe importancia 0 e fica
+  # atras da variavel usada cuja importancia reescalada e 0 (bonus de 1e-6 so para quem foi usada).
+  for (col in c(grep("^Imp_", names(comp), value = TRUE), "Coef_abs_lr")) {
+    x     <- comp[[col]]
+    usada <- !is.na(x)
+    x[is.na(x)] <- 0
+    comp[[col]] <- x
+    nome_rank <- if (col == "Coef_abs_lr") "Rank_lr" else sub("^Imp_", "Rank_", col)
+    comp[[nome_rank]] <- rank(-(x + ifelse(usada, 1e-6, 0)), ties.method = "average")
+  }
+  comp <- comp %>% arrange(Rank_SHAP_xgb, desc(Imp_SHAP_xgb))
   log_table(comp)
 
   ranks <- comp %>% select(starts_with("Rank_")) %>% as.matrix()
   rho   <- round(cor(ranks, method = "spearman"), 3)
   log_info("Concordancia entre rankings (correlacao de Spearman):")
   log_table(rho, digits = 3)
-  salvar_csv(comp, "results/comparacao_importancia_modelos.csv")
+  salvar_csv(comp %>% mutate(across(c(starts_with("Imp_"), Coef_abs_lr), ~round(.x, 4))),
+             "results/comparacao_importancia_modelos.csv")
   salvar_csv(as.data.frame(rho) %>% rownames_to_column("Ranking"), "results/concordancia_rankings_spearman.csv")
 
   log_subsection("Como ler os resultados")
