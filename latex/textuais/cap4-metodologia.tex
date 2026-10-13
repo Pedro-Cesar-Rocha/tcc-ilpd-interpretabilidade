@@ -1,5 +1,5 @@
 \chapter{Metodologia} \label{cap4}
-Este capítulo apresenta as técnicas e o protocolo experimental utilizados para a construção e avaliação dos modelos preditivos. Sua organização segue as etapas do processo de descoberta de conhecimento em bases de dados.
+Este capítulo apresenta as técnicas e o protocolo experimental utilizados para a construção e avaliação dos modelos preditivos, organizados segundo as etapas do processo de descoberta de conhecimento em bases de dados.
 
 \section{Base de Dados}
 
@@ -40,7 +40,7 @@ diagnóstico registrado, e não a um estado de saúde verificado.
 
 \subsection{Distribuição das Classes e Desbalanceamento}
 
-O dataset apresenta desbalanceamento significativo de classes. Dos 583 registros originais, 
+O dataset apresenta desbalanceamento significativo de classes: dos 583 registros originais, 
 416 pacientes (71,4\%) foram classificados como doentes hepáticos, enquanto 167 pacientes 
 (28,6\%) foram classificados como saudáveis, resultando em uma razão de aproximadamente 
 2,5:1 entre as classes. Essa distribuição desigual impõe desafios na modelagem, pois 
@@ -95,17 +95,14 @@ oficial do repositório UCI \cite{ramana2022ilpd}. Depois da leitura, conferiu-s
 que o número de observações (583) e de atributos (11, contando a variável-alvo) 
 correspondia ao documentado, e verificou-se o tipo de cada variável. Essa conferência 
 garante que nenhuma coluna foi lida com tipo errado, como uma variável numérica 
-interpretada como texto por causa de um caractere inválido. Erros desse tipo passariam 
-despercebidos e comprometeriam todas as etapas seguintes.
+interpretada como texto por causa de um caractere inválido, erro que passaria despercebido e comprometeria todas as etapas seguintes.
 
 \subsection{Valores Ausentes}
 
-Contou-se a quantidade de valores ausentes em cada variável. Apenas o atributo 
-\textit{AG\_Ratio} apresentou dados faltantes: 4 registros, cerca de 0,69\% da base. 
+Contou-se a quantidade de valores ausentes em cada variável, e apenas o atributo \textit{AG\_Ratio} apresentou dados faltantes: 4 registros, cerca de 0,69\% da base. 
 Como a proporção é muito pequena, descartaram-se as alternativas mais agressivas, 
 como excluir a variável ou usar métodos de imputação mais complexos (imputação 
-múltipla, imputação por $k$ vizinhos mais próximos). Optou-se pela imputação pela 
-\textbf{mediana}. A mediana é preferível à média porque é uma medida de tendência 
+múltipla, imputação por $k$ vizinhos mais próximos). Optou-se pela imputação pela \textbf{mediana}, preferível à média porque é uma medida de tendência 
 central robusta, pouco afetada pelos valores extremos e pela assimetria típicos de 
 dados laboratoriais \cite{batistamonard2003}.
 
@@ -151,8 +148,7 @@ a curva ROC (AUC), a sensibilidade e a especificidade \cite{FAWCETT2006861}.
 
 Também se construiu uma tabela de contingência entre o sexo do paciente e a 
 variável-alvo. A base é composta majoritariamente por pacientes do sexo masculino 
-(cerca de 76\%). Esse desequilíbrio é relevante para o objetivo de interpretabilidade 
-deste trabalho: se um grupo demográfico está sub-representado, o modelo pode ter 
+(cerca de 76\%), desequilíbrio relevante para o objetivo de interpretabilidade deste trabalho: se um grupo demográfico está sub-representado, o modelo pode ter 
 desempenho desigual entre os grupos e aprender relações enviesadas \cite{Rajkomar2018Ensuring, investigatingbiashealth}. Por esse 
 motivo, a avaliação dos modelos e a análise de interpretabilidade foram feitas também 
 de forma estratificada por sexo.
@@ -226,7 +222,7 @@ não normalidade severa. As demais variáveis não ultrapassaram 1,0 em valor
 absoluto. Dada essa separação nítida, a seleção das variáveis a serem
 transformadas não depende da escolha exata do limiar.
 
-Esse comportamento é esperado do ponto de vista clínico. Em indivíduos
+Esse comportamento é esperado do ponto de vista clínico: em indivíduos
 saudáveis, bilirrubinas e enzimas hepáticas permanecem dentro de faixas de
 referência definidas, mas, em pacientes com lesão ou disfunção hepática,
 podem atingir valores várias vezes acima do limite superior da normalidade
@@ -242,8 +238,7 @@ decidiu-se \textbf{não remover os \textit{outliers}} dessas variáveis.
 \subsection{Comparação entre Classes}
 
 Para uma primeira avaliação do poder discriminativo de cada variável, compararam-se
-as médias dos grupos de pacientes doentes e saudáveis com o \textbf{teste $t$ de
-Welch}. Esse teste foi escolhido no lugar do teste $t$ de Student clássico porque não
+as médias dos grupos de pacientes doentes e saudáveis com o \textbf{teste $t$ de Welch}, ao nível de significância de 5\%. Esse teste foi escolhido no lugar do teste $t$ de Student clássico porque não
 supõe que as variâncias dos dois grupos sejam iguais. Essa suposição seria pouco
 plausível aqui: os grupos são pré-existentes (definidos pelo diagnóstico, e não por
 atribuição aleatória), têm tamanhos diferentes (416 doentes e 167 saudáveis) e vários
@@ -252,8 +247,7 @@ maior dispersão no grupo de doentes \cite{psychologists}. É quando variâncias
 tamanhos diferem ao mesmo tempo que o teste de Student pode produzir valores-$p$
 inadequados. Nessas variáveis, a maior variância está no grupo maior, e o efeito
 esperado seria o de um teste conservador, que rejeita a hipótese nula menos vezes do
-que o nível nominal \cite{psychologists}. Considerou-se o nível de significância de
-5\%.
+que o nível nominal \cite{psychologists}.
 
 Em oito das nove variáveis analisadas, a diferença entre as médias das classes foi
 significativa ao nível de 5\% ($p < 0{,}05$); a exceção foi \textit{Total\_Proteins}
@@ -312,8 +306,7 @@ saudáveis, o que motiva o uso de modelos multivariados.
 \subsection{Análise de Correlação}
 
 Por fim, calculou-se a matriz de correlação de Pearson entre as variáveis numéricas
-(Figura~\ref{fig:eda_correlacao}). As observações com valores ausentes foram excluídas apenas para esse
-cálculo. O objetivo foi identificar \textbf{multicolinearidade}, ou seja, pares de
+(Figura~\ref{fig:eda_correlacao}), com exclusão das observações com valores ausentes apenas para esse cálculo, a fim de identificar \textbf{multicolinearidade}, ou seja, pares de
 variáveis que carregam praticamente a mesma informação. Adotou-se $|r| > 0{,}7$ como
 limiar de correlação forte \cite{Dormann2013Collinearity, Mukaka2012Statistics}.
 
@@ -327,8 +320,7 @@ limiar de correlação forte \cite{Dormann2013Collinearity, Mukaka2012Statistics
 Encontrou-se correlação forte nos pares \textit{Total\_Bilirubin} ×
 \textit{Direct\_Bilirubin} ($r = 0{,}874$), \textit{Alamine\_Aminotransferase} ×
 \textit{Aspartate\_Aminotransferase} ($r = 0{,}792$) e \textit{Total\_Proteins} ×
-\textit{Albumin} ($r = 0{,}783$). Essas correlações têm explicação fisiológica. A
-bilirrubina direta é uma das frações que compõem a bilirrubina total
+\textit{Albumin} ($r = 0{,}783$). Essas correlações têm explicação fisiológica: a bilirrubina direta é uma das frações que compõem a bilirrubina total
 \cite{Kwo2016ACG}. A ALT e a AST são enzimas liberadas pelos hepatócitos em
 resposta à lesão hepatocelular, e por isso se elevam em conjunto nesse padrão de
 lesão \cite{Kwo2016ACG, Newsome2018Guidelines}. Já a albumina responde por mais da
@@ -387,9 +379,7 @@ variáveis (Tabela~\ref{tab:descritivas}) podem inflar o coeficiente, efeito
 associado à curtose excessiva \cite{Bishara2015Reducing}. Esse viés é relevante
 sobretudo em amostras pequenas e tende a ser desprezível a partir de cerca de 160
 observações \cite{Bishara2015Reducing}, de modo que é pouco provável que comprometa
-os coeficientes obtidos aqui, com mais de 500 observações. Além disso, o par
-\textit{Total\_Proteins} × \textit{Albumin} envolve variáveis aproximadamente
-simétricas.
+os coeficientes obtidos aqui, com mais de 500 observações, além de o par \textit{Total\_Proteins} × \textit{Albumin} envolver variáveis aproximadamente simétricas.
 
 \section{Pré-processamento}
 
@@ -414,8 +404,7 @@ os da \textit{Direct\_Bilirubin} (mínimo de 0,1 mg/dL). Essa constante, porém,
 é neutra: em variáveis com valores pequenos, como as bilirrubinas, ela altera a
 forma da transformação, e a literatura adverte que a transformação logarítmica não
 garante, por si só, a redução da assimetria e que o resultado pode depender da
-constante adicionada \cite{logtransformation}. Por isso, o efeito foi verificado
-empiricamente. Calculados sobre a base já sem os registros duplicados
+constante adicionada \cite{logtransformation}. Por isso, o efeito foi verificado empiricamente: calculados sobre a base já sem os registros duplicados
 ($n = 570$), os coeficientes de assimetria passaram a variar entre 1,24 e 1,72
 (Tabela~\ref{tab:assimetria_log}), todos abaixo do limiar de 2 adotado, embora
 ainda indiquem assimetria residual moderada.
@@ -577,9 +566,7 @@ estatisticamente nas Seções~\ref{sec:comparacao_cv} e~\ref{sec:comparacao_auc}
 \subsection{Regressão Logística}
 \label{sec:regressao_logistica}
 
-A Regressão Logística é o modelo estatístico clássico para variáveis-resposta binárias
-\cite{Cox1958Regression}.
-Ela modela o logaritmo da razão de chances (\textit{log-odds}) de o paciente ser doente
+A Regressão Logística é o modelo estatístico clássico para variáveis-resposta binárias \cite{Cox1958Regression} e modela o logaritmo da razão de chances (\textit{log-odds}) de o paciente ser doente
 como uma combinação linear dos preditores \cite{Hosmer2005Applied}:
 
 \begin{equation}
@@ -749,8 +736,7 @@ análise de interpretabilidade.
 
 O LightGBM (\textit{Light Gradient Boosting Machine}) \cite{Ke2017LightGBM} é outra
 implementação de \textit{gradient boosting} com árvores de decisão e segue a mesma
-formulação aditiva da Equação~\ref{eq:boosting}. Seu diferencial está na eficiência
-computacional. Em vez de avaliar todos os pontos de divisão possíveis de cada
+formulação aditiva da Equação~\ref{eq:boosting}. Seu diferencial está na eficiência computacional: em vez de avaliar todos os pontos de divisão possíveis de cada
 preditor, o algoritmo agrupa os valores contínuos em um número limitado de faixas e
 constrói histogramas a partir delas, de modo que as divisões candidatas passam a ser
 avaliadas apenas entre as faixas, o que reduz o tempo de treinamento e o uso de
@@ -1010,8 +996,7 @@ valores-$p$ foram ajustados pela correção de Bonferroni, que multiplica cada
 valor-$p$ pelo número de comparações para controlar a probabilidade de ao menos um
 falso positivo no conjunto dos testes \cite{Demsar2006Statistical}.
 
-Esse procedimento deve ser interpretado com cautela. As 15 estimativas não são
-independentes, pois os conjuntos de treino das diferentes partições compartilham a
+Esse procedimento deve ser interpretado com cautela, pois as 15 estimativas não são independentes: os conjuntos de treino das diferentes partições compartilham a
 maior parte dos pacientes, o que leva o teste $t$ a subestimar a variância das
 diferenças e a rejeitar a hipótese nula com frequência maior do que o nível nominal
 \cite{Nadeau2003Inference, Demsar2006Statistical}.
@@ -1207,7 +1192,7 @@ como na comparação feita na validação cruzada (Seção~\ref{sec:comparacao_c
 valores-$p$ foram ajustados pela correção de Bonferroni \cite{Demsar2006Statistical}:
 cada valor-$p$ é multiplicado por seis, com limite superior igual a 1, e comparado ao
 nível de significância de 5\%, o que equivale a exigir $p < 0{,}05/6 \approx 0{,}0083$
-no valor-$p$ original. Ambos os valores foram registrados. A correção é conservadora,
+no valor-$p$ original, e ambos os valores foram registrados. A correção é conservadora,
 pois reduz o poder de detectar diferenças reais, mas limita a 5\% a probabilidade de
 que ao menos uma das seis comparações seja declarada significativa apenas por acaso.
 
@@ -1284,7 +1269,7 @@ O valor de Shapley do jogador $j$ é dado por:
 multiplica equivale à probabilidade de que, em uma ordenação aleatória de todos os
 jogadores, exatamente os membros de $S$ antecedam $j$. O valor de Shapley é, portanto,
 a contribuição marginal média do jogador sobre todas as ordens possíveis de entrada
-na coalizão. Ele é a única forma de divisão que satisfaz simultaneamente três
+na coalizão, e é a única forma de divisão que satisfaz simultaneamente três
 propriedades: eficiência (as contribuições somam o ganho total), simetria (jogadores
 com contribuições idênticas recebem o mesmo valor) e aditividade (o valor de uma soma
 de jogos é a soma dos valores) \cite{Shapley1953Value}. Delas decorre que um jogador
@@ -1375,8 +1360,7 @@ $(r)$ indica a $r$-ésima repetição. A previsão explicada é a probabilidade 
 e o valor base corresponde à probabilidade média prevista pelo modelo no conjunto de
 teste. Duas diferenças em relação ao TreeSHAP devem ser destacadas. Primeiro, o
 estimador é aproximado: está sujeito a erro de Monte Carlo, que diminui com o número
-de repetições, e a soma das contribuições reproduz a previsão apenas
-aproximadamente. Por isso, a semente aleatória foi fixada antes da estimação.
+de repetições, e a soma das contribuições reproduz a previsão apenas aproximadamente, razão pela qual a semente aleatória foi fixada antes da estimação.
 Segundo, como os valores do paciente de referência são inseridos sem considerar os
 valores conhecidos do paciente explicado, a estimativa trata as variáveis como
 independentes, o que corresponde à forma marginal descrita na
@@ -1414,8 +1398,7 @@ sua interpretação baseia-se nos coeficientes.
 \label{sec:analises_shap}
 
 Para cada modelo explicado, os valores SHAP dos pacientes do conjunto de teste foram
-organizados em uma matriz com uma linha por paciente e uma coluna por variável, a
-partir da qual foram produzidas as seguintes análises e visualizações:
+organizados em uma matriz com uma linha por paciente e uma coluna por variável, a partir da qual foram produzidas, com o pacote \texttt{shapviz} \cite{Mayer2026shapviz}, as seguintes análises e visualizações:
 
 \begin{enumerate}
     \item \textbf{Importância global}: a importância de cada variável foi definida
@@ -1461,8 +1444,6 @@ de que a reduzem; e, entre esses limites, de efeito fraco ou não linear. Variá
     erro mais crítico neste contexto, permitindo examinar quais variáveis levaram o
     modelo a subestimar o risco daquele paciente.
 \end{enumerate}
-
-Os gráficos foram produzidos com o pacote \texttt{shapviz} \cite{Mayer2026shapviz}.
 
 \subsection{Auditoria de Viés por Sexo}
 \label{sec:shap_sexo}
