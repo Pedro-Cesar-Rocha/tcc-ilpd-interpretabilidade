@@ -217,9 +217,10 @@ aproximem desses. Nesse mesmo estudo, assimetria de 2,0 (com curtose de 7,0)
 representou não normalidade moderada, e assimetria de 3,0 (com curtose de
 21,0), não normalidade severa \cite[p.~20]{curran1996robustness}. Trata-se,
 portanto, de uma convenção heurística, e não de um limite estabelecido.
-Cinco variáveis ultrapassaram esse limiar: \textit{Total\_Bilirubin},
-\textit{Direct\_Bilirubin}, \textit{Alkaline\_Phosphotase},
-\textit{Alamine\_Aminotransferase} e \textit{Aspartate\_Aminotransferase},
+Cinco variáveis ultrapassaram esse limiar: as duas bilirrubinas
+(\textit{Total\_Bilirubin} e \textit{Direct\_Bilirubin}), a fosfatase alcalina
+(\textit{Alkaline\_Phosphotase}) e as duas aminotransferases
+(\textit{Alamine\_Aminotransferase} e \textit{Aspartate\_Aminotransferase}),
 com coeficientes entre 3,20 e 10,49, todos superiores inclusive ao nível de
 não normalidade severa. As demais variáveis não ultrapassaram 1,0 em valor
 absoluto. Dada essa separação nítida, a seleção das variáveis a serem
@@ -254,10 +255,9 @@ esperado seria o de um teste conservador, que rejeita a hipótese nula menos vez
 que o nível nominal \cite{psychologists}. Considerou-se o nível de significância de
 5\%.
 
-Das nove variáveis analisadas, oito apresentaram diferença estatisticamente
-significativa entre as classes ($p < 0{,}05$), e apenas a variável
-\textit{Total\_Proteins} não apresentou diferença significativa
-($p = 0{,}393$), conforme detalhado na Tabela~\ref{tab:teste_welch}.
+Em oito das nove variáveis analisadas, a diferença entre as médias das classes foi
+significativa ao nível de 5\% ($p < 0{,}05$); a exceção foi \textit{Total\_Proteins}
+($p = 0{,}393$), conforme a Tabela~\ref{tab:teste_welch}.
 
 \begin{table}[htbp]
 \centering
