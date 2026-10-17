@@ -125,6 +125,8 @@
 \renewcommand{\pagedeclaration}{Pag.}            %renomeando lista de acronimos
 \printnomenclature	\label{listaacronimos}						    %gerando a lista de acronimos
 \newpage
+\include{pretextuais/simbolos}                 %lista de símbolos
+\newpage
 \tableofcontents   							    %inserindo o sumário
 \clearpage
 %-----------------------------------------------------------------
@@ -137,10 +139,9 @@
 \pagestyle{fancy}							 %tipo de estilo da página - cabeçalho e rodapé
 \renewcommand{\thepage}{\arabic{page}}
 \citeoption{abnt-etal-cite=2}           % a partir de 2 autores, usa o et al.
-
-\include{textuais/introducao}			% inserindo a introdução
 \include{textuais/cap3-fundamentacao}
 \include{textuais/cap4-metodologia}                 % metodo proposto e           resultados 
+\include{textuais/cap5-resultados}
 \include{textuais/conclusao}            %inserindo a conclusão
 %---------------------------------------------------------------------
 % BIBLIOGRAFIA
@@ -168,6 +169,7 @@
 %\bibliographystyle{abntex2-num}
 %\bibliographystyle{plainnat}
 \bibliography{postextuais/bibliografia3} %inserindo a bibliografia
+\include{postextuais/glossario}               %glossário (elemento pós-textual)
 %%--------------------------------------------------------------------
 %% ELEMENTOS POS-TEXTUAIS
 %%		localize cada um dos arquivos na pasta postextuais
@@ -177,6 +179,6 @@
 %% 		
 %%--------------------------------------------------------------------
 %\printglossary                           %imprimindo o glossário
-%\include{postextuais/apendice}         % apêndice do modelo (figuras ausentes); reativar com apêndice próprio
+%\include{postextuais/apendice} 
 %\include{postextuais/anexo} 
 \end{document}
