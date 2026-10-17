@@ -51,8 +51,8 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
 
   teste   <- readRDS("data/teste.rds")
   genero  <- readRDS("data/teste_genero.rds")
-  X_teste <- teste %>% select(-Dataset)
-  real    <- teste$Dataset
+  X_teste <- teste %>% select(-Diagnostico)
+  real    <- teste$Diagnostico
   melhor  <- if (file.exists("results/melhor_modelo.rds")) readRDS("results/melhor_modelo.rds") else "XGBoost"
 
   arquivos <- c("Regressao Logistica" = "models/modelo_lr.rds", "Random Forest" = "models/modelo_rf.rds",

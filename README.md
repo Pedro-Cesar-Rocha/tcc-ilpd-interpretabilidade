@@ -72,7 +72,7 @@ Doenças hepáticas frequentemente são silenciosas nos estágios iniciais. Exam
 | `Total_Proteins` | Proteínas totais (g/dL) | numérica |
 | `Albumin` | Albumina (g/dL) | numérica |
 | `AG_Ratio` | Razão albumina/globulina | numérica |
-| `Dataset` | **Alvo**: 1 = doente, 2 = saudável | binária |
+| `Diagnostico` | **Alvo**: 1 = doente, 2 = saudável (chamada `Selector` na documentação da UCI) | binária |
 
 Características relevantes descobertas na EDA:
 
@@ -224,7 +224,7 @@ Verifica cada dependência e instala apenas o que falta. Registra no log a vers�
 | Passo | O que faz | Por quê |
 |---|---|---|
 | Remoção de duplicatas | 583 → 570 linhas | Duplicatas inflam artificialmente a confiança e podem vazar entre treino e teste |
-| Encoding | `Gender`: Male=1, Female=0; `Dataset`: `"doente"` / `"saudavel"` | `caret` exige rótulos textuais válidos para calcular probabilidades |
+| Encoding | `Gender`: Male=1, Female=0; `Diagnostico`: `"doente"` / `"saudavel"` | `caret` exige rótulos textuais válidos para calcular probabilidades |
 | Transformação `log1p` | Bilirrubinas, fosfatase alcalina, ALT, AST | Reduz assimetria extrema; melhora modelos lineares e a estabilidade do SMOTE (transformação determinística, sem parâmetros estimados) |
 | **Split estratificado 80/20** | 457 treino / 113 teste | Estratificação garante a mesma proporção de classes nos dois conjuntos (71,1% vs 71,7%) |
 | Imputação | `AG_Ratio` ausente ← **mediana do treino** (1,00), aplicada a treino e teste | Feita **após** o split: o teste não influencia o valor imputado. Mediana é robusta a outliers; apenas 4 casos |

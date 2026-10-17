@@ -24,7 +24,7 @@ ensure_dirs(c("models", "results"))
 
 treino <- readRDS("data/df_proc.rds")
 log_info("Treino (distribuicao real) carregado: %d obs x %d preditores", nrow(treino), ncol(treino) - 1)
-log_kv(paste0("Classe ", levels(treino$Dataset)), as.vector(table(treino$Dataset)))
+log_kv(paste0("Classe ", levels(treino$Diagnostico)), as.vector(table(treino$Diagnostico)))
 log_info("O SMOTE sera aplicado dentro de cada fold da CV e no ajuste final (caret::trainControl(sampling)).")
 
 # --- Configuracao da validacao cruzada --------------------------------------
@@ -70,7 +70,7 @@ treinar <- function(nome, ...) {
   ti <- timer_start()
   set.seed(PIPELINE_SEED)
   # glm gera avisos de separacao quase perfeita apos SMOTE; sao esperados e inofensivos
-  modelo <- suppressWarnings(train(Dataset ~ ., data = treino, trControl = ctrl, metric = "ROC", ...))
+  modelo <- suppressWarnings(train(Diagnostico ~ ., data = treino, trControl = ctrl, metric = "ROC", ...))
 
   melhor <- modelo$results[rownames(modelo$bestTune), , drop = FALSE]
   if (ncol(modelo$bestTune) > 0 && !identical(names(modelo$bestTune), "parameter")) {

@@ -35,8 +35,8 @@ xgboost::xgb.set.config(verbosity = 0)
 RECALL_ALVO <- 0.90   # sensibilidade minima desejada em cenario de triagem clinica
 
 log_info("Conjunto de teste: %d observacoes (nunca vistas no treino nem no SMOTE)", nrow(teste))
-log_kv(paste0("Classe ", levels(teste$Dataset)),
-       sprintf("%d (%.1f%%)", table(teste$Dataset), 100 * prop.table(table(teste$Dataset))))
+log_kv(paste0("Classe ", levels(teste$Diagnostico)),
+       sprintf("%d (%.1f%%)", table(teste$Diagnostico), 100 * prop.table(table(teste$Diagnostico))))
 log_kv(paste0("Sexo ", levels(genero)),
        sprintf("%d (%.1f%%)", table(genero), 100 * prop.table(table(genero))))
 
@@ -75,10 +75,10 @@ avaliar <- function(modelo, nome) {
   classe <- predict(modelo, teste)
   # [Fund. 2.5.3 Metricas de Desempenho (sec:fund_matriz)] matriz de confusao
   #   (Tabela tab:matriz_confusao): VP, FN, VN, FP.
-  cm     <- confusionMatrix(classe, teste$Dataset, positive = "doente")
+  cm     <- confusionMatrix(classe, teste$Diagnostico, positive = "doente")
   # [Fund. 2.5.4 Curva ROC, AUC e Teste de DeLong (sec:fund_roc, sec:fund_delong)]
   #   curva ROC, AUC-ROC e intervalo de confianca de 95% pelo metodo de DeLong.
-  roc_o  <- roc(teste$Dataset, prob, levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
+  roc_o  <- roc(teste$Diagnostico, prob, levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
   ic     <- ci.auc(roc_o, method = "delong")
 
   log_info("Matriz de confusao (linhas = predito, colunas = real):")
@@ -114,14 +114,14 @@ avaliar <- function(modelo, nome) {
   # Limiar otimo pelo indice de Youden (Sens + Spec - 1)
   # [Fund. 2.5.5 Limiar de Decisao] indice de Youden, Eq. 2.6 (eq:youden).
   yj   <- coords(roc_cv, "best", best.method = "youden", ret = c("threshold", "sensitivity", "specificity"))
-  m_yj <- metricas_no_limiar(prob, teste$Dataset, yj$threshold[1])
+  m_yj <- metricas_no_limiar(prob, teste$Diagnostico, yj$threshold[1])
   log_info("Limiar otimo (Youden, CV): %.3f -> CV: Sens = %.3f | Spec = %.3f || teste: Sens = %.3f | Spec = %.3f",
            yj$threshold[1], yj$sensitivity[1], yj$specificity[1], m_yj["Sensibilidade"], m_yj["Especificidade"])
 
   # Limiar clinico: menor sacrificio de especificidade que garante Recall >= alvo na CV
   # [Fund. 2.5.5] maior limiar que atinge a meta minima de sensibilidade.
   lr   <- limiar_recall(roc_cv, RECALL_ALVO)
-  m_lr <- metricas_no_limiar(prob, teste$Dataset, lr$threshold)
+  m_lr <- metricas_no_limiar(prob, teste$Diagnostico, lr$threshold)
   log_info("Limiar clinico (Recall >= %.0f%% na CV): %.3f -> CV: Sens = %.3f | Spec = %.3f || teste: Sens = %.3f | Spec = %.3f | Precisao = %.3f",
            100 * RECALL_ALVO, lr$threshold, lr$sensitivity, lr$specificity,
            m_lr["Sensibilidade"], m_lr["Especificidade"], m_lr["Precisao"])
@@ -202,7 +202,7 @@ pr_df <- map_dfr(resultados, function(r) {
   data.frame(Modelo = r$nome, Recall = co$recall, Precision = co$precision) %>% filter(!is.na(Precision))
 })
 p_pr <- ggplot(pr_df, aes(Recall, Precision, colour = Modelo)) +
-  geom_hline(yintercept = mean(teste$Dataset == "doente"), linetype = "dashed", colour = "grey60") +
+  geom_hline(yintercept = mean(teste$Diagnostico == "doente"), linetype = "dashed", colour = "grey60") +
   geom_line(linewidth = 0.9) +
   labs(title = "Curvas Precision-Recall no conjunto de teste",
        subtitle = "Linha tracejada: prevalencia da classe positiva") +
@@ -227,7 +227,7 @@ log_subsection("Analise de limiar de decisao - todos os modelos")
 limiares <- seq(0.1, 0.9, by = 0.1)
 sens_lim <- map_dfr(resultados, function(r) {
   map_dfr(limiares, function(l) {
-    m <- metricas_no_limiar(r$prob, teste$Dataset, l)
+    m <- metricas_no_limiar(r$prob, teste$Diagnostico, l)
     data.frame(Modelo = r$nome, Limiar = l, Sensibilidade = round(m["Sensibilidade"], 3),
                Especificidade = round(m["Especificidade"], 3), F1 = round(m["F1"], 3),
                FN = m["FN"], FP = m["FP"], row.names = NULL)
@@ -258,12 +258,12 @@ salvar_plot(p_lim, "plots/limiar_sens_spec_modelos.png", width = 9, height = 6)
 #   DeLong para amostras independentes e Bonferroni (2.5.4 e 2.2.5).
 log_subsection("Desempenho estratificado por sexo (Straw & Wu, 2022)")
 log_info("Prevalencia de 'doente' por sexo no teste:")
-log_table(prop.table(table(Sexo = genero, Classe = teste$Dataset), 1), digits = 3)
+log_table(prop.table(table(Sexo = genero, Classe = teste$Diagnostico), 1), digits = 3)
 
 por_sexo <- map_dfr(resultados, function(r) {
   map_dfr(levels(genero), function(g) {
     idx  <- genero == g
-    real <- teste$Dataset[idx]; prob <- r$prob[idx]
+    real <- teste$Diagnostico[idx]; prob <- r$prob[idx]
     roc_g <- roc(real, prob, levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
     ic_g  <- ci.auc(roc_g, method = "delong")
     m05   <- metricas_no_limiar(prob, real, 0.5)
@@ -287,8 +287,8 @@ salvar_csv(por_sexo, "results/metricas_por_sexo.csv")
 # Um teste por modelo: p-valores ajustados por Bonferroni (4 comparacoes).
 gap_sexo <- map_dfr(resultados, function(r) {
   idx_f <- genero == "Feminino"; idx_m <- genero == "Masculino"
-  roc_f <- roc(teste$Dataset[idx_f], r$prob[idx_f], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
-  roc_m <- roc(teste$Dataset[idx_m], r$prob[idx_m], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
+  roc_f <- roc(teste$Diagnostico[idx_f], r$prob[idx_f], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
+  roc_m <- roc(teste$Diagnostico[idx_m], r$prob[idx_m], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
   tt <- roc.test(roc_f, roc_m, method = "delong", paired = FALSE)
   ps <- por_sexo %>% filter(Modelo == r$nome)
   data.frame(Modelo = r$nome,
@@ -321,7 +321,7 @@ salvar_plot(p_sexo, "plots/metricas_por_sexo.png", width = 8, height = 8)
 p_roc_sexo <- map_dfr(resultados, function(r) {
   map_dfr(levels(genero), function(g) {
     idx <- genero == g
-    roc_g <- roc(teste$Dataset[idx], r$prob[idx], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
+    roc_g <- roc(teste$Diagnostico[idx], r$prob[idx], levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
     data.frame(Modelo = r$nome, Sexo = sprintf("%s (AUC = %.3f)", g, as.numeric(auc(roc_g))),
                FPR = 1 - roc_g$specificities, TPR = roc_g$sensitivities)
   })

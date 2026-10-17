@@ -35,10 +35,10 @@ log_subsection("Codificacao de variaveis categoricas")
 df$Gender  <- ifelse(df$Gender == "Male", 1, 0)
 log_info("Gender  -> Male = 1, Female = 0  (%d homens, %d mulheres)", sum(df$Gender == 1), sum(df$Gender == 0))
 # Rotulos textuais sao exigidos pelo caret quando classProbs = TRUE
-df$Dataset <- factor(ifelse(df$Dataset == 1, "doente", "saudavel"),
+df$Diagnostico <- factor(ifelse(df$Diagnostico == 1, "doente", "saudavel"),
                      levels = c("saudavel", "doente"))
-log_info("Dataset -> 'doente' (classe positiva) / 'saudavel'")
-log_kv(paste0("Classe ", levels(df$Dataset)), as.vector(table(df$Dataset)))
+log_info("Diagnostico -> 'doente' (classe positiva) / 'saudavel'")
+log_kv(paste0("Classe ", levels(df$Diagnostico)), as.vector(table(df$Diagnostico)))
 
 # --- Transformacao log das variaveis assimetricas ---------------------------
 # [Fund. 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_log)]
@@ -61,12 +61,12 @@ for (v in vars_log) {
 #   de classes. [Fund. 2.1] semente fixada antes do sorteio.
 log_subsection("Divisao treino / teste (80/20, estratificada pela classe)")
 set.seed(PIPELINE_SEED)
-idx    <- createDataPartition(df$Dataset, p = 0.8, list = FALSE)
+idx    <- createDataPartition(df$Diagnostico, p = 0.8, list = FALSE)
 treino <- df[idx, ]
 teste  <- df[-idx, ]
 log_info("Treino: %d obs  |  Teste: %d obs", nrow(treino), nrow(teste))
 log_info("Proporcao 'doente' - treino: %.1f%%  |  teste: %.1f%%",
-         100 * mean(treino$Dataset == "doente"), 100 * mean(teste$Dataset == "doente"))
+         100 * mean(treino$Diagnostico == "doente"), 100 * mean(teste$Diagnostico == "doente"))
 
 # --- Imputacao (mediana estimada SOMENTE no treino) -------------------------
 # [Fund. 2.3.1 Valores Ausentes e Imputacao (sec:fund_ausentes)] mediana, robusta
@@ -84,8 +84,8 @@ log_ok("Total de NAs restantes: treino = %d | teste = %d", sum(is.na(treino)), s
 # [Fund. 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_padronizacao)]
 #   z-score z = (x - media) / desvio-padrao, com media e desvio estimados so no treino.
 log_subsection("Normalizacao (center + scale) ajustada no conjunto de treino")
-X_treino <- treino %>% select(-Dataset)
-X_teste  <- teste  %>% select(-Dataset)
+X_treino <- treino %>% select(-Diagnostico)
+X_teste  <- teste  %>% select(-Diagnostico)
 
 preproc  <- preProcess(X_treino, method = c("center", "scale"))
 X_treino_s <- predict(preproc, X_treino)
@@ -99,8 +99,8 @@ verif <- data.frame(Variavel = names(X_treino_s),
                     row.names = NULL)
 log_table(verif, digits = 3)
 
-treino_proc <- cbind(X_treino_s, Dataset = treino$Dataset)
-teste_proc  <- cbind(X_teste_s,  Dataset = teste$Dataset)
+treino_proc <- cbind(X_treino_s, Diagnostico = treino$Diagnostico)
+teste_proc  <- cbind(X_teste_s,  Diagnostico = teste$Diagnostico)
 
 # --- Persistencia -------------------------------------------------------------
 log_subsection("Salvando artefatos")

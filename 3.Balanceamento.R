@@ -24,7 +24,7 @@ log_info("Conjunto de treino carregado: %d x %d", nrow(treino), ncol(treino))
 # --- Distribuicao antes -------------------------------------------------------
 # [Fund. 2.3.4] desbalanceamento: classe majoritaria x minoritaria.
 log_subsection("Distribuicao antes do SMOTE")
-tab_antes <- table(treino$Dataset)
+tab_antes <- table(treino$Diagnostico)
 log_kv(paste0("Classe ", names(tab_antes)),
        sprintf("%d (%.1f%%)", tab_antes, 100 * prop.table(tab_antes)))
 log_info("Razao majoritaria/minoritaria: %.2f : 1", max(tab_antes) / min(tab_antes))
@@ -33,15 +33,15 @@ log_info("Razao majoritaria/minoritaria: %.2f : 1", max(tab_antes) / min(tab_ant
 # [Fund. 2.3.4] oversampling da classe minoritaria com k = 5 vizinhos mais proximos.
 log_subsection("Executando SMOTE (K = 5, dup_size = 0 -> balanceamento automatico)")
 set.seed(PIPELINE_SEED)
-res <- aplicar_smote(treino %>% select(-Dataset), treino$Dataset, K = 5)
-df_bal <- cbind(res$x, Dataset = res$y)
+res <- aplicar_smote(treino %>% select(-Diagnostico), treino$Diagnostico, K = 5)
+df_bal <- cbind(res$x, Diagnostico = res$y)
 n_sinteticas <- res$n_sinteticas
 sinteticas <- res$sinteticas
 log_ok("SMOTE concluido: %d amostras sinteticas geradas para a classe minoritaria.", n_sinteticas)
 
 # --- Distribuicao depois ------------------------------------------------------
 log_subsection("Distribuicao apos o SMOTE")
-tab_depois <- table(df_bal$Dataset)
+tab_depois <- table(df_bal$Diagnostico)
 log_kv(paste0("Classe ", names(tab_depois)),
        sprintf("%d (%.1f%%)", tab_depois, 100 * prop.table(tab_depois)))
 log_info("Razao majoritaria/minoritaria: %.2f : 1", max(tab_depois) / min(tab_depois))
@@ -51,8 +51,8 @@ log_info("Tamanho do treino: %d -> %d observacoes", nrow(treino), nrow(df_bal))
 log_subsection("Verificacao das amostras sinteticas")
 minoritaria <- names(tab_antes)[which.min(tab_antes)]
 comp <- data.frame(
-  Variavel        = names(select(df_bal, -Dataset)),
-  Media_Minoritaria_Original = round(colMeans(select(treino[treino$Dataset == minoritaria, ], -Dataset)), 3),
+  Variavel        = names(select(df_bal, -Diagnostico)),
+  Media_Minoritaria_Original = round(colMeans(select(treino[treino$Diagnostico == minoritaria, ], -Diagnostico)), 3),
   Media_Sintetica = round(colMeans(sinteticas), 3),
   row.names = NULL
 )

@@ -40,16 +40,16 @@ log_info("Reprodutibilidade: a semente fixa PIPELINE_SEED = %d (definida em Util
 # [Fund. 2.2.1 Dominio do Problema (sec:fund_figado)] as variaveis sao os
 #   marcadores laboratoriais (bilirrubinas, enzimas, proteinas) descritos no texto.
 # [Fund. 2.2.2 Conceitos Basicos de Dados (sec:fund_conceitos)] cada linha e uma
-#   observacao (paciente), cada coluna uma variavel; Dataset e a variavel-alvo.
+#   observacao (paciente), cada coluna uma variavel; Diagnostico e a variavel-alvo.
 arquivo <- "data/Indian Liver Patient Dataset (ILPD).csv"
 colunas <- c("Age", "Gender", "Total_Bilirubin", "Direct_Bilirubin",
              "Alkaline_Phosphotase", "Alamine_Aminotransferase",
              "Aspartate_Aminotransferase", "Total_Proteins",
-             "Albumin", "AG_Ratio", "Dataset")
+             "Albumin", "AG_Ratio", "Diagnostico")
 
 log_info("Lendo arquivo: %s", arquivo)
 df <- read.csv(arquivo, header = FALSE, col.names = colunas)
-log_ok("Dataset carregado: %d observacoes x %d variaveis", nrow(df), ncol(df))
+log_ok("Base carregada: %d observacoes x %d variaveis", nrow(df), ncol(df))
 
 # --- Estrutura ---------------------------------------------------------------
 log_subsection("Estrutura das variaveis")
@@ -80,8 +80,8 @@ if (n_dup > 0) log_warn("%d linhas duplicadas detectadas (mantidas nesta etapa).
 # --- Variavel alvo -----------------------------------------------------------
 # [Fund. 2.2.2 Conceitos Basicos (sec:fund_conceitos)] classe positiva/negativa,
 #   base desbalanceada, classe majoritaria/minoritaria e prevalencia.
-log_subsection("Distribuicao da variavel alvo (Dataset: 1 = doente, 2 = saudavel)")
-tab_alvo <- table(df$Dataset)
+log_subsection("Distribuicao da variavel alvo (Diagnostico: 1 = doente, 2 = saudavel)")
+tab_alvo <- table(df$Diagnostico)
 log_kv(paste0("Classe ", names(tab_alvo)),
        sprintf("%d (%.1f%%)", tab_alvo, 100 * prop.table(tab_alvo)))
 razao <- max(tab_alvo) / min(tab_alvo)
@@ -91,7 +91,7 @@ log_info("Razao de desbalanceamento: %.2f : 1", razao)
 # [Fund. 2.7 Vies Algoritmico e Equidade em Saude (sec:fund_vies)] grupo
 #   sub-representado (mulheres), motivo da analise estratificada por sexo.
 log_subsection("Distribuicao por genero")
-tab_gen <- table(df$Gender, df$Dataset, dnn = c("Gender", "Dataset"))
+tab_gen <- table(df$Gender, df$Diagnostico, dnn = c("Gender", "Diagnostico"))
 log_table(tab_gen)
 
 # --- Estatisticas descritivas ------------------------------------------------
@@ -99,7 +99,7 @@ log_table(tab_gen)
 #   media, desvio-padrao, mediana e coeficiente de assimetria b1 (Eq. 2.1,
 #   eq:assimetria), calculado na linha 'Assimetria' abaixo.
 log_subsection("Estatisticas descritivas das variaveis numericas")
-num_cols <- names(df)[sapply(df, is.numeric) & names(df) != "Dataset"]
+num_cols <- names(df)[sapply(df, is.numeric) & names(df) != "Diagnostico"]
 desc <- df %>%
   select(all_of(num_cols)) %>%
   pivot_longer(everything(), names_to = "Variavel", values_to = "Valor") %>%
@@ -127,7 +127,7 @@ if (length(assimetricas) > 0) {
 #   teste t de Welch (variancias desiguais), valor-p e nivel de significancia 0,05.
 log_subsection("Media das variaveis por classe (teste t de Welch)")
 comp <- lapply(num_cols, function(v) {
-  g1 <- df[[v]][df$Dataset == 1]; g2 <- df[[v]][df$Dataset == 2]
+  g1 <- df[[v]][df$Diagnostico == 1]; g2 <- df[[v]][df$Diagnostico == 2]
   tt <- t.test(g1, g2)
   data.frame(Variavel = v, Media_Doente = mean(g1, na.rm = TRUE),
              Media_Saudavel = mean(g2, na.rm = TRUE), p_valor = tt$p.value)
@@ -174,7 +174,7 @@ invisible(dev.off())
 log_ok("Grafico salvo: plots/eda_correlacao.png")
 
 # --- Graficos exploratorios -------------------------------------------------
-p_alvo <- ggplot(df, aes(x = factor(Dataset, labels = c("Doente", "Saudavel")), fill = factor(Dataset))) +
+p_alvo <- ggplot(df, aes(x = factor(Diagnostico, labels = c("Doente", "Saudavel")), fill = factor(Diagnostico))) +
   geom_bar(show.legend = FALSE) +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.4) +
   labs(title = "Distribuicao da variavel alvo", x = NULL, y = "Frequencia") +
@@ -183,7 +183,7 @@ salvar_plot(p_alvo, "plots/eda_distribuicao_alvo.png", width = 6, height = 4)
 
 # [Fund. 2.2.3] boxplots: valores extremos (outliers) e assimetria por classe.
 p_box <- df %>%
-  mutate(Classe = factor(Dataset, labels = c("Doente", "Saudavel"))) %>%
+  mutate(Classe = factor(Diagnostico, labels = c("Doente", "Saudavel"))) %>%
   select(all_of(num_cols), Classe) %>%
   pivot_longer(-Classe, names_to = "Variavel", values_to = "Valor") %>%
   ggplot(aes(x = Classe, y = Valor, fill = Classe)) +
