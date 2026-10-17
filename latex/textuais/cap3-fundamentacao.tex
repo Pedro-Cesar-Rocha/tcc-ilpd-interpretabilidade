@@ -1,0 +1,326 @@
+\chapter{Fundamentação Teórica} \label{cap:fundamentacao}
+
+Este capítulo apresenta os conceitos que sustentam o trabalho, organizados segundo as etapas do processo de mineração de dados: compreensão e exploração dos dados, preparação dos dados, modelagem, treinamento, validação e avaliação e interpretação dos modelos, seguidas de uma discussão sobre viés algorítmico em saúde e da descrição das ferramentas computacionais utilizadas. Os termos básicos estão reunidos no Glossário (página~\pageref{glossario}), e os símbolos matemáticos, na Lista de Símbolos (página~\pageref{listasimbolos}). As escolhas e os parâmetros adotados neste trabalho são apresentados no Capítulo~\ref{metodologia}.
+
+\section{Mineração de Dados e Descoberta de Conhecimento}
+\label{sec:fund_kdd}
+
+A descoberta de conhecimento em bases de dados (\textit{Knowledge Discovery in Databases}, KDD) é o processo de identificar, em grandes conjuntos de dados, padrões válidos, novos, potencialmente úteis e compreensíveis \cite{Fayyad1996KDD}. A mineração de dados é a etapa em que algoritmos extraem esses padrões, mas o resultado depende também das etapas que a antecedem (seleção, limpeza e transformação dos dados) e que a sucedem (interpretação dos padrões encontrados) \cite{Fayyad1996KDD}. O processo é iterativo: um resultado insatisfatório costuma exigir o retorno a etapas anteriores.
+
+Este trabalho segue esse processo em cinco etapas, que organizam este capítulo e a metodologia adotada, e a sequência dessas etapas implementada em código é chamada de \textit{pipeline}. O problema tratado é classificar pacientes em portadores ou não de doença hepática a partir de exames laboratoriais. A Figura~\ref{fig:fund_kdd} apresenta o fluxo adotado, com as operações realizadas em cada etapa. Ele é uma adaptação do processo de KDD \cite{Fayyad1996KDD} ao problema tratado, e a ordem das operações dentro de cada etapa, em particular na preparação dos dados, foi definida para evitar o vazamento de dados (Seção~\ref{sec:fund_vazamento}) \cite{KaufmanScharRosset2012, KAPOOR2023100804}: as operações que não dependem de parâmetros estimados dos dados (remoção de duplicatas e transformação logarítmica) são feitas antes da divisão em treino e teste, e as que dependem (imputação, padronização e reamostragem) são ajustadas somente no treino.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    etapa/.style={rectangle, rounded corners, draw, thick, align=center, text width=2.65cm, minimum height=1.8cm, font=\footnotesize\bfseries},
+    itens/.style={rectangle, draw, align=left, text width=2.65cm, minimum height=2.7cm, font=\scriptsize, inner sep=3pt},
+    seta/.style={->, thick, >=stealth}]
+\node[etapa] (a) {1. Compreensão e exploração};
+\node[etapa, right=0.3cm of a] (b) {2. Preparação dos dados};
+\node[etapa, right=0.3cm of b] (c) {3. Modelagem};
+\node[etapa, right=0.3cm of c] (d) {4. Treinamento, validação e avaliação};
+\node[etapa, right=0.3cm of d] (e) {5. Interpretação dos modelos};
+\node[itens, below=0.15cm of a, anchor=north] {\textbullet~Caracterização e qualidade da base\\ \textbullet~Estatísticas e assimetria\\ \textbullet~Comparação entre classes\\ \textbullet~Correlação};
+\node[itens, below=0.15cm of b, anchor=north] {\textbullet~Remoção de duplicatas\\ \textbullet~Transformação logarítmica\\ \textbullet~Divisão treino/teste\\ \textbullet~Imputação\\ \textbullet~Padronização\\ \textbullet~SMOTE (só no treino)};
+\node[itens, below=0.15cm of c, anchor=north] {\textbullet~Regressão Logística\\ \textbullet~\textit{Random Forest}\\ \textbullet~XGBoost\\ \textbullet~LightGBM};
+\node[itens, below=0.15cm of d, anchor=north] {\textbullet~Validação cruzada repetida\\ \textbullet~Busca aleatória de hiperparâmetros\\ \textbullet~Seleção pela AUC-ROC\\ \textbullet~Avaliação no teste e limiares\\ \textbullet~Comparação entre modelos};
+\node[itens, below=0.15cm of e, anchor=north] {\textbullet~SHAP (TreeSHAP e Monte Carlo)\\ \textbullet~Importância global e local\\ \textbullet~Auditoria por sexo\\ \textbullet~Comparação de rankings};
+\draw[seta] (a) -- (b);
+\draw[seta] (b) -- (c);
+\draw[seta] (c) -- (d);
+\draw[seta] (d) -- (e);
+\draw[seta, dashed] (d.north) -- ++(0,0.6) -| node[pos=0.25, above, font=\footnotesize] {retorno às etapas anteriores, quando necessário} (a.north);
+\end{tikzpicture}
+
+\caption{Fluxo (\textit{pipeline}) adotado neste trabalho, organizado nas etapas do processo de descoberta de conhecimento.}
+\label{fig:fund_kdd}
+{\small Fonte: elaborado pelo autor, com base em \citeonline{Fayyad1996KDD}.}
+\end{figure}
+
+Várias etapas do fluxo envolvem sorteios, como a divisão dos dados, a validação cruzada, o SMOTE, a busca de hiperparâmetros, as árvores aleatórias e a simulação de Monte Carlo. Por isso, fixa-se a semente aleatória, isto é, o valor inicial do gerador de números pseudoaleatórios, para que o experimento possa ser repetido com os mesmos resultados \cite{Pineau2020Improving}.
+
+As próximas seções conceituam cada fase do \textit{pipeline}, na ordem da Figura~\ref{fig:fund_kdd}: a compreensão e a exploração dos dados (Seção~\ref{sec:fund_estatistica}), a preparação dos dados (Seção~\ref{sec:fund_preparacao}), a modelagem (Seção~\ref{sec:fund_modelos}), o treinamento, a validação e a avaliação (Seção~\ref{sec:fund_validacao}) e a interpretação dos modelos (Seção~\ref{sec:fund_interpretabilidade}). Em seguida, a Seção~\ref{sec:fund_vies} discute o viés algorítmico em saúde, que orienta a análise por sexo feita neste trabalho, e a Seção~\ref{sec:fund_ferramentas} apresenta as ferramentas computacionais usadas para implementar o \textit{pipeline}.
+
+\section{Compreensão e Exploração dos Dados}
+\label{sec:fund_estatistica}
+
+A primeira etapa consiste em entender o problema e os dados disponíveis. A Análise Exploratória de Dados (AED) reúne técnicas descritivas, como resumos numéricos, gráficos e testes estatísticos, para conhecer a estrutura, a qualidade e o comportamento das variáveis antes da modelagem \cite{exploratorydataanalysis}. Ela serve apenas para descrever: nenhum valor calculado nela deve ser usado para transformar os dados que alimentam os modelos (Seção~\ref{sec:fund_vazamento}).
+
+\subsection{Domínio do Problema: Doença Hepática e Marcadores Laboratoriais}
+\label{sec:fund_figado}
+
+O fígado produz proteínas, como a albumina, e elimina a bilirrubina, um pigmento resultante da degradação da hemoglobina. Doença hepática é o termo geral para as condições que lesam o fígado ou prejudicam seu funcionamento, e sua investigação inicial recorre a exames de sangue, os marcadores laboratoriais, cujos valores podem chegar a várias vezes o limite superior da normalidade \cite{Giannini2005Liver, Kwo2016ACG}.
+
+Cada marcador reflete um aspecto do órgão. A alanina aminotransferase (ALT/TGP) e a aspartato aminotransferase (AST/TGO) são enzimas que ficam dentro das células do fígado e vão para o sangue quando elas são lesadas, por isso se elevam em conjunto \cite{Kwo2016ACG, Newsome2018Guidelines}. A fosfatase alcalina é uma enzima ligada às vias biliares e se eleva quando elas estão obstruídas \cite{Kwo2016ACG}. As proteínas totais, a albumina e a razão albumina/globulina refletem a produção de proteínas pelo fígado \cite{Busher1990Albumin}. Como consequência, vários exames carregam informação parcialmente repetida e tendem a ser correlacionados (Seção~\ref{sec:fund_correlacao}), e suas distribuições são assimétricas, com valores extremos que são o próprio efeito da doença e não, necessariamente, erros de medição (Seção~\ref{sec:fund_assimetria}).
+
+\subsection{Conceitos Básicos de Dados e Aprendizado Supervisionado}
+\label{sec:fund_conceitos}
+
+Uma base de dados tabular organiza a informação em linhas e colunas. Cada linha é uma observação (neste trabalho, um paciente) e cada coluna é uma variável (um exame ou uma característica do paciente). Uma tabela com 583 pacientes e 10 exames, por exemplo, tem 583 observações e 10 variáveis. As variáveis podem ser numéricas, como a concentração de bilirrubina, ou categóricas, como o sexo; a categórica com apenas duas categorias é chamada de binária.
+
+No aprendizado supervisionado, uma das variáveis é a variável-alvo (também chamada de classe ou rótulo), que se deseja prever, e as demais são os preditores \cite{elementsofstatiscal}. Quando a variável-alvo é categórica, como ter ou não doença hepática, a tarefa é de classificação. O modelo é treinado com pacientes cujo rótulo é conhecido e depois aplicado a pacientes novos. Para estimar o desempenho nesses pacientes novos, a base é dividida em um conjunto de treino, usado para ajustar o modelo, e um conjunto de teste, reservado para a avaliação final \cite{elementsofstatiscal}. Em um problema com duas classes, uma é a classe positiva, aqui ``doente'', e a outra, a negativa, ``saudável''. A base é desbalanceada quando uma classe tem muito mais observações que a outra (a majoritária e a minoritária), e a proporção de observações de uma classe é sua prevalência.
+
+\subsection{Estatísticas Descritivas e Assimetria}
+\label{sec:fund_assimetria}
+
+As estatísticas descritivas, como a média, a mediana e o desvio-padrão, resumem os valores de uma variável, e a comparação entre elas já revela algo sobre sua distribuição. Na presença de valores extremos (\textit{outliers}), a mediana é pouco afetada, mas a média é puxada na direção deles, como num grupo de dez pessoas em que uma ganha muito mais que as demais: a média salarial sobe, enquanto a mediana quase não se move \cite{han2012getting}. Uma média bem maior que a mediana é, portanto, um primeiro sinal de que a variável tem uma cauda de valores altos, isto é, de que sua distribuição é assimétrica.
+
+A distribuição de uma variável é a forma como seus valores se espalham pela escala de medida. Ela é simétrica quando os valores se equilibram em torno do centro e assimétrica quando há uma cauda mais longa de um dos lados. Na assimetria positiva, comum em exames laboratoriais, a maioria dos valores é baixa e uma cauda longa se estende para valores altos. Ela é medida pelo coeficiente de assimetria amostral (\textit{skewness}):
+
+\begin{equation}
+    b_1 = \frac{1}{n}\sum_{i=1}^{n}\left(\frac{x_i - \bar{x}}{s}\right)^3,
+    \label{eq:assimetria}
+\end{equation}
+
+\noindent em que $n$ é o número de observações, $x_i$ é o valor da $i$-ésima observação, $\bar{x}$ é a média e $s$ é o desvio-padrão. Em distribuições simétricas, os desvios positivos e negativos se compensam e $b_1$ fica próximo de zero; valores positivos indicam cauda longa à direita. Não há limite universal para uma assimetria excessiva; \citeonline[p.~26]{curran1996robustness} observaram problemas em simulações a partir de 2,0, valor usado aqui como convenção. Em doença hepática, valores muito altos podem ser o próprio fenômeno de interesse \cite[p.~237]{Aggarwal2015}, e removê-los descartaria os casos mais informativos.
+
+\subsection{Correlação e Multicolinearidade}
+\label{sec:fund_correlacao}
+
+A correlação mede o grau em que duas variáveis variam em conjunto: na correlação positiva, valores altos de uma acompanham valores altos da outra, e na negativa, valores baixos. O coeficiente de correlação de Pearson ($r$) mede o quanto os pontos de duas variáveis se aproximam de uma reta:
+
+\begin{equation}
+    r = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i - \bar{x})^2 \, \sum_{i=1}^{n}(y_i - \bar{y})^2}},
+    \label{eq:pearson}
+\end{equation}
+
+\noindent em que $x_i$ e $y_i$ são os valores das duas variáveis na $i$-ésima observação. O coeficiente varia de $-1$ a $+1$, e zero indica ausência de associação linear. Valores absolutos acima de 0,7 costumam indicar correlação forte \cite{Dormann2013Collinearity}. Como o coeficiente de Pearson é sensível a valores extremos \cite{Schober2018Correlation}, uma alternativa é a correlação de Spearman, calculada sobre os postos, isto é, as posições dos valores quando ordenados do menor para o maior; valores iguais (empates) recebem o posto médio das posições que ocupariam, de modo que dois valores empatados nas posições 3 e 4 recebem ambos o posto 3,5.
+
+Quando duas ou mais variáveis preditoras são fortemente correlacionadas, diz-se que há multicolinearidade: elas carregam praticamente a mesma informação, como a bilirrubina total e a direta. O principal efeito recai sobre a interpretação dos modelos, e não sobre sua capacidade de previsão \cite{Strobl2008Conditional, Dormann2013Collinearity}. Nos modelos lineares, os coeficientes tornam-se instáveis (Seção~\ref{sec:fund_lr}), e as medidas de importância de variáveis também são afetadas (Seção~\ref{sec:fund_dependencia}).
+
+\subsection{Testes de Hipótese e Comparações Múltiplas}
+\label{sec:fund_welch}
+\label{sec:fund_bonferroni}
+
+Um teste de hipótese verifica se os dados fornecem evidência contra uma hipótese nula, que em geral afirma que não há diferença ou efeito. Seu resultado é o valor-$p$, a probabilidade de observar uma diferença tão grande quanto a obtida se a hipótese nula fosse verdadeira. Quando o valor-$p$ é menor que o nível de significância adotado (a probabilidade máxima aceita de falso positivo, convencionalmente 0,05), rejeita-se a hipótese nula; rejeitá-la quando ela é verdadeira é um falso positivo. Para comparar as médias de uma variável em dois grupos, como doentes e saudáveis, usa-se o teste $t$ de Welch, que, ao contrário do teste $t$ de Student clássico, não supõe variâncias iguais entre os grupos e é recomendado como escolha padrão quando eles têm tamanhos diferentes \cite{psychologists}. Em amostras grandes, ele não exige distribuição normal dos dados \cite{theimportanceofnormality}.
+
+Quando vários testes são feitos sobre os mesmos dados, cresce a chance de que algum seja significativo apenas por acaso: com 20 testes ao nível de 0,05, espera-se em média um falso positivo mesmo que todas as hipóteses nulas sejam verdadeiras. A correção de Bonferroni controla esse problema multiplicando cada valor-$p$ pelo número de comparações, com limite superior igual a 1 \cite{Demsar2006Statistical}. Ela é conservadora: reduz os falsos positivos ao custo de perder diferenças reais.
+
+\section{Preparação dos Dados}
+\label{sec:fund_preparacao}
+
+A preparação converte os dados brutos em uma forma adequada aos algoritmos: trata valores ausentes e registros duplicados, transforma a escala das variáveis e ajusta a proporção entre as classes. Essas operações podem influenciar o resultado tanto quanto a escolha do algoritmo \cite{KAPOOR2023100804}.
+
+\subsection{Valores Ausentes e Imputação}
+\label{sec:fund_ausentes}
+
+Valores ausentes são células da base em que o valor não foi registrado, por exemplo, porque o exame não foi realizado. É possível excluir a variável ou os registros afetados ou fazer a imputação, que preenche o valor ausente com uma estimativa, como a média ou a mediana. A mediana é preferível por ser robusta aos valores extremos e à assimetria típicos de dados laboratoriais \cite{batistamonard2003}.
+
+\subsection{Registros Duplicados e Vazamento de Dados}
+\label{sec:fund_vazamento}
+
+Registros duplicados são observações repetidas, com os mesmos valores em todas as variáveis. O vazamento de dados (\textit{data leakage}) ocorre quando informações do conjunto de teste contaminam o treinamento, o que torna a estimativa de desempenho otimista demais \cite{KaufmanScharRosset2012, KAPOOR2023100804}, como um aluno que vê a prova antes de fazê-la. Ele tem três origens principais. A primeira são os duplicados: se um registro cai no treino e seu duplicado no teste, o modelo é avaliado em um exemplo que já ``viu'' \cite{KAPOOR2023100804}. A segunda é qualquer transformação cujos parâmetros sejam estimados dos dados, como uma mediana ou um desvio-padrão, que devem ser calculados apenas no treino e depois aplicados ao treino e ao teste \cite{KaufmanScharRosset2012}. A terceira é o balanceamento de classes feito antes da divisão dos dados (Seção~\ref{sec:fund_smote}).
+
+\subsection{Transformação Logarítmica e Padronização}
+\label{sec:fund_log}
+\label{sec:fund_padronizacao}
+
+A transformação logarítmica \cite{logtransformation},
+
+\begin{equation}
+    x' = \ln(1 + x),
+    \label{eq:log}
+\end{equation}
+
+\noindent em que $x$ é o valor original e $x'$ o valor transformado, comprime a cauda de uma variável positiva sem alterar a ordem das observações: a diferença entre 10 e 100 passa a ser parecida com a diferença entre 100 e 1000. A soma de uma unidade a mantém definida para valores próximos de zero. Como ela não garante a redução da assimetria \cite{logtransformation}, seu efeito deve ser conferido comparando o coeficiente de assimetria (Equação~\ref{eq:assimetria}) antes e depois. Por não depender de parâmetros estimados dos dados, pode ser aplicada antes da divisão em treino e teste sem vazamento \cite{KaufmanScharRosset2012}. Interessa sobretudo à Regressão Logística (Seção~\ref{sec:fund_lr}) \cite{Hosmer2005Applied}, e pouco às árvores, que dependem apenas da ordem dos valores \cite{elementsofstatiscal}.
+
+A padronização (\textit{z-score}) subtrai de cada valor a média da variável e divide o resultado pelo desvio-padrão, $z = (x - \bar{x})/s$, de modo que todas as variáveis passem a ter média zero e desvio-padrão um, isto é, a mesma escala. Como a média e o desvio-padrão são estimados dos dados, devem ser calculados apenas no treino (Seção~\ref{sec:fund_vazamento}). A padronização é relevante para a Regressão Logística, pois torna os coeficientes comparáveis, e pouco relevante para as árvores.
+
+\subsection{Desbalanceamento de Classes e SMOTE}
+\label{sec:fund_smote}
+
+Em uma base desbalanceada, um classificador pode atingir alta acurácia, isto é, alta proporção de acertos, apenas prevendo sempre a classe majoritária \cite{FAWCETT2006861}. Uma estratégia é a reamostragem, isto é, a alteração do número de observações de cada classe no conjunto de treino, que pode aumentar a classe minoritária (\textit{oversampling}) ou reduzir a majoritária (\textit{undersampling}). O SMOTE (\textit{Synthetic Minority Over-sampling Technique}) \cite{smote} é uma técnica de \textit{oversampling} que cria observações sintéticas da classe minoritária: escolhe-se uma observação dessa classe e um de seus $k$ vizinhos mais próximos, isto é, as $k$ observações da mesma classe mais parecidas com ela, e cria-se uma nova observação em um ponto sorteado no segmento entre as duas. Para variáveis categóricas ou binárias, em que um valor intermediário não corresponde a uma categoria válida, existe a variante SMOTE-NC \cite{smote}.
+
+No ILPD, por exemplo, a classe minoritária é a dos pacientes saudáveis (167 de 583). Para gerar um paciente saudável sintético, o SMOTE parte de um paciente saudável real, sorteia um dos cinco pacientes saudáveis mais parecidos com ele e cria um novo paciente com exames intermediários entre os dois: se um tem bilirrubina total de 0,8~mg/dL e o outro de 1,2~mg/dL, o sintético terá um valor entre 0,8 e 1,2. Se os dois pacientes forem de sexos diferentes, porém, o valor intermediário de \textit{Gender} não corresponde a nenhum sexo, o que ilustra o problema das variáveis binárias que motiva a variante SMOTE-NC.
+
+A reamostragem deve ocorrer apenas no treino e, quando há validação cruzada (Seção~\ref{sec:fund_cv}), dentro de cada partição de treino. Se ela precedesse a divisão, uma observação sintética poderia ser avaliada na validação enquanto as observações reais que a originaram permaneceriam no treino, o que é vazamento \cite{KaufmanScharRosset2012}. Além disso, o SMOTE altera a proporção de classes vista pelo modelo, de modo que as probabilidades previstas deixam de refletir a prevalência real \cite{vandenGoorbergh2022Harm} (Seção~\ref{sec:fund_limiar}).
+
+\section{Modelagem e Classificação}
+\label{sec:fund_modelos}
+
+A modelagem é a etapa em que se constroem os modelos que aprendem padrões nos dados. Um modelo de classificação é uma função que recebe os valores dos preditores de um paciente e devolve a classe prevista ou, como nos modelos deste trabalho, a probabilidade de que ele pertença à classe positiva. Treinar é ajustar os parâmetros internos do modelo aos dados de treino, e o risco central é o sobreajuste (\textit{overfitting}): o modelo memoriza particularidades e ruídos do treino, como quem decora as respostas de uma prova em vez de aprender a matéria, e por isso generaliza mal para pacientes novos, por exemplo.
+
+Os quatro modelos usados vão do mais simples ao mais complexo: a Regressão Logística, que é linear e interpretável, e três modelos de \textit{ensemble} baseados em árvores de decisão, o \textit{Random Forest}, o XGBoost e o LightGBM. A inclusão da Regressão Logística não é apenas didática. \citeonline{Christodoulou2019Systematic} revisaram 71 estudos que compararam a regressão logística com modelos de aprendizado de máquina, como árvores de decisão e \textit{Random Forest}, na predição de desfechos clínicos binários, e, nas 145 comparações consideradas metodologicamente confiáveis (com baixo risco de viés), não encontraram diferença de AUC-ROC (Seção~\ref{sec:fund_roc}) entre as duas abordagens. Em outras palavras, um modelo mais complexo não é automaticamente melhor. Por isso, a Regressão Logística funciona neste trabalho como referência: os modelos de \textit{ensemble}, mais complexos e menos interpretáveis, só se justificam se a superarem de forma estatisticamente verificável (Seção~\ref{sec:fund_comparacao_cv}).
+
+\subsection{Regressão Logística}
+\label{sec:fund_lr}
+
+A Regressão Logística é o modelo estatístico clássico para variáveis-alvo binárias \cite{Cox1958Regression}. Ela trabalha com a chance (\textit{odds}), a razão entre a probabilidade de o evento ocorrer e a de não ocorrer: uma probabilidade de 0,75 corresponde a uma chance de 3 para 1. O modelo escreve o logaritmo da chance como uma soma ponderada dos preditores \cite{Hosmer2005Applied}:
+
+\begin{equation}
+    \ln\left(\frac{\pi(\mathbf{x})}{1 - \pi(\mathbf{x})}\right) = \beta_0 + \sum_{j=1}^{p} \beta_j x_j,
+    \label{eq:logit}
+\end{equation}
+
+\noindent em que $\pi(\mathbf{x}) = P(Y = 1 \mid \mathbf{x})$ é a probabilidade de o paciente pertencer à classe positiva ($Y = 1$) dado o vetor de preditores $\mathbf{x} = (x_1, \ldots, x_p)$, $\beta_0$ é o intercepto (valor de partida, quando todos os preditores são zero) e $\beta_j$ é o coeficiente do preditor $x_j$, que funciona como o peso de sua contribuição \cite{Hosmer2005Applied}. A significância de cada coeficiente costuma ser avaliada pelo teste de Wald, que compara o coeficiente estimado com seu erro-padrão, a medida da incerteza da estimativa.
+
+A principal vantagem é a interpretação direta dos coeficientes. Mantidos constantes os demais preditores, o aumento de uma unidade em $x_j$ multiplica a chance da classe positiva por $e^{\beta_j}$, a razão de chances (\textit{odds ratio}, OR) \cite{Hosmer2005Applied}: se $e^{\beta_j} = 2$, a chance de doença dobra; se $e^{\beta_j} = 0{,}5$, cai pela metade. Essa leitura é pouco confiável para variáveis fortemente correlacionadas, cujas estimativas ficam instáveis e podem até trocar de sinal \cite{Dormann2013Collinearity}.
+
+\subsection{Árvores de Decisão e Métodos de \textit{Ensemble}}
+\label{sec:fund_arvores}
+
+Uma árvore de decisão classifica um paciente por meio de uma sequência de perguntas sobre seus exames, como um fluxograma. Cada nó faz uma pergunta como ``a bilirrubina total é maior que determinado valor?'', cada ramo leva à resposta e cada folha, isto é, cada nó final, indica a classe prevista. A árvore é construída dividindo-se os dados, a cada pergunta, em grupos cada vez mais homogêneos quanto à classe \cite{elementsofstatiscal}. Árvores individuais são fáceis de ler, mas instáveis: pequenas mudanças nos dados de treino produzem árvores muito diferentes, o que se chama de alta variância \cite{elementsofstatiscal}.
+
+Os métodos de \textit{ensemble} contornam essa instabilidade combinando muitos modelos, neste caso, muitas árvores, na ideia de que um grupo erra menos que um indivíduo. Há duas estratégias:
+\begin{itemize}
+    \item o \textit{bagging}: muitas árvores são treinadas \textbf{em paralelo e de forma independente}, cada uma com uma amostra diferente dos dados, e suas respostas são combinadas por votação, como um comitê de médicos em que cada um examinou um conjunto diferente de casos;
+    \item o \textit{boosting}: as árvores são treinadas \textbf{em sequência}, e cada nova árvore se concentra nos erros deixados pelas anteriores, como uma equipe de especialistas em que cada um corrige o que o anterior errou.
+\end{itemize}
+O \textit{Random Forest} usa \textit{bagging}, e o XGBoost e o LightGBM usam \textit{boosting}. O preço da combinação é a perda da interpretabilidade direta: o resultado deixa de ser um fluxograma legível e passa a ser uma caixa-preta (\textit{black box}).
+
+\subsection{\textit{Random Forest}}
+\label{sec:fund_rf}
+
+O \textit{Random Forest} (floresta aleatória) \cite{Breiman2001RandomForests} aplica o \textit{bagging} a árvores de decisão e acrescenta uma segunda fonte de aleatoriedade. A primeira é a amostra \textit{bootstrap}: para cada árvore, sorteia-se do conjunto de treino uma amostra com reposição e do mesmo tamanho dele, como retirar bolas de uma urna devolvendo cada uma após o sorteio, de modo que alguns pacientes aparecem repetidos e outros ficam de fora \cite{elementsofstatiscal}. Os pacientes que ficam de fora da amostra de uma árvore são chamados de \textit{out-of-bag} (OOB) e permitem avaliá-la em dados que ela não viu, o que serve, por exemplo, para calcular a importância por permutação. A segunda é que, a cada pergunta da árvore, apenas um subconjunto sorteado de \texttt{mtry} variáveis pode ser usado, o que torna as árvores diferentes entre si e reduz a variância do conjunto \cite{Breiman2001RandomForests}. A probabilidade de doença é a fração das $B$ árvores que votam ``doente'': se 350 de 500 árvores votam nessa classe, a probabilidade é 0,70. Aumentar o número de árvores não causa sobreajuste \cite{Breiman2001RandomForests}, e o método costuma funcionar bem com os hiperparâmetros padrão \cite{Probst2019Hyperparameters}.
+
+\subsection{XGBoost}
+\label{sec:fund_xgb}
+
+O XGBoost (\textit{eXtreme Gradient Boosting}) \cite{Chen2016XGBoost} é uma implementação otimizada e regularizada do \textit{gradient boosting} \cite{Friedman2001Greedy}, variante do \textit{boosting} em que cada nova árvore é ajustada na direção que mais reduz a função de perda, a medida do erro das previsões. Seu funcionamento pode ser entendido em passos. A primeira árvore faz uma previsão grosseira. Suponha que ela atribua probabilidade 0,40 de doença a um paciente que de fato está doente (valor 1): o erro é 0,60. A segunda árvore não tenta prever a doença do zero, e sim esse erro, e sua previsão é somada à da primeira, aproximando o resultado de 1. A terceira árvore corrige o erro que restou, e assim por diante, por dezenas ou centenas de iterações. Tecnicamente, na classificação \cite{elementsofstatiscal}, o erro a corrigir é a diferença entre o valor real (0 ou 1) e a probabilidade prevista. A previsão final é a soma das contribuições de todas as árvores, convertida em probabilidade pela função logística, que transforma qualquer número em um valor entre 0 e 1 (a mesma usada na Regressão Logística):
+
+\begin{equation}
+    F(\mathbf{x}) = \sum_{m=1}^{M} f_m(\mathbf{x}),
+    \qquad
+    \hat{\pi}(\mathbf{x}) = \frac{1}{1 + e^{-F(\mathbf{x})}},
+    \label{eq:boosting}
+\end{equation}
+
+\noindent em que $f_m$ é a $m$-ésima árvore, $M$ é o número de iterações e $F(\mathbf{x})$ é o escore somado, na escala do logaritmo da chance (Equação~\ref{eq:logit}).
+
+Dois ajustes evitam o sobreajuste. O primeiro é a taxa de aprendizado $\eta \in (0, 1]$, que faz cada árvore aplicar apenas uma fração de sua correção, como revisar um texto em várias passagens leves em vez de reescrevê-lo de uma vez, o que em geral melhora a generalização ao custo de mais iterações \cite{Chen2016XGBoost}. O segundo é a regularização, isto é, a penalização de árvores complexas durante o treinamento: $\gamma$ penaliza árvores com muitas folhas, e $\lambda$, valores muito grandes nas folhas \cite{Chen2016XGBoost}. Em dados tabulares, comparações padronizadas (\textit{benchmarks}) o colocam entre os melhores métodos, à frente inclusive de redes neurais, modelos inspirados no funcionamento do cérebro e muito usados em imagens e textos \cite{Grinsztajn2022Why, ShwartzZiv2021Tabular}, e ele dispõe de um algoritmo de explicação eficiente, o TreeSHAP (Seção~\ref{sec:fund_estimacao}).
+
+\subsection{LightGBM}
+\label{sec:fund_lgbm}
+
+O LightGBM (\textit{Light Gradient Boosting Machine}) \cite{Ke2017LightGBM} segue a mesma ideia de \textit{boosting} da Equação~\ref{eq:boosting}, com foco na eficiência computacional. Em vez de testar todos os pontos de divisão possíveis, ele agrupa os valores contínuos em faixas (histogramas) e cresce a árvore sempre pela folha cuja divisão mais reduz a perda (\textit{leaf-wise}), e não nível por nível \cite{Ke2017LightGBM}. Opcionalmente, a amostragem GOSS (\textit{Gradient-based One-Side Sampling}) acelera o treino mantendo as observações de maior erro e sorteando apenas parte das demais \cite{Ke2017LightGBM}. Isso pode causar sobreajuste em bases pequenas, e a documentação recomenda controlar o número mínimo de observações por folha \cite{LightGBMDocsTuning}.
+
+\section{Treinamento, Validação e Avaliação}
+\label{sec:fund_validacao}
+
+Ajustar um modelo aos dados de treino não basta: é preciso estimar quão bem ele funcionará em pacientes novos, o que se chama capacidade de generalização. Esta etapa trata de como estimar o desempenho sem usar o conjunto de teste, de como escolher as configurações dos algoritmos, de como medir o desempenho e de como comparar os modelos.
+
+\subsection{Validação Cruzada}
+\label{sec:fund_cv}
+
+Na validação cruzada $k$-\textit{fold}, o conjunto de treino é dividido em $k$ partes de tamanho semelhante, os \textit{folds}. Com $k = 5$, por exemplo, o modelo é treinado com quatro partes (80\% dos dados) e avaliado na quinta, e isso é repetido cinco vezes, de modo que cada parte sirva uma vez de avaliação. O desempenho estimado é a média das cinco avaliações \cite{elementsofstatiscal}. As previsões feitas para os pacientes da parte deixada de fora, por um modelo que não os viu, são chamadas de previsões fora da partição (\textit{out-of-fold}). A estratificação mantém em cada parte a proporção de classes da base. Os valores mais usados de $k$ são 5 e 10, que oferecem um compromisso entre o viés e a variância da estimativa: com $k$ pequeno, cada modelo é treinado com menos dados e o desempenho tende a ser subestimado; com $k$ grande, os conjuntos de treino se parecem muito e as estimativas ficam mais variáveis \cite{elementsofstatiscal, Raschka2018Model}. Não há, porém, uma regra formal para escolher $k$, e 5 e 10 são sobretudo convenções consolidadas. O procedimento pode ser repetido com divisões diferentes, o que reduz a variabilidade da estimativa \cite{Kim2009Estimating}, e há quem defenda usar um $k$ menor e investir o tempo poupado em mais repetições \cite{Moss2018JKfold}.
+
+\subsection{Hiperparâmetros e Sua Otimização}
+\label{sec:fund_hiperparametros}
+
+Os modelos têm dois tipos de valores ajustáveis. Os parâmetros são aprendidos dos dados durante o treinamento, como os coeficientes da Regressão Logística. Os hiperparâmetros são configurações definidas antes do treinamento, que controlam como o algoritmo aprende, como o número de variáveis sorteadas em cada pergunta do \textit{Random Forest}, a profundidade máxima das árvores ou a taxa de aprendizado do XGBoost. A otimização de hiperparâmetros consiste em testar várias combinações, avaliar cada uma por validação cruzada e escolher a de melhor desempenho.
+
+Na busca em grade (\textit{Grid Search}), testam-se todas as combinações de uma lista de valores, o que se torna inviável quando os hiperparâmetros são muitos. Na busca aleatória (\textit{Random Search}), sorteia-se um número fixo de combinações, o que costuma encontrar configurações tão boas quanto as da grade com custo muito menor \cite{Bergstra2012Random}. Como a combinação escolhida tende a ter resultado otimista na própria validação cruzada \cite{Cawley2010OverFitting}, o desempenho final é medido no conjunto de teste.
+
+\subsection{Métricas de Desempenho}
+\label{sec:fund_metricas}
+\label{sec:fund_matriz}
+
+Uma métrica de desempenho é um número que resume a qualidade das previsões. Como os modelos devolvem probabilidades, é preciso convertê-las em classes comparando cada probabilidade a um limiar de decisão: probabilidades iguais ou acima dele viram ``doente'' (Seção~\ref{sec:fund_limiar}). A matriz de confusão (Tabela~\ref{tab:matriz_confusao}) cruza as classes previstas com as reais e define quatro resultados: verdadeiros positivos (VP), doentes classificados como doentes; falsos negativos (FN), doentes classificados como saudáveis; verdadeiros negativos (VN), saudáveis classificados como saudáveis; e falsos positivos (FP), saudáveis classificados como doentes \cite{FAWCETT2006861}.
+
+\begin{table}[htbp]
+\centering
+\caption{Matriz de confusão, com ``doente'' como classe positiva.}
+\label{tab:matriz_confusao}
+\begin{tabular}{llcc}
+\hline
+ & & \multicolumn{2}{c}{\textbf{Classe real}} \\
+ & & \textbf{Doente} & \textbf{Saudável} \\
+\hline
+\multirow{2}{*}{\textbf{Classe prevista}} & \textbf{Doente} & VP & FP \\
+ & \textbf{Saudável} & FN & VN \\
+\hline
+\end{tabular}
+\end{table}
+
+Para tornar as métricas concretas, considere 100 pacientes, dos quais 70 doentes e 30 saudáveis, e um modelo que acerta 60 dos doentes (VP~=~60, FN~=~10) e 15 dos saudáveis (VN~=~15, FP~=~15). As métricas são:
+
+\begin{itemize}
+    \item \textit{Acurácia}: proporção de classificações corretas, $(\mathrm{VP} + \mathrm{VN}) / (\mathrm{VP} + \mathrm{FP} + \mathrm{FN} + \mathrm{VN})$; no exemplo, $75/100 = 75\%$;
+    \item \textit{Sensibilidade} (\textit{recall}): proporção de doentes que o modelo encontra, $\mathrm{VP} / (\mathrm{VP} + \mathrm{FN})$; no exemplo, $60/70 \approx 86\%$;
+    \item \textit{Especificidade}: proporção de saudáveis corretamente identificados, $\mathrm{VN} / (\mathrm{VN} + \mathrm{FP})$; no exemplo, $15/30 = 50\%$;
+    \item \textit{Precisão}: proporção de doentes entre os classificados como doentes, $\mathrm{VP} / (\mathrm{VP} + \mathrm{FP})$; no exemplo, $60/75 = 80\%$;
+    \item \textit{F1}: média harmônica entre a precisão e a sensibilidade, elevada somente quando ambas são; no exemplo, $\approx 0{,}83$;
+    \item \textit{Acurácia balanceada}: média entre a sensibilidade e a especificidade, que dá o mesmo peso a cada classe; no exemplo, $\approx 68\%$;
+    \item \textit{Kappa de Cohen}: concordância entre as classes previstas e as reais descontada a concordância esperada ao acaso \cite{Cohen1960Coefficient}; vale 1 na concordância perfeita e 0 quando o modelo não é melhor que o acaso; no exemplo, $\approx 0{,}38$.
+\end{itemize}
+
+O exemplo mostra por que a acurácia sozinha engana \cite{FAWCETT2006861}: 75\% parece bom, mas o modelo erra metade dos saudáveis, o que a especificidade, a acurácia balanceada e o Kappa revelam. O caso extremo é o classificador que declara todos os pacientes doentes: com 70\% de doentes, teria 70\% de acurácia e 100\% de sensibilidade, mas especificidade nula e Kappa igual a zero. Por isso a acurácia deve vir acompanhada de métricas por classe e corrigidas pelo acaso.
+
+\subsection{Curva ROC, AUC e Teste de DeLong}
+\label{sec:fund_roc}
+\label{sec:fund_delong}
+
+A escolha do limiar muda as métricas: um limiar baixo encontra mais doentes (maior sensibilidade), mas acusa mais saudáveis (menor especificidade). A curva ROC (\textit{Receiver Operating Characteristic}) mostra essa troca ao representar a sensibilidade em função da taxa de falsos positivos ($1 -$ especificidade) para todos os limiares possíveis. A AUC-ROC é a área sob a curva e tem uma interpretação direta: é a probabilidade de que um paciente doente sorteado ao acaso receba do modelo uma probabilidade maior que a de um paciente saudável sorteado ao acaso \cite{FAWCETT2006861}. Vale 0,5 para um classificador que equivale a cara ou coroa e 1 para uma separação perfeita. Por ser calculada dentro de cada classe, é insensível à proporção entre elas e permite comparar modelos antes de escolher o limiar. Em dados desbalanceados, recomenda-se complementá-la com a curva \textit{Precision-Recall} (precisão em função da sensibilidade) \cite{Saito2015Precision}.
+
+Como a AUC-ROC é estimada em uma amostra, ela tem incerteza, expressa por um intervalo de confiança, isto é, uma faixa de valores plausíveis para a quantidade estimada. O método de DeLong \cite{DeLong1988Comparing} estima essa incerteza sem supor distribuição para as probabilidades previstas, produz os intervalos e testa a diferença entre as AUC-ROC de dois modelos avaliados nos mesmos pacientes \cite{DeLong1988Comparing, Robin2011pROC}. Os valores-$p$ de vários pares devem ser corrigidos para comparações múltiplas (Seção~\ref{sec:fund_bonferroni}).
+
+\subsection{Limiar de Decisão}
+\label{sec:fund_limiar}
+
+O limiar de 0,5 só minimiza o custo dos erros quando as probabilidades previstas são bem calibradas, isto é, correspondem às frequências reais, e os dois tipos de erro têm o mesmo custo \cite{Elkan2001Foundations}. Na triagem clínica, isto é, a avaliação inicial que identifica quem precisa de investigação adicional, um falso negativo pode atrasar o diagnóstico, enquanto um falso positivo tende a gerar apenas exames complementares, e o ponto de corte deve levar em conta o maior custo do falso negativo \cite{Habibzadeh2016Determining}. Um critério usual é o índice de Youden \cite{Youden1950Index},
+
+\begin{equation}
+    J = \textrm{Sensibilidade} + \textrm{Especificidade} - 1,
+    \label{eq:youden}
+\end{equation}
+
+\noindent cujo máximo indica o limiar que melhor equilibra os dois tipos de acerto. Para priorizar a sensibilidade, pode-se fixar uma meta mínima e escolher o maior limiar que a atinge. O limiar não deve ser escolhido nas mesmas previsões usadas para avaliar o desempenho, pois o resultado seria otimista \cite{Leeflang2008Bias}.
+
+\subsection{Comparação Estatística entre Modelos na Validação Cruzada}
+\label{sec:fund_comparacao_cv}
+
+Como os modelos são avaliados nas mesmas partições, as diferenças entre eles podem ser analisadas de forma pareada: para cada par de modelos, calcula-se a diferença da métrica em cada partição e aplica-se o teste $t$ pareado, que compara dois conjuntos de medidas obtidas nas mesmas partições e cuja hipótese nula é que a diferença média seja zero, com valores-$p$ ajustados por Bonferroni (Seção~\ref{sec:fund_bonferroni}). Como os conjuntos de treino das partições compartilham a maior parte dos pacientes, as estimativas não são independentes e o teste tende a rejeitar a hipótese nula mais do que deveria \cite{Nadeau2003Inference}. Por isso, deve ser tratado como evidência complementar à comparação em um conjunto de teste independente.
+
+\section{Interpretabilidade de Modelos}
+\label{sec:fund_interpretabilidade}
+
+A interpretabilidade é a capacidade de entender por que um modelo produziu determinada previsão, isto é, quais variáveis a influenciaram e em que sentido. A Regressão Logística é interpretável por construção, pois seus coeficientes mostram o efeito de cada variável. Os \textit{ensembles}, ao contrário, combinam dezenas a centenas de árvores, o que leva ao uso de métodos de explicação aplicados após o treinamento (\textit{post-hoc}). Em decisões de alto risco, como as clínicas, defende-se preferir modelos interpretáveis quando o desempenho é comparável, pois explicações \textit{post-hoc} podem não ser fiéis ao modelo e devem servir como auditoria, não como descrição infalível \cite{Rudin2019Stop}.
+
+\subsection{Valores de Shapley}
+\label{sec:fund_shapley}
+
+Os valores de Shapley vêm da teoria dos jogos cooperativos e respondem à pergunta de como dividir de forma justa um ganho obtido em conjunto \cite{Shapley1953Value}. Imagine três colegas que fazem um trabalho em grupo e tiram nota 9: como dividir o crédito entre eles? A ideia é medir, para cada colega, quanto a nota do grupo aumenta quando ele entra, e tirar a média dessa contribuição sobre todas as ordens possíveis em que o grupo poderia ter se formado, já que a contribuição de alguém depende de quem já estava lá. Essa divisão é justa no sentido de satisfazer propriedades como a eficiência, segundo a qual as contribuições somam o ganho total, e a simetria, segundo a qual jogadores equivalentes recebem o mesmo valor \cite{Shapley1953Value}.
+
+\subsection{SHAP}
+\label{sec:fund_shap}
+
+O SHAP (\textit{SHapley Additive exPlanations}) \cite{Lundberg2017Unified} aplica essa ideia à explicação de modelos: os ``colegas'' são as variáveis preditoras, e o ``ganho'' a dividir é a diferença entre a previsão do modelo para um paciente e uma previsão de referência. As explicações são locais, pois decompõem a previsão de cada paciente, mas podem ser agregadas para descrever o comportamento global do modelo \cite{Lundberg2020Trees}. A previsão se decompõe em uma soma:
+
+\begin{equation}
+    f(\mathbf{x}) = \phi_0 + \sum_{j=1}^{p} \phi_j,
+    \label{eq:shap_aditivo}
+\end{equation}
+
+\noindent em que $f(\mathbf{x})$ é a saída do modelo para o paciente $\mathbf{x}$, $\phi_0$ é o valor base, a saída média do modelo sobre um conjunto de referência, e $\phi_j$ é o valor SHAP da variável $j$. Por exemplo, se o valor base é uma probabilidade de doença de 40\% e o modelo prevê 85\% para um paciente, os 45 pontos percentuais de diferença são repartidos entre as variáveis: a bilirrubina pode contribuir com $+30$, a fosfatase alcalina com $+20$ e a albumina com $-5$. Valor positivo indica que a variável elevou a previsão de doença para aquele paciente, e negativo, que a reduziu. Como o modelo precisa de todas as variáveis para prever, calcular a contribuição de um subconjunto exige decidir o que fazer com as variáveis ausentes dele. Na forma marginal, elas são sorteadas de outros pacientes, sem considerar as conhecidas; na forma condicional, são sorteadas respeitando a relação com as conhecidas. A primeira descreve o funcionamento do modelo, e a segunda, a relação entre as variáveis e a previsão tal como aparece nos dados \cite{Chen2020TrueToModel, Chen2023Algorithms}.
+
+\subsection{Estimação dos Valores SHAP e Efeito da Correlação}
+\label{sec:fund_estimacao}
+\label{sec:fund_dependencia}
+
+O cálculo exato exige avaliar $2^{p-1}$ subconjuntos de variáveis para cada variável e cada paciente, o que é inviável em geral. O TreeSHAP \cite{Lundberg2020Trees} é um algoritmo que explora a estrutura das árvores para calcular os valores de modelos de árvores de forma exata e rápida, percorrendo cada árvore uma única vez \cite{Chen2023Algorithms}.
+
+Para modelos sem algoritmo específico, como o \textit{Random Forest} neste trabalho, os valores podem ser estimados por simulação de Monte Carlo, isto é, por sorteios aleatórios repetidos \cite{Strumbelj2014Explaining}. A ideia é medir o efeito de uma variável trocando seu valor: para um paciente explicado, sorteia-se um paciente de referência, substitui-se o valor da variável pelo dele e observa-se quanto a previsão muda. Repetindo o processo $n_{\mathrm{sim}}$ vezes, com diferentes pacientes de referência e diferentes ordens de variáveis, a média das mudanças aproxima o valor SHAP. A estimativa tem erro aleatório, que diminui com as repetições, e por isso a semente aleatória deve ser fixada. Como a troca ignora a relação entre as variáveis, o método corresponde à forma marginal, ao passo que o TreeSHAP aproxima a condicional. Como os valores podem estar em escalas distintas (probabilidade ou logaritmo da chance), a comparação entre modelos deve se concentrar na ordem de importância e na direção dos efeitos.
+
+A correlação entre variáveis afeta as medidas de importância de modos distintos. Na importância por permutação do \textit{Random Forest} (queda de desempenho quando os valores de uma variável são embaralhados), variáveis correlacionadas tendem a ser favorecidas \cite{Strobl2008Conditional}. No SHAP condicional, o crédito é dividido entre elas \cite{Chen2023Algorithms}, e ignorar a dependência pode distorcer as explicações \cite{Aas2021Explaining}. Na simulação marginal, o crédito não se divide, mas o modelo é avaliado em combinações pouco plausíveis de valores \cite{Chen2020TrueToModel}. Assim, discordâncias entre rankings podem refletir tanto padrões aprendidos diferentes quanto propriedades das medidas.
+
+\subsection{Visualizações e Resumos dos Valores SHAP}
+\label{sec:fund_visualizacoes}
+
+Os valores SHAP de um conjunto de pacientes formam uma tabela com uma linha por paciente e uma coluna por variável, da qual derivam os resumos mais usados. A importância global de uma variável é a média dos valores absolutos de seus valores SHAP, isto é, o tamanho médio de sua contribuição, independentemente do sentido. O gráfico \textit{beeswarm} mostra cada paciente como um ponto na linha de cada variável, posicionado pelo valor SHAP e colorido pelo valor da variável, o que revela a dispersão dos efeitos e o sentido da associação. Os gráficos de dependência mostram o valor SHAP em função do valor da variável, e o gráfico \textit{waterfall} decompõe a previsão de um paciente a partir do valor base, somando uma a uma as contribuições. O pacote \texttt{shapviz} \cite{Mayer2026shapviz} produz esses resumos e gráficos (Seção~\ref{sec:fund_ferramentas}).
+
+\section{Viés Algorítmico e Equidade em Saúde}
+\label{sec:fund_vies}
+
+O viés algorítmico é a tendência de um modelo a produzir resultados sistematicamente piores para determinados grupos de pessoas. Quando um grupo está sub-representado nos dados, o modelo pode ter desempenho desigual entre os grupos \cite{Rajkomar2018Ensuring, investigatingbiashealth}, com implicações diretas para a equidade em saúde. Em uma análise do próprio ILPD, \citeonline{investigatingbiashealth} observaram mais falsos negativos entre as pacientes do sexo feminino. A auditoria de viés exige avaliar o desempenho separadamente em cada subgrupo, preferindo a sensibilidade, a especificidade e a AUC-ROC, que não dependem da prevalência de cada grupo, ao contrário da precisão e do F1 \cite{FAWCETT2006861}. Uma disparidade mostra que o modelo erra mais em um grupo, mas não explica por quê; para investigar o mecanismo, a análise de interpretabilidade pode examinar se as variáveis que orientam as previsões diferem entre os grupos \cite{investigatingbiashealth}.
+
+\section{Ferramentas Computacionais}
+\label{sec:fund_ferramentas}
+
+O \textit{pipeline} foi implementado na linguagem R \cite{linguagemr}, voltada à estatística e à análise de dados, cujas funcionalidades são ampliadas por pacotes, isto é, conjuntos de funções prontas. Os principais pacotes, por etapa do processo, são os seguintes:
+
+\begin{itemize}
+    \item \textit{exploração e preparação dos dados}: \texttt{tidyverse} \cite{tidyverse}, conjunto de pacotes para manipulação e visualização de dados, \texttt{corrplot} \cite{corrplot2024}, para matrizes de correlação, e \texttt{smotefamily}, que implementa o SMOTE;
+    \item \textit{treinamento e validação}: \texttt{caret} (\textit{Classification And REgression Training}) \cite{Kuhn2008Building}, que oferece uma interface única para dividir os dados de forma estratificada, treinar diferentes algoritmos, executar a validação cruzada, buscar hiperparâmetros e calcular métricas, de modo que todos os modelos sejam treinados e comparados sob o mesmo protocolo; e os pacotes que implementam os algoritmos, \texttt{randomForest} \cite{Liaw2002Classification}, \texttt{xgboost} \cite{Chen2016XGBoost} e \texttt{lightgbm} \cite{Ke2017LightGBM};
+    \item \textit{avaliação}: \texttt{pROC} \cite{Robin2011pROC}, para curvas ROC, AUC, intervalos de confiança e teste de DeLong;
+    \item \textit{interpretação}: \texttt{fastshap} \cite{Greenwell2024fastshap}, para estimar valores SHAP por Monte Carlo, e \texttt{shapviz} \cite{Mayer2026shapviz}, que organiza os valores SHAP e produz os gráficos descritos na Seção~\ref{sec:fund_visualizacoes}.
+\end{itemize}

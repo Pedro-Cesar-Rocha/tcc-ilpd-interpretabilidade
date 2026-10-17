@@ -1,0 +1,363 @@
+\usepackage[Glenn]{fncychap}
+\usepackage[utf8]{inputenc}        % acentuação e cedilha
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{kpfonts}
+\usepackage{titletoc}
+\usepackage[brazil]{babel}         % titulos em português
+%\usepackage[T1]{fontenc}           % codificação
+\usepackage{graphicx}			   % para inserir figuras
+\usepackage[verbose,a4paper,tmargin=30mm,bmargin=20mm,lmargin=30mm,rmargin=20mm]{geometry}
+% configurando margens
+\usepackage{indentfirst}
+\usepackage{hyperref}				% para criar links no documento 
+\usepackage{fancyhdr}				% para cabeçalhos e rodapés
+\usepackage{mathptmx}               % fonte estilo times
+\usepackage{nomencl}                % para construir a lista de acronimos
+\usepackage{glossary}
+\pagestyle{headings}
+\usepackage[algoruled,longend,linesnumbered,portuguese]{algorithm2e}
+\usepackage[alf]{abntex2cite}
+\usepackage{microtype}   %para melhorias na justificação
+\setlength{\parindent}{1.25cm}
+\usepackage{calligra}
+\usepackage{subfigure}
+%\usepackage{wrapfig}
+\usepackage{longtable}
+%\setlength{\parskip}{1ex plus 0.5ex minus 0.2ex}
+%\def{\nompageref}{\numpag}
+\usepackage[skip=6pt,font=footnotesize,labelfont=bf,labelsep= colon]{caption}
+\usepackage{multicol}
+%\usepackage[format= hang,labelsep= colon,font= none,labelfont= \captionheaderfont ,textfont=\captionbodyfont ]{caption}
+\usepackage[T1]{fontenc}
+%%%font palladio
+%\usepackage[sc]{mathpazo}
+%\linespread{1.05}         % Palladio needs more leading (space between lines)
+%%%font arial
+%\usepackage{helvet}
+%\renewcommand{\familydefault}{\sfdefault}
+
+\lhead{\textit{\scriptsize \rightmark}}
+\chead{}
+\rhead{\thepage}
+\lfoot{}
+\cfoot{}
+\rfoot{}
+
+%\renewcommand{\ABNTEXsectionfont}{\fontfamily{m}\fontseries{b}\selectfont}
+%\renewcommand{\ABNTEXsubsectionfont}{\fontfamily{cmd}\fontseries{b}\selectfont}
+%\newcommand{\citeonline}[2]{%
+%\cite[p~#2]{#1}%
+%}
+%\newcommand{\apudonline}[2]{%
+%\cite[p~#2]{#1}%
+%}
+
+%\newcommand{\citacaodireta}[3]{%
+%\begin{footnotesize}
+%\hspace{4cm}
+%\begin{tabular}{p{10.5cm}}
+%\setlength{\baselineskip}{\baselineskip}
+%\vspace{0.8cm}
+%#1 \cite[p~#3]{#2}.
+%\vspace{0.8cm}
+%\end{tabular}
+%\end{footnotesize}%
+%}
+%
+%%%%%criar um novo estilo de cabeçalhos e rodapés
+%\newcommand{\makepagestyle{meuestilo}
+%%%%cabeçalhos
+%\makeevenhead{meuestilo} %%pagina par
+%{\thepage}
+%{}
+%{\textit{\scriptsize \rightmark}}
+%\makeoddhead{meuestilo} %%pagina ímpar ou com oneside
+%{\textit{\scriptsize \rightmark}}
+%{}
+%{\thepage}
+%\makeheadrule{meuestilo}{\textwidth}{\normalrulethickness} %linha
+%%% rodapé
+%\makeevenfoot{meuestilo}
+%{} %%pagina par
+%{}
+%{}
+%\makeoddfoot{meuestilo} %%pagina ímpar ou com oneside
+%{}
+%{}
+%{}
+%}
+%%
+%%% dedicatoria
+%%% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\newenvironment{dedicatoria}{
+ \ifpdf
+  \pdfbookmark[1]{DEDICATÓRIA}{pretexto.6}
+ \fi
+ \normalfont\vspace*{\stretch{1}}
+  \setlength{\baselineskip}{1\baselineskip} \normalfont%
+  \vspace*{\stretch{1}}\par%
+}{\clearpage}
+
+%%% Agradecimentos
+%%% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\newenvironment{agradecimentos}{
+ \ifpdf
+  \pdfbookmark[1]{AGRADECIMENTOS}{pretexto.7}
+ \fi
+ \@makeschapterhead{AGRADECIMENTOS}
+}{\clearpage}
+
+
+
+
+%%% Epígrafe
+%%% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\newcommand{\epigrafe}[3]{%
+  \ifpdf
+   \pdfbookmark[1]{EPÍGRAFE}{pretexto.10}
+  \fi
+  \setlength{\baselineskip}{1\baselineskip} \normalfont%
+  \vspace*{\stretch{1}}\par%
+  \begin{quotation}%
+  #1%
+  \par%
+  \begin{flushright}
+  \textbf{#2}, \\ \textit{#3}.
+  \end{flushright}%
+  \end{quotation}%
+%\setlength{\baselineskip}{1.5\baselineskip} 
+  %\clearpage%
+}
+
+%%% Notas
+%%% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%
+%\renewcommand{\nota}[1]{%
+%\vspace{0.5cm}
+%\noindent
+%\begin{minipage}{\textwidth}
+%\begin{center}
+%\begin{tabular}{|p{0.8\textwidth}|}
+%\hline \\
+%\vspace{-1cm}\emph{\textbf{Nota:} #1}\\
+%\hline
+%\end{tabular}
+%\end{center}
+%\end{minipage}
+%\vspace{0.4cm}
+%}%
+%
+%%\renewcommand{\nota}[1]{%
+%%\vspace{0.1cm}
+%%\noindent
+%%\hrulefill \\
+%%\vspace{-1.5cm}
+%%
+%%\emph{\textbf{Nota:} #1}\\
+%%
+%%\vspace{-0.5cm}
+%%\hrule
+%%\vspace{0.8cm}%
+%%}
+%
+%
+%%% Siglas
+%%% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%\def\eqdeclaration#1{, veja equa\c{c}\~ao\nobreakspace(#1)}%
+%%\def\pagedeclaration#1{, p\’agina\nobreakspace#1}%
+%\def\nomname{Nomenclatura}
+
+\newcommand{\sigla}[2]{%
+#2 (\hyperref[listaacronimos]{#1}) \label{#1} 
+\nomenclature{\hyperref[#1]{#1}}{#2. \nomrefpage}%
+}
+
+\newcommand{\siglai}[2]{%
+\hyperref[listaacronimos]{#1} (#2) \label{#1} 
+\nomenclature{\hyperref[#1]{#1}}{#2. \nomrefpage}%
+}
+
+\newcommand{\sig}[1]{%
+\hyperref[listaacronimos]{#1} 
+}
+%\renewcommand{\sc}{\textsc}
+%\def\@@@nomenclature[#1]#2#3{%
+%\def\@tempa{#2}\def\@tempb{#3}%
+%\protected@write\@nomenclaturefile{}%
+%{\string\nomenclatureentry{#1\nom@verb\@tempa @{\nom@verb\@tempa}&%
+%\begingroup\nom@verb\@tempb\protect\nomeqref{\theequation}%
+%|nompageref}{\thepage}}%
+%\endgroup
+%\@esphack}
+%%% Section titles
+%%% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%\def\mghrulefill#1{\leavevmode\leaders\hrule\@height #1\hfill\kern\z@}
+%
+%%\def\@makechapterhead#1{%
+%%%  \vspace*{10\p@}%
+%%\thispagestyle{plain}
+%%   {\interlinepenalty\@M
+%%    \raggedleft
+%%    \mghrulefill{0.5pt}
+%%    \large\textsc\mdseries{\@chapapp}\space\Huge\thechapter
+%%    \par\nobreak
+%%    \raggedright\Large\textsc\bfseries #1 \par\nobreak\vskip -10\p@
+%%    \mghrulefill{0.5pt}\par\nobreak
+%%    \vskip 10\p@
+%%  }}
+%%
+%%\def\@schapter#1{\if@twocolumn
+%%                   \@topnewpage[\@makeschapterhead{#1}]%
+%%                 \else
+%%                   \@makeschapterhead{#1}%
+%%                   \@afterheading
+%%                 \fi}
+%%
+%%\def\@makeschapterhead#1{%
+%%  % \vspace*{10\p@}%
+%%  { \parindent \z@ \raggedright
+%%    \interlinepenalty\@M
+%%    \mghrulefill{0.5pt}\par\nobreak
+%%    \raggedright\Large\textsc\bfseries #1 \par\nobreak \vskip -10\p@
+%%    \mghrulefill{0.5pt}\par\nobreak
+%%    \vskip 10\p@
+%%  }}
+%
+%
+%% ajusta o sumario conforme as regras da ABNT NBR 6027:2012
+%%\def\cftparagraphnumwidth{10pt}
+%%\setlength\cftpartnumwidth{-5pt}
+%%\setlength\cftchapternumwidth{10pt}
+%%\setlength\cftsectionnumwidth{25pt}
+%%\setlength\cftsubsectionnumwidth{30pt}
+%%\setlength\cftsubsubsectionnumwidth{50pt}
+%%\setlength\cftchapterindent{-20pt}
+%%\setlength\cftsectionindent{15pt}
+%%\setlength\cftsubsectionindent{50pt}
+%%\setlength\cftsubsubsectionindent{50pt}
+%%\renewcommand*{\cftsectionfont}{\bfseries}
+%%%% header and footer
+%%% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%
+%\newcommand\cabecalho{\fancyhf{} 
+%
+%
+%\lhead{\textit{\scriptsize{\leftmark\ - \rightmark}}}
+%\chead{} \rhead{\thepage} \lfoot{} \cfoot{} \rfoot{} \pagestyle{fancy} }
+%
+%
+%\newcommand{\headrulewidth}{0.06pt}
+%
+%%\renewcommand\chapter{\if@openright\cleardoublepage\else\clearpage\fi
+%%  \@mkboth{}{}
+%%  \thispagestyle{plain}
+%%  \global\@topnum\z@
+%%  \@afterindentfalse
+%%  \secdef\@chapter\@schapter}
+%
+%\usepackage{pifont,graphicx}
+%\newcommand\mylleaf{\ding{’247}}
+%\newcommand\myrleaf{\reflectbox{\mylleaf}}
+%\newcommand\MyNumToName[1]{%
+%\ifcase#1\relax % case 0
+%\or First\or Second\or Third%
+%\else Not implemented\fi}
+%%\makeatletter
+%\setlength\midchapskip{10pt}
+%
+%\makechapterstyle{VZ15b}{
+%\renewcommand\chapternamenum{}
+%\renewcommand\printchaptername{}
+%\renewcommand\chapnamefont{\Large\scshape}
+%\renewcommand\printchapternum{%
+%\chapnamefont
+%\null
+%\hfill
+%\mylleaf
+%\quad}
+%%\MyNumToName{\thechapter}\space\@chapapp\quad\myrleaf\hfill\null}
+%%\renewcommand\printchapternonum{%
+%%\par\hrule\vskip\midchapskip}
+%%\renewcommand\chaptitlefont{\Huge\scshape\centering}
+%%\renewcommand\afterchapternum{%
+%%\par\nobreak\vskip\midchapskip\hrule\vskip\midchapskip}
+%%\renewcommand\afterchaptertitle{%
+%%\par\vskip\midchapskip\hrule\nobreak\vskip\afterchapskip}
+%}
+%%\makeatother
+%%\chapterstyle{VZ15b}
+
+
+%%<*sample05>
+%\def\@@@nomenclature[#1]#2#3{%
+% \def\@tempa{#2}\def\@tempb{#3}%
+% \protected@write\@nomenclaturefile{}%
+%{\string\nomenclatureentry{#1\nom@verb\@tempa @[{\nom@verb\@tempa}]%
+%            |nompageref{\begingroup\nom@verb\@tempb\protect\nomeqref{\theequation}}}%
+%{\thepage}}%
+% \endgroup
+% \@esphack}
+
+%\nompageref#1#2{%
+%\if@printpageref\pagedeclaration{#2}
+%\else\null\fi\linebreak#1\nomentryend\endgroup
+%}
+
+%\renewcommand{\pagedeclaration}[1]{\dotfill\nobreakspace(#1)}
+%\def\nomentryend{.}
+%\def\nomlabel#1{\textbf{#1}\hfil}
+%
+%%% tabelas
+%\newcommand{\rotulotab}[1]{
+%\caption{#1}
+%%\bigskip
+%}%
+
+%
+%\newenvironment{tabela}[3]{
+%\begin{minipage}[#1]{#2\textwidth}
+%#3
+%\end{minipage}
+%}%
+
+%\renewcommand{\captionof}{
+%\captionof{figure}{\tiny \textbf{caption}}
+%\addto\captionsportuguese{
+%\renewcommand{\figurename}{\textbf{Figura: }}
+%\renewcommand{\tablename}{\textbf{Tabela: }}
+%}
+
+%%% Section titles
+%%% - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+%\def\mghrulefill#1{\leavevmode\leaders\hrule\@height #1\hfill\kern\z@}
+%
+%\def\@makechapterhead#1{%
+%  \vspace*{20\p@}%
+%   {\interlinepenalty\@M
+%    \raggedleft
+%    \mghrulefill{0.5pt}
+%    \Large\sf\mdseries\MakeUppercase{\@chapapp}\space\Huge\thechapter
+%    \par\nobreak
+%    \raggedright\LARGE\rm\bfseries #1 \par\nobreak\vskip -10\p@
+%    \mghrulefill{0.5pt}\par\nobreak
+%    \vskip 40\p@
+%   
+%  }}
+%
+%\def\@schapter#1{\if@twocolumn
+%                   \@topnewpage[\@makeschapterhead{#1}]%
+%                 \else
+%                   \@makeschapterhead{#1}%
+%                   \@afterheading
+%                 \fi}
+%
+%\def\@makeschapterhead#1{%
+%   \vspace*{20\p@}%
+%  { \parindent \z@ \raggedright
+%    \interlinepenalty\@M
+%    \mghrulefill{0.5pt}\par\nobreak
+%    \raggedright\Large\rm\bfseries #1 \par\nobreak \vskip -10\p@
+%    \mghrulefill{0.5pt}\par\nobreak
+%    \vskip 40\p@
+%  }}
