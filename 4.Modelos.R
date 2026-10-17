@@ -139,10 +139,21 @@ cv_df <- as.data.frame(resumo_cv) %>% rownames_to_column("Modelo") %>%
          Spec_Media = as.data.frame(summary(rs)$statistics$Spec)$Mean)
 salvar_csv(cv_df, "results/cv_auc_por_modelo.csv")
 
-png("plots/cv_comparacao_modelos.png", width = 1000, height = 600, res = 130)
-print(bwplot(rs, metric = "ROC", main = "AUC-ROC na validacao cruzada (5 folds x 3 repeticoes)"))
-invisible(dev.off())
-log_ok("Grafico salvo: plots/cv_comparacao_modelos.png")
+# Boxplot da AUC-ROC nas 15 particoes (5 folds x 3 repeticoes), em ggplot2 para
+# manter o mesmo estilo dos demais graficos. Pontos = particoes; losango = media.
+cv_long <- rs$values %>%
+  select(ends_with("~ROC")) %>%
+  pivot_longer(everything(), names_to = "Modelo", values_to = "AUC") %>%
+  mutate(Modelo = rotulo_modelo(sub("~ROC$", "", Modelo)),
+         Modelo = reorder(Modelo, AUC, FUN = mean))
+p_cv <- ggplot(cv_long, aes(AUC, Modelo)) +
+  geom_boxplot(width = 0.5, outlier.shape = NA, fill = "grey92", linewidth = 0.3) +
+  geom_point(position = position_jitter(height = 0.12, width = 0, seed = PIPELINE_SEED),
+             size = 1, alpha = 0.6) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 2.2, fill = "white") +
+  labs(x = "AUC-ROC na valida\u00e7\u00e3o cruzada (15 parti\u00e7\u00f5es)", y = NULL) +
+  tema_tcc()
+salvar_plot(p_cv, "plots/cv_comparacao_modelos.png", width = 13.5, height = 7)
 
 # Teste pareado: diferencas de AUC entre modelos sao estatisticamente significativas?
 # [Fund. 2.5.6] teste t pareado entre particoes; [Fund. 2.2.5 (sec:fund_bonferroni)]

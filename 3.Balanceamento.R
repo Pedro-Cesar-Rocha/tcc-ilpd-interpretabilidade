@@ -74,13 +74,13 @@ df_plot <- bind_rows(
 ) %>% mutate(Momento = factor(Momento, levels = c("Antes", "Depois")))
 
 p <- ggplot(df_plot, aes(x = Classe, y = n, fill = Classe)) +
-  geom_col(show.legend = FALSE) +
-  geom_text(aes(label = n), vjust = -0.4) +
+  geom_col(show.legend = FALSE, width = 0.6) +
+  geom_text(aes(label = n), vjust = -0.4, size = 3) +
   facet_wrap(~Momento) +
-  labs(title = "Distribuicao das classes no treino: antes e depois do SMOTE",
-       x = "Classe", y = "Observacoes") +
-  theme_minimal()
-salvar_plot(p, "plots/smote_antes_depois.png", width = 7, height = 4)
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(x = NULL, y = "N\u00famero de pacientes no treino") +
+  tema_tcc()
+salvar_plot(p, "plots/smote_antes_depois.png", width = 12, height = 7)
 
 salvar_rds(df_bal, "data/df_balanceado.rds")
 log_info("Nota: a etapa 4 NAO usa este arquivo diretamente; o SMOTE e reaplicado dentro de cada fold da CV.")

@@ -110,6 +110,8 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     S   <- get_shap_values(sv)
     timer_end(ti, sprintf("Calculo SHAP (%s)", nome))
     log_info("Valor base (media das previsoes na escala %s): %.4f", res$escala, get_baseline(sv))
+    # Rotulo da escala dos valores SHAP nos eixos dos graficos.
+    esc <- if (res$escala == "log-odds") "log da chance" else "probabilidade"
 
     # Importancia global
     # [Fund. 2.6.4 Visualizacoes e Resumos dos Valores SHAP (sec:fund_visualizacoes)]
@@ -143,22 +145,26 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
 
     # Graficos globais
     # [Fund. 2.6.4] graficos de barras (importancia global) e beeswarm.
+    # Estes graficos entram lado a lado no TCC (XGBoost e Random Forest, cada um com
+    # 0,49 da largura do texto, ~8 cm). Sao salvos com 10 cm e fonte 8, o que da
+    # cerca de 6,5 pt impressos; o eixo informa a escala dos valores SHAP.
     p_bar <- sv_importance(sv, kind = "bar") +
-      labs(title = sprintf("Importancia global (media de |SHAP|) - %s", nome),
-           subtitle = sprintf("Escala: %s", res$escala))
+      labs(x = sprintf("M\u00e9dia de |SHAP| (%s)", esc)) +
+      tema_tcc(base_size = 8, legenda = "none")
     p_bee <- sv_importance(sv, kind = "beeswarm") +
-      labs(title = sprintf("Distribuicao dos valores SHAP por variavel - %s", nome),
-           subtitle = "Cada ponto e um paciente; cor = valor da variavel (padronizado)")
-    salvar_plot(p_bar, sprintf("plots/shap_importancia_%s.png", slug))
-    salvar_plot(p_bee, sprintf("plots/shap_beeswarm_%s.png", slug))
+      labs(x = sprintf("Valor SHAP (%s)", esc), colour = "Valor da\nvari\u00e1vel") +
+      tema_tcc(base_size = 8, legenda = "right")
+    salvar_plot(p_bar, sprintf("plots/shap_importancia_%s.png", slug), width = 10, height = 8)
+    salvar_plot(p_bee, sprintf("plots/shap_beeswarm_%s.png", slug), width = 10, height = 8)
 
     # Dependencia (top 4)
     # [Fund. 2.6.4] graficos de dependencia.
     top4 <- head(imp_df$Variavel, 4)
     for (v in top4) {
       p_dep <- sv_dependence(sv, v = v, color_var = "auto") +
-        labs(title = sprintf("Dependencia SHAP - %s (%s)", v, nome))
-      salvar_plot(p_dep, sprintf("plots/shap_dependencia_%s_%s.png", slug, v), width = 6, height = 4.5)
+        labs(y = sprintf("SHAP (%s)", esc)) +
+        tema_tcc(base_size = 8, legenda = "right")
+      salvar_plot(p_dep, sprintf("plots/shap_dependencia_%s_%s.png", slug, v), width = 10, height = 7.5)
     }
 
     # Explicacoes locais
@@ -176,10 +182,10 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
       log_info("  %-20s paciente #%d | real = %-8s | sexo = %-9s | prob(doente) = %.3f", nm, i, real[i], genero[i], probs[i])
       log_info("      maior contribuicao p/ doente: %s (%+.3f) | p/ saudavel: %s (%+.3f)",
                names(contrib)[1], contrib[1], names(contrib)[length(contrib)], contrib[length(contrib)])
-      p_wf <- sv_waterfall(sv, row_id = i) +
-        labs(title = sprintf("Explicacao local - paciente #%d (%s) - %s", i, nm, nome),
-             subtitle = sprintf("Real: %s | Sexo: %s | Prob. prevista de doente: %.3f", real[i], genero[i], probs[i]))
-      salvar_plot(p_wf, sprintf("plots/shap_waterfall_%s_%s.png", slug, nm), width = 7, height = 5)
+      p_wf <- sv_waterfall(sv, row_id = i, annotation_size = 2.4) +
+        labs(x = sprintf("Valor SHAP (%s)", esc)) +
+        tema_tcc(base_size = 8, legenda = "none")
+      salvar_plot(p_wf, sprintf("plots/shap_waterfall_%s_%s.png", slug, nm), width = 10, height = 8)
     }
 
     # SHAP estratificado por sexo (auditoria de vies)
@@ -214,19 +220,18 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
       ggplot(aes(Variavel, Importancia_SHAP, fill = Sexo)) +
       geom_col(position = position_dodge(0.8), width = 0.7) +
       coord_flip() +
-      labs(title = sprintf("Importancia SHAP por sexo - %s", nome),
-           subtitle = sprintf("Media de |SHAP| no teste; escala: %s", res$escala), x = NULL, y = "Media |SHAP|") +
-      theme_minimal() + theme(legend.position = "bottom")
-    salvar_plot(p_sexo, sprintf("plots/shap_importancia_por_sexo_%s.png", slug), width = 7, height = 5)
+      labs(x = NULL, y = sprintf("M\u00e9dia de |SHAP| (%s)", esc), fill = NULL) +
+      tema_tcc(base_size = 8)
+    salvar_plot(p_sexo, sprintf("plots/shap_importancia_por_sexo_%s.png", slug), width = 10, height = 8.5)
 
     p_bee_sexo <- data.frame(SHAP_Gender = S[, "Gender"], Sexo = genero, Classe = real) %>%
       ggplot(aes(Sexo, SHAP_Gender, colour = Classe)) +
       geom_hline(yintercept = 0, linetype = "dashed", colour = "grey50") +
-      geom_jitter(width = 0.15, alpha = 0.7, size = 1.6) +
-      labs(title = sprintf("Contribuicao SHAP da variavel Gender por sexo - %s", nome),
-           subtitle = "Valores > 0 aumentam a previsao de 'doente'", y = sprintf("SHAP(Gender) [%s]", res$escala), x = NULL) +
-      theme_minimal() + theme(legend.position = "bottom")
-    salvar_plot(p_bee_sexo, sprintf("plots/shap_gender_por_sexo_%s.png", slug), width = 6, height = 4.5)
+      geom_point(position = position_jitter(width = 0.15, height = 0, seed = PIPELINE_SEED),
+                 alpha = 0.7, size = 1.3) +
+      labs(y = sprintf("SHAP de Gender (%s)", esc), x = NULL, colour = NULL) +
+      tema_tcc()
+    salvar_plot(p_bee_sexo, sprintf("plots/shap_gender_por_sexo_%s.png", slug), width = 10.5, height = 7.5)
 
     # Importancia sem arredondar (postos calculados depois, com posto medio nos empates)
     tibble(Variavel = names(imp), Imp = as.numeric(imp)) %>%

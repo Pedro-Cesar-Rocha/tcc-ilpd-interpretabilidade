@@ -166,32 +166,41 @@ if (nrow(pares) > 0) {
   log_ok("Nenhum par com |r| > 0.7.")
 }
 
-png("plots/eda_correlacao.png", width = 1000, height = 900, res = 130)
+# Salvo em 13 x 12 cm (0,8 da largura do texto), sem titulo (a legenda fica no LaTeX).
+png("plots/eda_correlacao.png", width = 13, height = 12, units = "cm", res = 300)
 corrplot(mat_cor, method = "color", type = "upper", addCoef.col = "black",
-         number.cex = 0.7, tl.cex = 0.8, tl.col = "black",
-         title = "Matriz de correlacao - ILPD", mar = c(0, 0, 2, 0))
+         number.cex = 0.55, tl.cex = 0.6, cl.cex = 0.55, tl.col = "black",
+         mar = c(0, 0, 0, 0))
 invisible(dev.off())
 log_ok("Grafico salvo: plots/eda_correlacao.png")
 
 # --- Graficos exploratorios -------------------------------------------------
-p_alvo <- ggplot(df, aes(x = factor(Diagnostico, labels = c("Doente", "Saudavel")), fill = factor(Diagnostico))) +
-  geom_bar(show.legend = FALSE) +
-  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.4) +
-  labs(title = "Distribuicao da variavel alvo", x = NULL, y = "Frequencia") +
-  theme_minimal()
-salvar_plot(p_alvo, "plots/eda_distribuicao_alvo.png", width = 6, height = 4)
+p_alvo <- ggplot(df, aes(x = factor(Diagnostico, labels = c("Doente", "Saud\u00e1vel")), fill = factor(Diagnostico))) +
+  geom_bar(show.legend = FALSE, width = 0.6) +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.4, size = 3) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(x = NULL, y = "N\u00famero de pacientes") +
+  tema_tcc()
+salvar_plot(p_alvo, "plots/eda_distribuicao_alvo.png", width = 11, height = 7)
 
 # [Fund. 2.2.3] boxplots: valores extremos (outliers) e assimetria por classe.
+# Nas variaveis com forte assimetria (|b1| > 2), a escala original comprime a
+# caixa contra o zero e so os valores extremos aparecem; por isso elas sao
+# mostradas em escala log10 (apenas no grafico; o modelo usa ln(1 + x)).
 p_box <- df %>%
-  mutate(Classe = factor(Diagnostico, labels = c("Doente", "Saudavel"))) %>%
+  mutate(Classe = factor(Diagnostico, labels = c("Doente", "Saud\u00e1vel"))) %>%
   select(all_of(num_cols), Classe) %>%
   pivot_longer(-Classe, names_to = "Variavel", values_to = "Valor") %>%
+  filter(!is.na(Valor)) %>%
+  mutate(log_escala = Variavel %in% assimetricas,
+         Valor      = ifelse(log_escala, log10(Valor), Valor),
+         Variavel   = ifelse(log_escala, paste0(Variavel, "\n(escala log10)"), Variavel)) %>%
   ggplot(aes(x = Classe, y = Valor, fill = Classe)) +
-  geom_boxplot(outlier.size = 0.6, show.legend = FALSE) +
-  facet_wrap(~Variavel, scales = "free_y", ncol = 5) +
-  labs(title = "Distribuicao das variaveis por classe (escala original)", x = NULL) +
-  theme_minimal(base_size = 9)
-salvar_plot(p_box, "plots/eda_boxplots_por_classe.png", width = 12, height = 6)
+  geom_boxplot(outlier.size = 0.5, linewidth = 0.3, show.legend = FALSE) +
+  facet_wrap(~Variavel, scales = "free_y", ncol = 3) +
+  labs(x = NULL, y = NULL) +
+  tema_tcc(base_size = 8)
+salvar_plot(p_box, "plots/eda_boxplots_por_classe.png", width = 16, height = 15)
 
 salvar_rds(df, "data/df_raw.rds")
 timer_end(t0, "Etapa 1")

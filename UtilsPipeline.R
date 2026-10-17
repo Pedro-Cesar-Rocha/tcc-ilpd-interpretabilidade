@@ -79,10 +79,32 @@ salvar_rds <- function(obj, caminho) {
   log_ok("Salvo: %s (%.1f KB)", caminho, file.info(caminho)$size / 1024)
 }
 
-salvar_plot <- function(p, caminho, width = 8, height = 5, dpi = 150) {
-  ggplot2::ggsave(caminho, p, width = width, height = height, dpi = dpi)
-  log_ok("Grafico salvo: %s", caminho)
+# --- Graficos no tamanho da pagina do TCC ------------------------------------
+# A area util da pagina A4 com margens ABNT (3 cm a esquerda e 2 cm a direita)
+# tem 16 cm de largura. Cada grafico e salvo, em centimetros, na largura em que
+# sera impresso na monografia (a mesma do \includegraphics), de modo que o texto
+# do grafico saia com tamanho proximo ao do texto (8 a 9 pt), sem reducao.
+LARGURA_TCC_CM <- 16
+
+salvar_plot <- function(p, caminho, width = LARGURA_TCC_CM, height = 10, dpi = 300,
+                        sem_titulo = TRUE) {
+  # O titulo e o subtitulo sao retirados porque a legenda da figura no LaTeX
+  # (\caption) ja cumpre esse papel; use sem_titulo = FALSE para mante-los.
+  if (sem_titulo && inherits(p, "ggplot")) p <- p + ggplot2::labs(title = NULL, subtitle = NULL)
+  ggplot2::ggsave(caminho, p, width = width, height = height, units = "cm", dpi = dpi, bg = "white")
+  log_ok("Grafico salvo: %s (%.1f x %.1f cm)", caminho, width, height)
 }
+
+# Tema padrao dos graficos do TCC.
+tema_tcc <- function(base_size = 9, legenda = "bottom") {
+  ggplot2::theme_minimal(base_size = base_size) +
+    ggplot2::theme(legend.position = legenda,
+                   panel.grid.minor = ggplot2::element_blank(),
+                   strip.text = ggplot2::element_text(face = "bold"))
+}
+
+# Nomes dos modelos com acentos nos graficos (nos objetos ficam sem acento).
+rotulo_modelo <- function(x) sub("Regressao Logistica", "Regress\u00e3o Log\u00edstica", x, fixed = TRUE)
 
 salvar_csv <- function(df, caminho) {
   utils::write.csv(df, caminho, row.names = FALSE)
