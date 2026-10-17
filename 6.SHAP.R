@@ -153,7 +153,12 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
       tema_tcc(base_size = 8, legenda = "none")
     p_bee <- sv_importance(sv, kind = "beeswarm") +
       labs(x = sprintf("Valor SHAP (%s)", esc), colour = "Valor da\nvari\u00e1vel") +
-      tema_tcc(base_size = 8, legenda = "right")
+      tema_tcc(base_size = 8, legenda = "right") +
+      # Rotulos da barra de cores em portugues: o shapviz reescala a cor de cada
+      # variavel para [0, 1] e rotula os extremos como "Low"/"High"; aqui a mesma
+      # paleta (inferno) e refeita com os rotulos "Baixo"/"Alto".
+      ggplot2::scale_colour_viridis_c(option = "inferno", begin = 0.25, end = 0.85,
+                                      breaks = 0:1, labels = c("Baixo", "Alto"))
     salvar_plot(p_bar, sprintf("plots/shap_importancia_%s.png", slug), width = 10, height = 8)
     salvar_plot(p_bee, sprintf("plots/shap_beeswarm_%s.png", slug), width = 10, height = 8)
 

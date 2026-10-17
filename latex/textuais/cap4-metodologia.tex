@@ -6,13 +6,13 @@ Este capítulo apresenta as técnicas e o protocolo experimental utilizados para
 
 \subsection{Caracterização da Base}
 
-Neste projeto foi utilizado o Indian Liver Patient Dataset (ILPD) \cite{ramana2022ilpd}, um dataset de 583 registros contendo dados bioquímicos relacionados ao fígado, visando auxiliar na predição de patologias hepáticas. O dataset é composto por 10 atributos preditores, sendo 9 variáveis bioquímicas e 1 variável demográfica, além da variável-alvo que classifica os pacientes em diagnosticados com doença hepática ou sem esse diagnóstico. As variáveis preditoras estão descritas na Tabela~\ref{tab:variaveis}.
+Neste projeto foi utilizado o Indian Liver Patient Dataset (ILPD) \cite{ramana2022ilpd}, um dataset de 583 registros contendo dados bioquímicos relacionados ao fígado, visando auxiliar na predição de patologias hepáticas. O dataset é composto por 10 atributos preditores, sendo 9 variáveis bioquímicas e 1 variável demográfica, além da variável-alvo que classifica os pacientes em diagnosticados com doença hepática ou sem esse diagnóstico. As variáveis preditoras e a variável-alvo estão descritas na Tabela~\ref{tab:variaveis}.
 
 \begin{table}[htbp]
 \centering
-\caption{Variáveis preditoras do ILPD.}
+\caption{Variáveis do ILPD: dez preditoras e a variável-alvo.}
 \label{tab:variaveis}
-\begin{tabular}{llp{8.5cm}}
+\begin{tabular}{llp{8cm}}
 \hline
 \textbf{Variável} & \textbf{Tipo} & \textbf{Descrição} \\
 \hline
@@ -26,6 +26,7 @@ Aspartate\_Aminotransferase & numérica    & atividade de aspartato aminotransfe
 Total\_Proteins             & numérica    & concentração de proteínas totais, em g/dL \\
 Albumin                     & numérica    & concentração de albumina, em g/dL \\
 AG\_Ratio                   & numérica    & razão albumina/globulina \\
+Diagnostico                 & binária     & variável-alvo: 1 = doente, 2 = saudável (\textit{Selector} na documentação da UCI) \\
 \hline
 \end{tabular}
 \end{table}
@@ -112,7 +113,7 @@ AG\_Ratio                   & 0,91   & 1,03  & $<0{,}001$ & sim \\
 \end{tabular}
 \end{table}
 
-Também foram gerados \textit{boxplots} de cada variável numérica, separados por classe e na escala original (Figura~\ref{fig:eda_boxplots}). Em cada painel, a caixa delimita do primeiro ao terceiro quartil, isto é, a metade central das observações do grupo, a linha no interior da caixa marca a mediana, os bigodes se estendem até os valores não considerados atípicos e os pontos isolados são os valores extremos. A comparação visual entre as caixas de doentes e saudáveis permite avaliar a sobreposição entre as distribuições dos dois grupos.
+Também foram gerados \textit{boxplots} de cada variável numérica, separados por classe (Figura~\ref{fig:eda_boxplots}), na escala original ou, nas cinco variáveis com forte assimetria, em escala logarítmica de base 10, adotada apenas para facilitar a visualização. Em cada painel, a caixa delimita do primeiro ao terceiro quartil, isto é, a metade central das observações do grupo, a linha no interior da caixa marca a mediana, os bigodes se estendem até os valores não considerados atípicos e os pontos isolados são os valores extremos. A comparação visual entre as caixas de doentes e saudáveis permite avaliar a sobreposição entre as distribuições dos dois grupos.
 
 \begin{figure}[H]
 \centering

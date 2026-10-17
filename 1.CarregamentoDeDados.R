@@ -169,7 +169,7 @@ if (nrow(pares) > 0) {
 # Salvo em 13 x 12 cm (0,8 da largura do texto), sem titulo (a legenda fica no LaTeX).
 png("plots/eda_correlacao.png", width = 13, height = 12, units = "cm", res = 300)
 corrplot(mat_cor, method = "color", type = "upper", addCoef.col = "black",
-         number.cex = 0.55, tl.cex = 0.6, cl.cex = 0.55, tl.col = "black",
+         number.cex = 0.55, tl.cex = 0.6, cl.cex = 0.55, tl.col = "black", tl.srt = 45,
          mar = c(0, 0, 0, 0))
 invisible(dev.off())
 log_ok("Grafico salvo: plots/eda_correlacao.png")
