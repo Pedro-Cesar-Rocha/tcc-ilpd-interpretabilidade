@@ -3,6 +3,8 @@
 # Verifica e instala as dependencias da pipeline, fixando versoes onde ha
 # incompatibilidades conhecidas (caret + xgboost; fastshap arquivado no CRAN).
 # =============================================================================
+# [Fund. 2.8 Ferramentas Computacionais (sec:fund_ferramentas)]
+# Linguagem R e pacotes usados em cada etapa da pipeline.
 source("UtilsPipeline.R")
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 

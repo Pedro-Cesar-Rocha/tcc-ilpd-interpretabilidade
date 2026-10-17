@@ -4,6 +4,10 @@
 # ESTRATIFICADA e, SOMENTE DEPOIS, imputacao e normalizacao com parametros
 # estimados no treino (evita qualquer vazamento de informacao do teste).
 # =============================================================================
+# [Fund. 2.3 Preparacao dos Dados (sec:fund_preparacao)] Etapa 2 da Figura 2.1.
+# A ordem das operacoes segue a secao 2.1: o que nao depende de parametros
+# estimados (duplicatas, log) vem antes da divisao; o que depende (imputacao,
+# padronizacao, SMOTE) e ajustado somente no treino (2.3.2, vazamento de dados).
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
   library(tidyverse)
@@ -17,12 +21,16 @@ df <- readRDS("data/df_raw.rds")
 log_info("Dados brutos carregados: %d x %d", nrow(df), ncol(df))
 
 # --- Duplicatas --------------------------------------------------------------
+# [Fund. 2.3.2 Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
+#   primeira origem de vazamento: um registro no treino e sua copia no teste.
 log_subsection("Remocao de duplicatas")
 n_antes <- nrow(df)
 df <- distinct(df)
 log_info("Removidas %d linhas duplicadas (%d -> %d).", n_antes - nrow(df), n_antes, nrow(df))
 
 # --- Encoding ----------------------------------------------------------------
+# [Fund. 2.2.2 Conceitos Basicos (sec:fund_conceitos)] variavel binaria (Gender)
+#   e classe positiva ('doente') x negativa ('saudavel').
 log_subsection("Codificacao de variaveis categoricas")
 df$Gender  <- ifelse(df$Gender == "Male", 1, 0)
 log_info("Gender  -> Male = 1, Female = 0  (%d homens, %d mulheres)", sum(df$Gender == 1), sum(df$Gender == 0))
@@ -33,6 +41,10 @@ log_info("Dataset -> 'doente' (classe positiva) / 'saudavel'")
 log_kv(paste0("Classe ", levels(df$Dataset)), as.vector(table(df$Dataset)))
 
 # --- Transformacao log das variaveis assimetricas ---------------------------
+# [Fund. 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_log)]
+#   log1p(x) = ln(1 + x), Eq. 2.3 (eq:log); o efeito e conferido pelo coeficiente
+#   de assimetria antes e depois (Eq. 2.1). Nao usa parametros estimados dos dados,
+#   por isso pode vir antes da divisao treino/teste.
 log_subsection("Transformacao log1p em variaveis com forte assimetria")
 vars_log <- c("Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase",
               "Alamine_Aminotransferase", "Aspartate_Aminotransferase")
@@ -44,6 +56,9 @@ for (v in vars_log) {
 }
 
 # --- Divisao treino/teste (estratificada) -----------------------------------
+# [Fund. 2.2.2 Conceitos Basicos (sec:fund_conceitos)] conjunto de treino e de teste.
+# [Fund. 2.5.1 Validacao Cruzada (sec:fund_cv)] estratificacao: mantem a proporcao
+#   de classes. [Fund. 2.1] semente fixada antes do sorteio.
 log_subsection("Divisao treino / teste (80/20, estratificada pela classe)")
 set.seed(PIPELINE_SEED)
 idx    <- createDataPartition(df$Dataset, p = 0.8, list = FALSE)
@@ -54,6 +69,8 @@ log_info("Proporcao 'doente' - treino: %.1f%%  |  teste: %.1f%%",
          100 * mean(treino$Dataset == "doente"), 100 * mean(teste$Dataset == "doente"))
 
 # --- Imputacao (mediana estimada SOMENTE no treino) -------------------------
+# [Fund. 2.3.1 Valores Ausentes e Imputacao (sec:fund_ausentes)] mediana, robusta
+#   a assimetria; [Fund. 2.3.2] estimada so no treino (segunda origem de vazamento).
 log_subsection("Imputacao de valores ausentes (mediana do treino aplicada a treino e teste)")
 mediana_ag <- median(treino$AG_Ratio, na.rm = TRUE)
 na_treino  <- sum(is.na(treino$AG_Ratio)); na_teste <- sum(is.na(teste$AG_Ratio))
@@ -64,6 +81,8 @@ log_info("AG_Ratio: mediana do treino = %.2f | imputados: %d no treino, %d no te
 log_ok("Total de NAs restantes: treino = %d | teste = %d", sum(is.na(treino)), sum(is.na(teste)))
 
 # --- Normalizacao (ajustada SOMENTE no treino) ------------------------------
+# [Fund. 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_padronizacao)]
+#   z-score z = (x - media) / desvio-padrao, com media e desvio estimados so no treino.
 log_subsection("Normalizacao (center + scale) ajustada no conjunto de treino")
 X_treino <- treino %>% select(-Dataset)
 X_teste  <- teste  %>% select(-Dataset)
@@ -89,6 +108,7 @@ salvar_rds(treino_proc, "data/df_proc.rds")   # treino pre-processado (entrada d
 salvar_rds(teste_proc,  "data/teste.rds")     # teste intocado pelo SMOTE
 salvar_rds(preproc,     "data/preproc.rds")
 # Genero em rotulo legivel, para a analise estratificada por sexo (etapas 5 e 6)
+# [Fund. 2.7 Vies Algoritmico e Equidade em Saude (sec:fund_vies)]
 genero_teste <- factor(ifelse(teste$Gender == 1, "Masculino", "Feminino"),
                        levels = c("Feminino", "Masculino"))
 salvar_rds(genero_teste, "data/teste_genero.rds")

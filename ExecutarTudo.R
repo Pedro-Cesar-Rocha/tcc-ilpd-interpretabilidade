@@ -3,6 +3,22 @@
 # Orquestra a pipeline completa, cronometra cada etapa, trata erros e grava
 # uma copia integral do console em logs/pipeline_<timestamp>.log.
 # =============================================================================
+# -----------------------------------------------------------------------------
+# MAPA ENTRE O CODIGO E A FUNDAMENTACAO TEORICA (Capitulo 2 da monografia)
+# A pipeline implementa o fluxo da Figura 2.1 (secao 2.1, \label{fig:fund_kdd}).
+# Cada script corresponde a uma ou mais etapas dessa figura:
+#   0.InstalarPacotes.R     -> 2.8 Ferramentas Computacionais
+#   1.CarregamentoDeDados.R -> Etapa 1, 2.2 Compreensao e Exploracao dos Dados
+#   2.PreProcessamento.R    -> Etapa 2, 2.3 Preparacao dos Dados (2.3.1 a 2.3.3)
+#   3.Balanceamento.R       -> Etapa 2, 2.3.4 Desbalanceamento de Classes e SMOTE
+#   4.Modelos.R             -> Etapa 3, 2.4 Modelagem; Etapa 4, 2.5.1, 2.5.2 e 2.5.6
+#   5.Avaliacao.R           -> Etapa 4, 2.5.3 a 2.5.5; e 2.7 Vies Algoritmico
+#   6.SHAP.R                -> Etapa 5, 2.6 Interpretabilidade; e 2.7 Vies Algoritmico
+#   UtilsPipeline.R         -> semente (2.1), SMOTE por fold (2.3.4) e LightGBM (2.4.5)
+# Dentro de cada script, comentarios no formato [Fund. X.Y ...] indicam a secao
+# (ou equacao) da Fundamentacao em que o conceito usado naquele trecho e explicado.
+# Numeracao conforme a versao atual da monografia; entre parenteses, o \label.
+# -----------------------------------------------------------------------------
 project_dir <- getwd()
 source(file.path(project_dir, "UtilsPipeline.R"))
 

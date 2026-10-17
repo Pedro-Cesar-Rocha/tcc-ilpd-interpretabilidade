@@ -6,6 +6,10 @@
 #   - criacao de diretorios e persistencia de artefatos com log
 # =============================================================================
 
+# [Fund. 2.1 Mineracao de Dados e Descoberta de Conhecimento (sec:fund_kdd)]
+# Semente aleatoria: fixa o gerador de numeros pseudoaleatorios para que os
+# sorteios (divisao, CV, SMOTE, busca de hiperparametros, arvores, Monte Carlo)
+# se repitam e o experimento seja reprodutivel.
 PIPELINE_SEED <- 42
 
 # ----------------------------------------------------------------------------
@@ -96,6 +100,12 @@ salvar_csv <- function(df, caminho) {
 # diferentes geraria valores intermediarios sem significado. Apos o SMOTE, cada
 # valor sintetico e substituido pela categoria valida mais proxima, ou seja, a
 # amostra sintetica herda o sexo de um dos dois pacientes que a originaram.
+# [Fund. 2.3.4 Desbalanceamento de Classes e SMOTE (sec:fund_smote)]
+#   - SMOTE: nova observacao sintetica em um ponto do segmento entre uma
+#     observacao da classe minoritaria e um de seus k vizinhos mais proximos (K = 5).
+#   - Correcao de Gender: mesma ideia da variante SMOTE-NC para variaveis binarias.
+# [Fund. 2.3.2 Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
+#   - SMOTE dentro de cada fold: a terceira origem de vazamento descrita no texto.
 VARS_BINARIAS <- c("Gender")
 
 categoria_mais_proxima <- function(valores, categorias) {
@@ -135,6 +145,10 @@ smote_caret <- list(
 # (caret nao possui metodo nativo; este wrapper permite usar a mesma
 #  validacao cruzada, tuning e comparacao via resamples dos demais modelos)
 # ----------------------------------------------------------------------------
+# [Fund. 2.4.5 LightGBM (sec:fund_lgbm)] modelo de boosting com histogramas e
+#   crescimento leaf-wise; num_leaves e min_data_in_leaf controlam o sobreajuste.
+# [Fund. 2.5.2 Hiperparametros e Sua Otimizacao (sec:fund_hiperparametros)]
+#   a funcao grid(search = "random") define o espaco da busca aleatoria.
 lightgbm_caret <- list(
   label   = "LightGBM",
   library = "lightgbm",
@@ -173,6 +187,7 @@ lightgbm_caret <- list(
   },
   predict = function(modelFit, newdata, submodels = NULL) {
     p <- predict(modelFit$booster, as.matrix(newdata))
+    # [Fund. 2.5.3 Metricas de Desempenho / 2.5.5 Limiar de Decisao] limiar padrao 0,5
     factor(ifelse(p >= 0.5, modelFit$lev[2], modelFit$lev[1]), levels = modelFit$lev)
   },
   prob = function(modelFit, newdata, submodels = NULL) {

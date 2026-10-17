@@ -8,6 +8,9 @@
 #   - XGBoost (gradient boosting)
 #   - LightGBM (gradient boosting, wrapper customizado para o caret)
 # =============================================================================
+# [Fund. 2.4 Modelagem e Classificacao (sec:fund_modelos)] Etapa 3 da Figura 2.1.
+# [Fund. 2.5 Treinamento, Validacao e Avaliacao (sec:fund_validacao)] Etapa 4,
+#   parte de treinamento e validacao (a avaliacao no teste esta em 5.Avaliacao.R).
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
   library(tidyverse)
@@ -26,15 +29,23 @@ log_info("O SMOTE sera aplicado dentro de cada fold da CV e no ajuste final (car
 
 # --- Configuracao da validacao cruzada --------------------------------------
 log_subsection("Configuracao da validacao cruzada")
+# [Fund. 2.5.2 Hiperparametros e Sua Otimizacao (sec:fund_hiperparametros)]
+#   busca aleatoria (Random Search) com numero fixo de combinacoes.
 N_RANDOM <- 30   # combinacoes de hiperparametros sorteadas por modelo (Random Search)
 
 # twoClassSummary toma o primeiro nivel ("saudavel") como evento; troca Sens/Spec
 # para que ambas se refiram a classe positiva "doente" (a AUC nao muda).
+# [Fund. 2.5.3 Metricas de Desempenho (sec:fund_metricas)] sensibilidade e
+#   especificidade referidas a classe positiva 'doente'.
 resumo_doente <- function(data, lev = NULL, model = NULL) {
   out <- twoClassSummary(data, lev = lev, model = model)
   setNames(out[c("ROC", "Spec", "Sens")], c("ROC", "Sens", "Spec"))
 }
 
+# [Fund. 2.5.1 Validacao Cruzada (sec:fund_cv)] k-fold repetida (k = 5, 3 repeticoes);
+#   savePredictions guarda as previsoes fora da particao (out-of-fold).
+# [Fund. 2.5.4 Curva ROC e AUC (sec:fund_roc)] selecao pela AUC-ROC (metric = "ROC").
+# [Fund. 2.3.4 SMOTE] sampling = smote_caret: SMOTE dentro de cada fold.
 ctrl <- trainControl(
   method          = "repeatedcv",
   number          = 5,
@@ -52,6 +63,8 @@ log_kv(c("Metodo", "Folds", "Repeticoes", "Balanceamento", "Busca de hiperparame
 # Silencia o aviso deprecated `ntree_limit` do xgboost 1.7 (interno do caret)
 xgboost::xgb.set.config(verbosity = 0)
 
+# [Fund. 2.1] semente redefinida antes de cada train(): mesmas particoes para
+#   todos os modelos. [Fund. 2.4] sobreajuste e a razao da validacao cruzada.
 treinar <- function(nome, ...) {
   log_subsection(sprintf("Treinando: %s", nome))
   ti <- timer_start()
@@ -75,12 +88,21 @@ treinar <- function(nome, ...) {
   modelo
 }
 
+# [Fund. 2.4.1 Regressao Logistica (sec:fund_lr)] Eq. 2.4 (eq:logit).
+# [Fund. 2.4.3 Random Forest (sec:fund_rf)] bagging, bootstrap, mtry, ntree = 500,
+#   importance = TRUE -> importancia por permutacao nas amostras out-of-bag.
+# [Fund. 2.4.4 XGBoost (sec:fund_xgb)] gradient boosting, Eq. 2.5 (eq:boosting);
+#   eta, gamma etc. sao os ajustes contra sobreajuste descritos no texto.
+# [Fund. 2.4.5 LightGBM (sec:fund_lgbm)] wrapper em UtilsPipeline.R.
+# [Fund. 2.4.2 Arvores de Decisao e Metodos de Ensemble (sec:fund_arvores)]
 modelo_lr  <- treinar("Regressao Logistica", method = "glm", family = "binomial")
 modelo_rf  <- treinar("Random Forest",       method = "rf", tuneLength = N_RANDOM, ntree = 500, importance = TRUE)
 modelo_xgb <- treinar("XGBoost",             method = "xgbTree", tuneLength = N_RANDOM, verbosity = 0)
 modelo_lgb <- treinar("LightGBM",            method = lightgbm_caret, tuneLength = N_RANDOM)
 
 # --- Coeficientes da regressao logistica (interpretacao direta) -------------
+# [Fund. 2.4.1 Regressao Logistica (sec:fund_lr)] razao de chances OR = exp(beta)
+#   e valor-p do teste de Wald; instabilidade sob multicolinearidade (2.2.4).
 log_subsection("Coeficientes da Regressao Logistica (odds ratio)")
 coefs <- summary(modelo_lr$finalModel)$coefficients
 coef_df <- data.frame(Variavel   = rownames(coefs),
@@ -94,6 +116,8 @@ log_info("OR > 1: aumento de 1 DP na variavel eleva a chance de 'doente'; OR < 1
 salvar_csv(coef_df, "results/coeficientes_regressao_logistica.csv")
 
 # --- Comparacao dos modelos na validacao cruzada -----------------------------
+# [Fund. 2.5.6 Comparacao Estatistica entre Modelos na Validacao Cruzada
+#   (sec:fund_comparacao_cv)] mesmas 15 particoes para os quatro modelos.
 log_subsection("Comparacao dos modelos na validacao cruzada (resamples)")
 modelos <- list(
   "Regressao Logistica" = modelo_lr,
@@ -121,6 +145,8 @@ invisible(dev.off())
 log_ok("Grafico salvo: plots/cv_comparacao_modelos.png")
 
 # Teste pareado: diferencas de AUC entre modelos sao estatisticamente significativas?
+# [Fund. 2.5.6] teste t pareado entre particoes; [Fund. 2.2.5 (sec:fund_bonferroni)]
+#   correcao de Bonferroni para as seis comparacoes.
 log_subsection("Diferencas de AUC entre modelos (teste t pareado, Bonferroni)")
 dif <- diff(rs, metric = "ROC")
 log_table(summary(dif)$table$ROC, digits = 4)
