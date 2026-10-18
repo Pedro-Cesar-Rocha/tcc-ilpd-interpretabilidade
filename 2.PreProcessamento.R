@@ -51,8 +51,8 @@ log_kv(paste0("Classe ", levels(df$Diagnostico)), as.vector(table(df$Diagnostico
 # [Metodologia - 3.3.1 (sec:preproc_duplicatas)] ln(1 + x) nas cinco variaveis assimetricas;
 #   a assimetria antes/depois impressa aqui e a da Tabela tab:assimetria_log.
 # [Fundamentação Teórica - 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_log)]
-#   log1p(x) = ln(1 + x), Eq. 2.3 (eq:log); o efeito e conferido pelo coeficiente
-#   de assimetria antes e depois (Eq. 2.1). Nao usa parametros estimados dos dados,
+#   log1p(x) = ln(1 + x), Eq. 2.2 (eq:log); o efeito e conferido pelo coeficiente
+#   de assimetria antes e depois. Nao usa parametros estimados dos dados,
 #   por isso pode vir antes da divisao treino/teste.
 log_subsection("Transformacao log1p em variaveis com forte assimetria")
 vars_log <- c("Total_Bilirubin", "Direct_Bilirubin", "Alkaline_Phosphotase",

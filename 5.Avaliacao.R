@@ -120,7 +120,7 @@ avaliar <- function(modelo, nome) {
   log_info("ROC out-of-fold da CV: %d predicoes | AUC = %.4f", length(roc_cv$response), as.numeric(auc(roc_cv)))
 
   # Limiar otimo pelo indice de Youden (Sens + Spec - 1)
-  # [Fundamentação Teórica - 2.5.5 Limiar de Decisao] indice de Youden, Eq. 2.6 (eq:youden).
+  # [Fundamentação Teórica - 2.5.5 Limiar de Decisao] indice de Youden, Eq. 2.5 (eq:youden).
   yj   <- coords(roc_cv, "best", best.method = "youden", ret = c("threshold", "sensitivity", "specificity"))
   m_yj <- metricas_no_limiar(prob, teste$Diagnostico, yj$threshold[1])
   log_info("Limiar otimo (Youden, CV): %.3f -> CV: Sens = %.3f | Spec = %.3f || teste: Sens = %.3f | Spec = %.3f",

@@ -67,7 +67,7 @@ Construiu-se também uma tabela de contingência entre o sexo do paciente e a va
 \subsection{Estatísticas Descritivas e Assimetria}
 \label{sec:estatisticas_descritivas_assimetria}
 
-Para cada uma das nove variáveis numéricas foram calculadas a média, o desvio-padrão, o mínimo, a mediana, o máximo e o coeficiente de assimetria (\textit{skewness}, Equação~\ref{eq:assimetria}), apresentados na Tabela~\ref{tab:descritivas}.
+Para cada uma das nove variáveis numéricas foram calculadas a média, o desvio-padrão, o mínimo, a mediana, o máximo e o coeficiente de assimetria (\textit{skewness}, Seção~\ref{sec:fund_assimetria}), apresentados na Tabela~\ref{tab:descritivas}.
 
 \begin{table}[htbp]
 \centering
@@ -87,7 +87,7 @@ Total\_Proteins             & 6,48   & 1,09   & 2,7  & 6,6  & 9,6   & $-0{,}28$ 
 Albumin                     & 3,14   & 0,80   & 0,9  & 3,1  & 5,5   & $-0{,}04$ \\
 AG\_Ratio\textsuperscript{a} & 0,95  & 0,32   & 0,3  & 0,93 & 2,8   & 0,99 \\
 \hline
-\multicolumn{7}{l}{\footnotesize DP: desvio-padrão; $b_1$: coeficiente de assimetria (Equação~\ref{eq:assimetria}).} \\
+\multicolumn{7}{l}{\footnotesize DP: desvio-padrão; $b_1$: coeficiente de assimetria (\textit{skewness}).} \\
 \multicolumn{7}{l}{\footnotesize \textsuperscript{a} Calculado sobre as 579 observações não ausentes.} \\
 \end{tabular}
 \end{table}
@@ -97,25 +97,25 @@ Adotou-se o critério $|b_1| > 2$ para identificar desvios substanciais da norma
 \subsection{Comparação entre Classes}
 \label{sec:comparacao_classes}
 
-Para uma primeira avaliação do poder discriminativo de cada variável, compararam-se as médias dos grupos de pacientes doentes e saudáveis com o teste $t$ de Welch, ao nível de significância de 5\% (Seção~\ref{sec:fund_welch}). O teste foi escolhido no lugar do teste $t$ de Student clássico porque a suposição de variâncias iguais seria pouco plausível aqui: os grupos são pré-existentes (definidos pelo diagnóstico, e não por atribuição aleatória), têm tamanhos diferentes (416 doentes e 167 saudáveis) e vários exames, como as bilirrubinas, a fosfatase alcalina e as aminotransferases, apresentam maior dispersão no grupo de doentes, que é o maior, de modo que o efeito esperado do teste de Student seria o de um teste conservador \cite{psychologists}. Em oito das nove variáveis analisadas, a diferença entre as médias das classes foi significativa ao nível de 5\% ($p < 0{,}05$); a exceção foi \textit{Total\_Proteins} ($p = 0{,}393$), conforme a Tabela~\ref{tab:teste_welch}.
+Para uma primeira avaliação de quais exames diferem entre os grupos, compararam-se as médias de cada variável numérica entre os pacientes doentes e saudáveis (Tabela~\ref{tab:medias_classe}). Nas bilirrubinas e nas aminotransferases, as médias dos doentes foram cerca de três a cinco vezes maiores; a albumina e a razão albumina/globulina foram menores nos doentes, e \textit{Total\_Proteins} foi praticamente igual nos dois grupos.
 
 \begin{table}[htbp]
 \centering
-\caption{Resultado do teste $t$ de Welch entre as classes doente e saudável.}
-\label{tab:teste_welch}
-\begin{tabular}{lrrrl}
+\caption{Médias das variáveis numéricas por classe (base original, $n = 583$).}
+\label{tab:medias_classe}
+\begin{tabular}{lrr}
 \hline
-\textbf{Variável} & \textbf{Média Doente} & \textbf{Média Saudável} & \textbf{$p$-valor} & \textbf{Signif.} \\
+\textbf{Variável} & \textbf{Média Doente} & \textbf{Média Saudável} \\
 \hline
-Age                         & 46,15  & 41,24 & 0,0014   & sim \\
-Total\_Bilirubin            & 4,16   & 1,14  & $<0{,}001$ & sim \\
-Direct\_Bilirubin           & 1,92   & 0,40  & $<0{,}001$ & sim \\
-Alkaline\_Phosphotase       & 319,01 & 219,75 & $<0{,}001$ & sim \\
-Alamine\_Aminotransferase   & 99,61  & 33,65 & $<0{,}001$ & sim \\
-Aspartate\_Aminotransferase & 137,70 & 40,69 & $<0{,}001$ & sim \\
-Total\_Proteins             & 6,46   & 6,54  & 0,3932   & não \\
-Albumin                     & 3,06   & 3,34  & $<0{,}001$ & sim \\
-AG\_Ratio                   & 0,91   & 1,03  & $<0{,}001$ & sim \\
+Age                         & 46,15  & 41,24 \\
+Total\_Bilirubin            & 4,16   & 1,14  \\
+Direct\_Bilirubin           & 1,92   & 0,40  \\
+Alkaline\_Phosphotase       & 319,01 & 219,75 \\
+Alamine\_Aminotransferase   & 99,61  & 33,65 \\
+Aspartate\_Aminotransferase & 137,70 & 40,69 \\
+Total\_Proteins             & 6,46   & 6,54  \\
+Albumin                     & 3,06   & 3,34  \\
+AG\_Ratio                   & 0,91   & 1,03  \\
 \hline
 \end{tabular}
 \end{table}
@@ -129,7 +129,7 @@ Também foram gerados \textit{boxplots} de cada variável numérica, separados p
 \label{fig:eda_boxplots}
 \end{figure}
 
-A análise do teste $t$ de Welch é univariada e, por isso, não considera interações nem efeitos combinados. Além disso, algumas variáveis apresentam forte assimetria e valores extremos (Figura~\ref{fig:eda_boxplots}), e o grupo saudável, com 167 pacientes, é o menor dos dois, de modo que, nas variáveis mais assimétricas (bilirrubinas, fosfatase alcalina e aminotransferases), os valores-$p$ devem ser lidos como indicativos, e não como medidas exatas \cite{theimportanceofnormality}. Os valores-$p$ obtidos servem como referência para comparar, no Capítulo~\ref{cap:resultados}, com as importâncias de atributos obtidas por meio dos valores SHAP.
+Essa comparação olha uma variável de cada vez e, por isso, não considera efeitos combinados entre os exames, que são justamente o que os modelos exploram; ela serve apenas para descrever os dados.
 
 \subsection{Análise de Correlação}
 \label{sec:analise_correlacao}
@@ -363,4 +363,4 @@ Por fim, verificou-se se os quatro modelos atribuem importâncias semelhantes à
 
 Variáveis não utilizadas por um modelo receberam importância nula e ocuparam as últimas posições de seu ranking; na importância nativa, reescalada de 0 a 100, a variável utilizada de menor importância também recebe o valor 0, mas permanece à frente das não utilizadas. Em todos os rankings, inclusive nos rankings por sexo da Seção~\ref{sec:shap_sexo}, variáveis com importâncias exatamente iguais receberam o posto médio das posições que ocupariam, como no caso das três variáveis não utilizadas pelo XGBoost, cuja importância SHAP é nula: empatadas nas posições 8 a 10, recebem todas o posto 9. Os postos foram obtidos a partir dos valores de importância antes de qualquer arredondamento, de modo que apenas empates reais recebem o mesmo posto, com a única exceção do ranking da Regressão Logística, obtido a partir dos coeficientes arredondados para quatro casas decimais, que não apresentam empates, de modo que o arredondamento não altera os postos. A concordância entre todos os pares de rankings foi medida pela correlação de postos de Spearman (Seção~\ref{sec:fund_correlacao}).
 
-Como as medidas têm naturezas diferentes, a comparação baseia-se nas posições dos rankings, e não em suas magnitudes. Uma concordância elevada sugere que a importância das variáveis é pouco sensível à escolha do algoritmo, o que aumenta a confiança nas conclusões da análise de interpretabilidade, ao passo que discordâncias podem refletir tanto diferenças reais nos padrões aprendidos quanto propriedades das próprias medidas de importância, especialmente na presença de variáveis correlacionadas: a importância por permutação do \textit{Random Forest} tende a favorecer variáveis correlacionadas \cite{Strobl2008Conditional}, e a importância SHAP pode dividir o crédito entre elas \cite{Chen2023Algorithms, Verdinelli2024Feature}. Os rankings obtidos também são confrontados com os resultados do teste de Welch (Tabela~\ref{tab:teste_welch}), o que permite verificar se as variáveis mais importantes para os modelos coincidem com as que apresentaram as maiores diferenças entre doentes e saudáveis na análise exploratória.
+Como as medidas têm naturezas diferentes, a comparação baseia-se nas posições dos rankings, e não em suas magnitudes. Uma concordância elevada sugere que a importância das variáveis é pouco sensível à escolha do algoritmo, o que aumenta a confiança nas conclusões da análise de interpretabilidade, ao passo que discordâncias podem refletir tanto diferenças reais nos padrões aprendidos quanto propriedades das próprias medidas de importância, especialmente na presença de variáveis correlacionadas: a importância por permutação do \textit{Random Forest} tende a favorecer variáveis correlacionadas \cite{Strobl2008Conditional}, e a importância SHAP pode dividir o crédito entre elas \cite{Chen2023Algorithms, Verdinelli2024Feature}. Os rankings obtidos também são confrontados com as médias por classe (Tabela~\ref{tab:medias_classe}), o que permite verificar se as variáveis mais importantes para os modelos coincidem com as que mais diferem entre doentes e saudáveis.

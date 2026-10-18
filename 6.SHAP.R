@@ -77,10 +77,10 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   #   invertido porque o caret codifica "saudavel" como positiva) e Monte Carlo no
   #   Random Forest (nsim = 100, semente 42).
   # [Fundamentação Teórica - 2.6.1 Valores de Shapley (sec:fund_shapley)] e [2.6.2 SHAP (sec:fund_shap)]:
-  #   decomposicao aditiva f(x) = phi_0 + soma(phi_j), Eq. 2.7 (eq:shap_aditivo);
+  #   decomposicao aditiva f(x) = phi_0 + soma(phi_j), Eq. 2.6 (eq:shap_aditivo);
   #   o 'baseline' do shapviz e o valor base phi_0.
   # [Fundamentação Teórica - 2.6.3 Estimacao dos Valores SHAP (sec:fund_estimacao)]
-  #   - XGBoost/LightGBM: TreeSHAP exato, escala do logaritmo da chance (Eq. 2.5);
+  #   - XGBoost/LightGBM: TreeSHAP exato, escala do logaritmo da chance (Eq. 2.4);
   #   - Random Forest: Monte Carlo (fastshap, nsim = 100), escala de probabilidade,
   #     com semente fixada porque a estimativa tem erro aleatorio.
   calcular_shap <- function(nome, modelo) {

@@ -111,8 +111,8 @@ log_table(tab_gen)
 # [Metodologia - 3.2.3 Estatisticas Descritivas e Assimetria
 #   (sec:estatisticas_descritivas_assimetria)] Tabela tab:descritivas.
 # [Fundamentação Teórica - 2.2.3 Estatisticas Descritivas e Assimetria (sec:fund_assimetria)]
-#   media, desvio-padrao, mediana e coeficiente de assimetria b1 (Eq. 2.1,
-#   eq:assimetria), calculado na linha 'Assimetria' abaixo.
+#   media, desvio-padrao, mediana e coeficiente de assimetria b1 (skewness),
+#   calculado na linha 'Assimetria' abaixo.
 log_subsection("Estatisticas descritivas das variaveis numericas")
 num_cols <- names(df)[sapply(df, is.numeric) & names(df) != "Diagnostico"]
 desc <- df %>%
@@ -138,33 +138,24 @@ if (length(assimetricas) > 0) {
 }
 
 # --- Comparacao das medias por classe ---------------------------------------
-# [Metodologia - 3.2.4 Comparacao entre Classes (sec:comparacao_classes)] teste t de Welch
-#   entre doentes e saudaveis (Tabela tab:teste_welch).
-# [Fundamentação Teórica - 2.2.5 Testes de Hipotese e Comparacoes Multiplas (sec:fund_welch)]
-#   teste t de Welch (variancias desiguais), valor-p e nivel de significancia 0,05.
-log_subsection("Media das variaveis por classe (teste t de Welch)")
+# [Metodologia - 3.2.4 Comparacao entre Classes (sec:comparacao_classes)] media de
+#   cada variavel entre doentes e saudaveis (Tabela tab:medias_classe); comparacao
+#   apenas descritiva, uma variavel de cada vez.
+log_subsection("Media das variaveis por classe")
 comp <- lapply(num_cols, function(v) {
   g1 <- df[[v]][df$Diagnostico == 1]; g2 <- df[[v]][df$Diagnostico == 2]
-  tt <- t.test(g1, g2)
   data.frame(Variavel = v, Media_Doente = mean(g1, na.rm = TRUE),
-             Media_Saudavel = mean(g2, na.rm = TRUE), p_valor = tt$p.value)
-}) %>% bind_rows()
-comp$Significativo <- ifelse(comp$p_valor < 0.05, "sim", "nao")
+             Media_Saudavel = mean(g2, na.rm = TRUE))
+}) %>% bind_rows() %>%
+  mutate(Razao_Doente_Saudavel = Media_Doente / Media_Saudavel)
 log_table(comp, digits = 3)
 salvar_csv(comp, "results/comparacao_medias_por_classe.csv")
-
-significativas <- comp$Variavel[comp$Significativo == "sim"]
-nao_significativas <- comp$Variavel[comp$Significativo == "nao"]
-log_info("Variaveis com diferenca significativa (p < 0.05): %s",
-         if (length(significativas) > 0) paste(significativas, collapse = ", ") else "nenhuma")
-log_info("Variaveis sem diferenca significativa (p >= 0.05): %s",
-         if (length(nao_significativas) > 0) paste(nao_significativas, collapse = ", ") else "nenhuma")
 
 # --- Correlacao --------------------------------------------------------------
 # [Metodologia - 3.2.5 Analise de Correlacao (sec:analise_correlacao)] matriz de Pearson
 #   (Figura fig:eda_correlacao) e pares com |r| > 0,7.
 # [Fundamentação Teórica - 2.2.4 Correlacao e Multicolinearidade (sec:fund_correlacao)]
-#   coeficiente de Pearson (Eq. 2.2, eq:pearson) e limiar |r| > 0,7 de correlacao forte.
+#   coeficiente de Pearson (Eq. 2.1, eq:pearson) e limiar |r| > 0,7 de correlacao forte.
 log_subsection("Matriz de correlacao (Pearson)")
 mat_cor <- cor(df[, num_cols], use = "complete.obs")
 pares <- which(abs(mat_cor) > 0.7 & upper.tri(mat_cor), arr.ind = TRUE)

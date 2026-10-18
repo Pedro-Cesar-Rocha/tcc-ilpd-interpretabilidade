@@ -97,10 +97,10 @@ treinar <- function(nome, ...) {
   modelo
 }
 
-# [Fundamentação Teórica - 2.4.1 Regressao Logistica (sec:fund_lr)] Eq. 2.4 (eq:logit).
+# [Fundamentação Teórica - 2.4.1 Regressao Logistica (sec:fund_lr)] Eq. 2.3 (eq:logit).
 # [Fundamentação Teórica - 2.4.3 Random Forest (sec:fund_rf)] bagging, bootstrap, mtry, ntree = 500,
 #   importance = TRUE -> importancia por permutacao nas amostras out-of-bag.
-# [Fundamentação Teórica - 2.4.4 XGBoost (sec:fund_xgb)] gradient boosting, Eq. 2.5 (eq:boosting);
+# [Fundamentação Teórica - 2.4.4 XGBoost (sec:fund_xgb)] gradient boosting, Eq. 2.4 (eq:boosting);
 #   eta, gamma etc. sao os ajustes contra sobreajuste descritos no texto.
 # [Fundamentação Teórica - 2.4.5 LightGBM (sec:fund_lgbm)] wrapper em UtilsPipeline.R.
 # [Fundamentação Teórica - 2.4.2 Arvores de Decisao e Metodos de Ensemble (sec:fund_arvores)]

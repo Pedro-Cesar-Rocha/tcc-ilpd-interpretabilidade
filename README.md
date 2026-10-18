@@ -215,7 +215,7 @@ Verifica cada dependência e instala apenas o que falta. Registra no log a vers�
 - Distribuição da variável alvo e razão de desbalanceamento.
 - Tabela cruzada sexo × classe.
 - Estatísticas descritivas (média, DP, mín, mediana, máx, **assimetria**) → `results/estatisticas_descritivas.csv`.
-- **Teste t de Welch** comparando a média de cada exame entre doentes e saudáveis → identifica quais variáveis já discriminam as classes univariadamente.
+- Média de cada exame entre doentes e saudáveis (e a razão entre elas) → `results/comparacao_medias_por_classe.csv`; comparação apenas descritiva.
 - Matriz de correlação de Pearson com alerta para pares com |r| > 0,7 → `results/pares_alta_correlacao.csv`.
 - Gráficos: distribuição do alvo, boxplots por classe, heatmap de correlação.
 
@@ -339,19 +339,19 @@ Dos 583 registros originais, **416 são doentes (71,4%)** e **167 saudáveis (28
 
 Os boxplots já revelam, antes de qualquer modelo, quais exames separam os grupos:
 
-| Exame | Média doentes | Média saudáveis | p-valor (Welch) | Leitura |
-|---|---|---|---|---|
-| Total_Bilirubin | 4,16 | 1,14 | < 10⁻¹⁵ | ~3,6× maior nos doentes |
-| Direct_Bilirubin | 1,92 | 0,40 | < 10⁻¹⁸ | ~4,9× maior nos doentes |
-| Alamine_Aminotransferase (ALT) | 99,6 | 33,7 | < 10⁻⁸ | ~3× maior |
-| Aspartate_Aminotransferase (AST) | 137,7 | 40,7 | < 10⁻⁷ | ~3,4× maior |
-| Alkaline_Phosphotase | 319,0 | 219,8 | < 10⁻⁷ | ~1,5× maior |
-| Albumin | 3,06 | 3,34 | < 10⁻⁴ | **menor** nos doentes |
-| AG_Ratio | 0,91 | 1,03 | < 10⁻⁴ | **menor** nos doentes |
-| Age | 46,2 | 41,2 | 0,001 | doentes ~5 anos mais velhos |
-| Total_Proteins | 6,46 | 6,54 | 0,39 | **não significativo** |
+| Exame | Média doentes | Média saudáveis | Leitura |
+|---|---|---|---|
+| Total_Bilirubin | 4,16 | 1,14 | ~3,6× maior nos doentes |
+| Direct_Bilirubin | 1,92 | 0,40 | ~4,9× maior nos doentes |
+| Alamine_Aminotransferase (ALT) | 99,6 | 33,7 | ~3× maior |
+| Aspartate_Aminotransferase (AST) | 137,7 | 40,7 | ~3,4× maior |
+| Alkaline_Phosphotase | 319,0 | 219,8 | ~1,5× maior |
+| Albumin | 3,06 | 3,34 | **menor** nos doentes |
+| AG_Ratio | 0,91 | 1,03 | **menor** nos doentes |
+| Age | 46,2 | 41,2 | doentes ~5 anos mais velhos |
+| Total_Proteins | 6,46 | 6,54 | **praticamente igual** |
 
-Nove das dez variáveis apresentam diferença estatisticamente significativa entre as classes. `Total_Proteins` é a exceção — o que torna interessante o fato de ela aparecer entre as variáveis mais importantes no SHAP do XGBoost e com o maior odds ratio da regressão logística (Seções 7.3 e 7.5): os modelos a usam em **interação** com `Albumin`, algo que um teste univariado não captura.
+Quase todos os exames diferem entre as classes; `Total_Proteins` é a exceção — o que torna interessante o fato de ela aparecer entre as variáveis mais importantes no SHAP do XGBoost e com o maior odds ratio da regressão logística (Seções 7.3 e 7.5): os modelos a usam em **interação** com `Albumin`, algo que uma comparação de uma variável por vez não captura.
 
 Os boxplots também expõem o problema de **assimetria extrema**: em ALT, AST e bilirrubinas a caixa fica achatada na base do gráfico e os outliers se estendem até dezenas de vezes a mediana. A transformação `log1p` reduziu a assimetria de AST de **10,5 → 1,24** e de ALT de **6,66 → 1,46**.
 
