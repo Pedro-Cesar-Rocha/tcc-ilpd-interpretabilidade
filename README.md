@@ -381,7 +381,7 @@ Verificação de integridade das 132 sintéticas: suas médias ficam a no máxim
 |---|---|---|---|---|---|---|
 | **Regressão Logística** | **0,753** | 0,054 | 0,654 | 0,836 | 0,667 | **0,694** |
 | XGBoost | 0,725 | 0,064 | 0,616 | 0,827 | 0,701 | 0,639 |
-| Random Forest | 0,722 | 0,075 | 0,575 | 0,807 | **0,735** | 0,510 |
+| Random Forest | 0,723 | 0,074 | 0,581 | 0,810 | **0,751** | 0,515 |
 | LightGBM | 0,720 | 0,064 | 0,607 | 0,792 | 0,685 | 0,659 |
 
 > Sensibilidade e especificidade referem-se à classe positiva `doente`. O `twoClassSummary` do caret toma o primeiro nível do desfecho (`saudavel`) como evento, por isso o pipeline usa um *wrapper* (`resumo_doente`) que troca as duas métricas; a AUC não é afetada.
@@ -435,7 +435,7 @@ Três pontos merecem discussão no texto do TCC:
 
 | Modelo | AUC | IC 95% (DeLong) | Acurácia | Sensibilidade | Especificidade | Precisão |
 |---|---|---|---|---|---|---|
-| **Random Forest** | **0,781** | [0,694 ; 0,868] | 0,717 | **0,753** | 0,625 | 0,836 |
+| **Random Forest** | **0,787** | [0,703 ; 0,871] | **0,726** | **0,765** | 0,625 | 0,838 |
 | LightGBM | 0,761 | [0,671 ; 0,851] | 0,681 | 0,691 | 0,656 | 0,836 |
 | XGBoost | 0,745 | [0,650 ; 0,840] | 0,717 | 0,716 | **0,719** | **0,866** |
 | Regressão Logística | 0,736 | [0,644 ; 0,829] | 0,681 | 0,728 | 0,563 | 0,808 |
@@ -444,31 +444,31 @@ Lendo o gráfico:
 
 - As quatro curvas estão **claramente acima da diagonal**, mas **entrelaçadas** — nenhuma domina as outras em toda a extensão. As curvas são "serrilhadas" porque há apenas 113 pacientes no teste.
 - **No teste, o ranking se inverte em relação à CV**: o Random Forest, terceiro na CV, tem a maior AUC; a regressão logística, primeira na CV, tem a menor. As diferenças, porém, estão todas dentro dos intervalos de confiança (largura ≈ 0,18) — o que a Seção seguinte formaliza.
-- A comparação CV → teste é agora **coerente**: RL 0,753 → 0,736 (−0,017), XGBoost 0,725 → 0,745 (+0,020), RF 0,722 → 0,781 (+0,060), LightGBM 0,720 → 0,761 (+0,041). Nenhum modelo "despenca" no teste, sinal de que a CV com SMOTE por fold é uma estimativa honesta.
+- A comparação CV → teste é agora **coerente**: RL 0,753 → 0,736 (−0,017), XGBoost 0,725 → 0,745 (+0,020), RF 0,723 → 0,787 (+0,064), LightGBM 0,720 → 0,761 (+0,041). Nenhum modelo "despenca" no teste, sinal de que a CV com SMOTE por fold é uma estimativa honesta.
 
 #### Matrizes de confusão (limiar 0,5)
 
 | | Random Forest | XGBoost | LightGBM | Reg. Logística |
 |---|---|---|---|---|
-| **Verdadeiros positivos** (doente → doente) | 61 | 58 | 56 | 59 |
-| **Falsos negativos** (doente → saudável) ⚠️ | 20 | 23 | 25 | 22 |
+| **Verdadeiros positivos** (doente → doente) | 62 | 58 | 56 | 59 |
+| **Falsos negativos** (doente → saudável) ⚠️ | 19 | 23 | 25 | 22 |
 | **Falsos positivos** (saudável → doente) | 12 | 9 | 11 | 14 |
 | **Verdadeiros negativos** (saudável → saudável) | 20 | 23 | 21 | 18 |
 
-Dos 81 doentes no teste, o Random Forest deixa passar **20 (24,7 %)** no limiar padrão; o LightGBM, 25 (30,9 %). O XGBoost é o mais equilibrado (Sens ≈ Spec ≈ 0,72), refletindo sua forte regularização.
+Dos 81 doentes no teste, o Random Forest deixa passar **19 (23,5 %)** no limiar padrão; o LightGBM, 25 (30,9 %). O XGBoost é o mais equilibrado (Sens ≈ Spec ≈ 0,72), refletindo sua forte regularização.
 
 #### Comparação estatística das AUCs (teste de DeLong)
 
 | Comparação | AUC A | AUC B | p-valor | p ajustado (Bonferroni) |
 |---|---|---|---|---|
-| Reg. Logística vs Random Forest | 0,736 | 0,781 | 0,152 | 0,909 |
-| Random Forest vs XGBoost | 0,781 | 0,745 | 0,223 | 1,000 |
-| Random Forest vs LightGBM | 0,781 | 0,761 | 0,360 | 1,000 |
+| Reg. Logística vs Random Forest | 0,736 | 0,787 | 0,090 | 0,541 |
+| Random Forest vs XGBoost | 0,787 | 0,745 | 0,159 | 0,956 |
+| Random Forest vs LightGBM | 0,787 | 0,761 | 0,230 | 1,000 |
 | Reg. Logística vs LightGBM | 0,736 | 0,761 | 0,418 | 1,000 |
 | XGBoost vs LightGBM | 0,745 | 0,761 | 0,556 | 1,000 |
 | Reg. Logística vs XGBoost | 0,736 | 0,745 | 0,764 | 1,000 |
 
-**Nenhuma diferença é significativa no teste** — nem mesmo antes da correção de Bonferroni (menor p-valor bruto = 0,15). Combinado com a CV (onde a regressão logística teve a maior AUC média), o resultado do trabalho é claro: **neste dataset, os modelos de caixa-preta não oferecem ganho preditivo demonstrável sobre o modelo linear interpretável.** Esse achado é central para o objetivo 6 da proposta (trade-off desempenho × interpretabilidade).
+**Nenhuma diferença é significativa no teste** — nem mesmo antes da correção de Bonferroni (menor p-valor bruto = 0,09). Combinado com a CV (onde a regressão logística teve a maior AUC média), o resultado do trabalho é claro: **neste dataset, os modelos de caixa-preta não oferecem ganho preditivo demonstrável sobre o modelo linear interpretável.** Esse achado é central para o objetivo 6 da proposta (trade-off desempenho × interpretabilidade).
 
 #### Visão consolidada das métricas
 
@@ -480,7 +480,7 @@ A proposta pede atenção especial ao Recall. Em vez de otimizar Recall diretame
 
 | Modelo | Limiar clínico (CV) | Spec na CV | Sens no teste | Spec no teste | Precisão no teste | FN / FP no teste |
 |---|---|---|---|---|---|---|
-| **Random Forest** | 0,373 | 0,260 | 0,901 | **0,312** | **0,768** | **8 / 22** |
+| **Random Forest** | 0,375 | 0,255 | 0,901 | **0,312** | **0,768** | **8 / 22** |
 | LightGBM | 0,360 | 0,220 | 0,901 | 0,281 | 0,760 | 8 / 23 |
 | XGBoost | 0,361 | 0,215 | **0,840** ⚠️ | **0,312** | 0,756 | 13 / 22 |
 | Regressão Logística | 0,320 | 0,318 | 0,901 | 0,188 | 0,737 | 8 / 26 |
@@ -500,7 +500,7 @@ O teste tem **32 mulheres (17 doentes, 53 %)** e **81 homens (64 doentes, 79 %)*
 | Modelo | AUC ♀ | AUC ♂ | Δ AUC (♂−♀) | Sens ♀ | Sens ♂ | Spec ♀ | Spec ♂ | Taxa FN ♀ | Taxa FN ♂ |
 |---|---|---|---|---|---|---|---|---|---|
 | Regressão Logística | 0,729 | 0,748 | +0,019 | 0,765 | 0,719 | 0,467 | 0,647 | 0,235 | 0,281 |
-| **Random Forest** | 0,782 | 0,774 | −0,008 | 0,765 | 0,766 | 0,667 | 0,588 | 0,235 | 0,234 |
+| **Random Forest** | 0,790 | 0,781 | −0,009 | 0,824 | 0,766 | 0,667 | 0,588 | 0,176 | 0,234 |
 | XGBoost | 0,733 | 0,743 | +0,009 | **0,647** | 0,734 | 0,733 | 0,706 | **0,353** | 0,266 |
 | LightGBM | 0,780 | 0,737 | −0,043 | 0,706 | 0,688 | 0,800 | 0,529 | 0,294 | 0,313 |
 
@@ -509,7 +509,7 @@ Sensibilidade, especificidade e taxa de FN no limiar 0,5.
 Leitura:
 
 - **As AUCs por sexo estão sempre a menos de 0,05 uma da outra.** Não há sinal de que os modelos discriminem pior em um dos grupos (com a ressalva de que o grupo feminino é pequeno).
-- **O Random Forest é o mais equânime**: sensibilidade praticamente idêntica (0,765 vs 0,766) e taxa de FN igual (≈ 23,5 %) nos dois sexos.
+- **O Random Forest perde menos mulheres doentes** do que homens doentes (taxa de FN 17,6 % vs 23,4 %).
 - **O XGBoost é o menos equânime em sensibilidade**: perde **35 % das mulheres doentes** contra 27 % dos homens doentes (Δ Sens = +0,087 a favor dos homens). Com 17 mulheres doentes, isso corresponde a 6 vs ~4,5 casos — a diferença não é significativa, mas é exatamente o padrão que Straw & Wu (2022) alertam: modelos treinados em populações majoritariamente masculinas (75 % dos pacientes do ILPD) podem ter falsos negativos concentrados nas mulheres.
 - A **regressão logística e o LightGBM têm especificidade muito diferente entre sexos** (Δ = +0,18 e −0,27), ou seja, o mesmo limiar produz taxas de falso positivo distintas para homens e mulheres. Em um sistema real, isso sugere **calibrar o limiar por sexo**.
 - **No limiar clínico** (escolhido na CV), a sensibilidade das mulheres fica acima da dos homens na RL, no RF e no LightGBM (0,94–1,00 vs 0,88–0,89), e o gap do XGBoost praticamente desaparece (0,82 vs 0,84). O custo recai na especificidade, baixa nos dois sexos (0,13–0,41): na RL, só 2 das 15 mulheres saudáveis são reconhecidas como saudáveis (`results/metricas_por_sexo.csv`).
@@ -518,124 +518,113 @@ Leitura:
 
 ### 7.5 Explicabilidade (SHAP)
 
-Foram explicados o **XGBoost** (TreeSHAP exato, escala log-odds) e o **Random Forest** (maior AUC no teste; `fastshap`, escala de probabilidade). Como as escalas diferem, comparam-se **rankings e direções**, não magnitudes.
+Foram explicados os três *ensembles*: **XGBoost** e **LightGBM** (TreeSHAP exato, escala log-odds) e **Random Forest** (maior AUC no teste; `fastshap`, escala de probabilidade). Como as escalas diferem, comparam-se **rankings e direções**, não magnitudes.
 
 #### Importância global
 
-| | |
-|---|---|
-| ![](plots/shap_importancia_xgb.png) | ![](plots/shap_importancia_rf.png) |
+| XGBoost | LightGBM | Random Forest |
+|---|---|---|
+| ![](plots/shap_importancia_xgb.png) | ![](plots/shap_importancia_lgb.png) | ![](plots/shap_importancia_rf.png) |
 
-| # | XGBoost — variável | Média \|SHAP\| | % | Random Forest — variável | Média \|SHAP\| | % |
-|---|---|---|---|---|---|---|
-| 1 | Total_Bilirubin | 0,515 | 37,6 | Alkaline_Phosphotase | 0,059 | 17,8 |
-| 2 | Alkaline_Phosphotase | 0,362 | 26,4 | Direct_Bilirubin | 0,056 | 16,8 |
-| 3 | Total_Proteins | 0,117 | 8,5 | Total_Bilirubin | 0,045 | 13,7 |
-| 4 | Aspartate_Aminotransferase | 0,111 | 8,1 | Aspartate_Aminotransferase | 0,041 | 12,5 |
-| 5 | Age | 0,108 | 7,9 | Alamine_Aminotransferase | 0,037 | 11,2 |
-| 6 | AG_Ratio | 0,080 | 5,8 | AG_Ratio | 0,025 | 7,5 |
-| 7 | Alamine_Aminotransferase | 0,076 | 5,6 | Age | 0,024 | 7,3 |
-| 8 | Gender † | **0,000** | 0,0 | Albumin | 0,019 | 5,6 |
-| 9 | Direct_Bilirubin † | **0,000** | 0,0 | Total_Proteins | 0,016 | 4,9 |
-| 10 | Albumin † | **0,000** | 0,0 | Gender | 0,009 | 2,8 |
+| Variável | XGB (%) | LGB (%) | RF (%) |
+|---|---|---|---|
+| Total_Bilirubin | **37,6** | 16,5 | 13,8 |
+| Alkaline_Phosphotase | 26,4 | **23,0** | **18,4** |
+| Total_Proteins | 8,5 | 0,7 | 4,9 |
+| Aspartate_Aminotransferase | 8,1 | 16,8 | 11,8 |
+| Age | 7,9 | 7,3 | 8,1 |
+| AG_Ratio | 5,8 | 5,4 | 7,3 |
+| Alamine_Aminotransferase | 5,6 | 9,1 | 12,0 |
+| Direct_Bilirubin | 0,0 † | 19,2 | 14,7 |
+| Albumin | 0,0 † | 2,1 | 6,0 |
+| Gender | 0,0 † | 0,0 | 3,1 |
 
-† Empatadas (média |SHAP| = 0): nos CSVs e na comparação de rankings, as três recebem o posto médio 9.
+† Não usadas pelo XGBoost (média |SHAP| = 0); nos rankings, recebem o posto médio 9.
 
-Dois perfis muito diferentes de "raciocínio":
-
-- **XGBoost é concentrado**: bilirrubina total e fosfatase alcalina respondem por **64 %** do impacto; 4 variáveis acumulam 80 %. Com `colsample_bytree = 0,35` e `gamma = 7,3`, **três variáveis nunca entraram em nenhuma árvore** (`Gender`, `Direct_Bilirubin`, `Albumin`). O modelo descartou `Direct_Bilirubin` porque é redundante com `Total_Bilirubin` (r = 0,87) e `Albumin` porque é redundante com `Total_Proteins`/`AG_Ratio`.
-- **Random Forest é distribuído**: a variável #1 tem só 17,8 % e são necessárias **7 variáveis para acumular 80 %**. Com `mtry = 1`, cada split é forçado a usar uma variável sorteada, então até variáveis redundantes recebem crédito.
-- Ambos concordam que **`Gender` é (quase) irrelevante** — 0 % no XGBoost, 2,8 % no RF — e que **fosfatase alcalina, bilirrubinas e transaminases** dominam.
+- **XGBoost é concentrado**: bilirrubina total e fosfatase alcalina somam 64 %; 4 variáveis acumulam 80 %. A regularização forte (24 árvores, `colsample_bytree = 0,35`, `gamma = 7,3`) fez o modelo usar só uma variável de cada par redundante.
+- **LightGBM e Random Forest são distribuídos** (5 e 7 variáveis para 80 %): usam as duas bilirrubinas e as duas transaminases. O LightGBM quase não usa as proteínas (`Total_Proteins` 0,7 %, `Albumin` 2,1 %).
+- Os três concordam que **`Gender` é (quase) irrelevante** e que **fosfatase alcalina, bilirrubinas e transaminases** dominam.
 
 #### Direção dos efeitos — beeswarm
 
-| XGBoost | Random Forest |
-|---|---|
-| ![](plots/shap_beeswarm_xgb.png) | ![](plots/shap_beeswarm_rf.png) |
+| XGBoost | LightGBM | Random Forest |
+|---|---|---|
+| ![](plots/shap_beeswarm_xgb.png) | ![](plots/shap_beeswarm_lgb.png) | ![](plots/shap_beeswarm_rf.png) |
 
-Cada ponto é um dos 113 pacientes do teste; a posição horizontal é quanto aquela variável empurrou a previsão (direita = para "doente"), e a cor é o valor padronizado da variável. As tabelas `results/shap_direcao_efeito_<m>.csv` quantificam a direção pela correlação entre o valor da variável e seu SHAP:
+Correlação entre o valor da variável e seu SHAP (`results/shap_direcao_efeito_<m>.csv`):
 
-| Variável | Corr. XGBoost | Corr. Random Forest | Efeito |
+| Variável | XGB | LGB | RF |
 |---|---|---|---|
-| Age | +0,86 | +0,87 | ↑ idade → ↑ risco |
-| Total_Bilirubin | +0,81 | +0,85 | ↑ → ↑ risco |
-| Alkaline_Phosphotase | +0,81 | +0,77 | ↑ → ↑ risco |
-| Aspartate_Aminotransferase | +0,72 | +0,83 | ↑ → ↑ risco |
-| Alamine_Aminotransferase | +0,53 | +0,82 | ↑ → ↑ risco |
-| Direct_Bilirubin | — (não usada) | +0,83 | ↑ → ↑ risco |
-| Total_Proteins | +0,36 | +0,40 | ↑ → ↑ risco (fraco) |
-| **Albumin** | — (não usada) | **−0,71** | ↑ albumina → ↓ risco |
-| **AG_Ratio** | **−0,67** | **−0,58** | ↑ razão A/G → ↓ risco |
-| Gender | — (não usada) | −0,17 | fraco |
+| Age | +0,86 | +0,87 | +0,89 |
+| Total_Bilirubin | +0,81 | +0,86 | +0,86 |
+| Direct_Bilirubin | — | +0,82 | +0,82 |
+| Alkaline_Phosphotase | +0,81 | +0,82 | +0,75 |
+| Alamine_Aminotransferase | +0,53 | +0,79 | +0,84 |
+| Aspartate_Aminotransferase | +0,72 | +0,87 | +0,82 |
+| Total_Proteins | +0,36 | +0,77 | +0,43 |
+| Albumin | — | −0,05 | **−0,74** |
+| AG_Ratio | **−0,67** | **−0,67** | **−0,57** |
+| Gender | — | — | −0,14 |
 
-**Coerência clínica:** os dois modelos, sem nenhum conhecimento médico, reproduzem o raciocínio de um hepatologista — bilirrubinas, fosfatase alcalina e transaminases elevadas indicam colestase e lesão hepatocelular; albumina e razão A/G altas refletem função de síntese preservada. Note que o SHAP recupera a **direção correta de `AG_Ratio`** (protetora), ao contrário do coeficiente da regressão logística (OR = 3,8), que é distorcido pela multicolinearidade. Esse é um argumento concreto a favor do SHAP como ferramenta de interpretação.
+**Coerência clínica:** bilirrubinas, fosfatase alcalina e transaminases elevadas aumentam o risco; albumina e razão A/G altas o reduzem. O SHAP recupera a **direção correta de `AG_Ratio`** (protetora), ao contrário do coeficiente da regressão logística (OR = 3,8), distorcido pela multicolinearidade.
 
 #### Gráficos de dependência (variável mais importante de cada modelo)
 
-| XGBoost | Random Forest |
-|---|---|
-| ![](plots/shap_dependencia_xgb_Total_Bilirubin.png) | ![](plots/shap_dependencia_rf_Alkaline_Phosphotase.png) |
+| XGBoost | LightGBM | Random Forest |
+|---|---|---|
+| ![](plots/shap_dependencia_xgb_Total_Bilirubin.png) | ![](plots/shap_dependencia_lgb_Alkaline_Phosphotase.png) | ![](plots/shap_dependencia_rf_Alkaline_Phosphotase.png) |
 
-Os gráficos de dependência mostram a **forma funcional** da relação (eixo X = valor padronizado da variável, eixo Y = SHAP). A cor indica a variável com maior **interação**.
+#### Explicações locais — piores falsos negativos
 
-#### Explicações locais — pacientes individuais
+| XGBoost | LightGBM | Random Forest |
+|---|---|---|
+| ![](plots/shap_waterfall_xgb_FN_pior_erro.png) | ![](plots/shap_waterfall_lgb_FN_pior_erro.png) | ![](plots/shap_waterfall_rf_FN_pior_erro.png) |
 
-| XGBoost — VP mais confiante | XGBoost — pior falso negativo |
-|---|---|
-| ![](plots/shap_waterfall_xgb_VP_maior_confianca.png) | ![](plots/shap_waterfall_xgb_FN_pior_erro.png) |
-
-| Random Forest — VP mais confiante | Random Forest — pior falso negativo |
-|---|---|
-| ![](plots/shap_waterfall_rf_VP_maior_confianca.png) | ![](plots/shap_waterfall_rf_FN_pior_erro.png) |
-
-- **Paciente #17 (homem, doente)** é o verdadeiro positivo mais confiante **para os dois modelos** (prob. 0,88 no XGBoost, 0,98 no RF). No XGBoost a bilirrubina total é a maior contribuição (+0,86 log-odds); no RF, a bilirrubina direta (+0,065). Os modelos concordam no *porquê*.
-- **Paciente #78 (homem, doente)** é o pior falso negativo do XGBoost (prob. 0,22): a **bilirrubina total baixa** (−0,46) é o principal fator que puxa para "saudável".
-- **Paciente #51 (homem, doente)** é o pior falso negativo do Random Forest (prob. 0,26): a **fosfatase alcalina baixa** (−0,085) domina; só a idade (+0,021) aponta para doença.
-- Em ambos os casos, o paciente tem **perfil laboratorial de pessoa saudável** nas variáveis que o modelo mais usa. Nenhum modelo baseado apenas nesses dez exames o classificaria corretamente — o SHAP **distingue um erro do modelo de uma limitação dos dados**.
+- **XGBoost — paciente #78** (homem, 35 anos, prob. 0,22): bilirrubina total de 1,6 mg/dL, logo abaixo do corte de ~1,8 aprendido (−0,46 log-odds), e albumina baixa (2,5 g/dL), que o modelo não usa.
+- **LightGBM — paciente #50** (homem, 30 anos, prob. 0,33): fosfatase alcalina abaixo da mediana (−0,30 log-odds), mas albumina (2,3 g/dL) e proteínas totais (4,6 g/dL) baixas, que o modelo quase não usa.
+- **Random Forest — paciente #113** (homem, 31 anos, prob. 0,25): exames compatíveis com pessoa saudável; a fosfatase alcalina (−0,10) domina.
+- O SHAP **distingue um erro do modelo** (XGBoost e LightGBM ignoram o sinal das proteínas) **de uma limitação dos dados** (no RF, o paciente tem exames normais).
 
 #### SHAP estratificado por sexo
 
-| XGBoost | Random Forest |
-|---|---|
-| ![](plots/shap_importancia_por_sexo_xgb.png) | ![](plots/shap_importancia_por_sexo_rf.png) |
-| ![](plots/shap_gender_por_sexo_xgb.png) | ![](plots/shap_gender_por_sexo_rf.png) |
+| XGBoost | LightGBM | Random Forest |
+|---|---|---|
+| ![](plots/shap_importancia_por_sexo_xgb.png) | ![](plots/shap_importancia_por_sexo_lgb.png) | ![](plots/shap_importancia_por_sexo_rf.png) |
 
-- **Concordância do ranking de importância entre mulheres e homens: Spearman = 0,988** nos dois modelos. Os modelos usam as variáveis na mesma ordem para os dois sexos — não há "lógica diferente" por grupo.
-- **Contribuição média de `Gender`:** XGBoost = 0 (variável não usada); Random Forest = **+0,0035 para mulheres e −0,0018 para homens** (escala de probabilidade). Ou seja, o RF desloca o risco em menos de meio ponto percentual com base no sexo — na mesma direção do coeficiente da regressão logística (mulheres com risco ligeiramente maior, ajustado pelos exames), mas com magnitude desprezível.
-- **Conclusão da auditoria:** o gap de sensibilidade do XGBoost entre sexos (Seção 7.4) **não** vem do uso direto da variável `Gender` — o modelo nem a usa. Vem da distribuição diferente dos exames entre homens e mulheres (fisiologicamente, mulheres têm valores de referência menores para fosfatase alcalina e transaminases), que o modelo trata com um único limiar. Isso é um argumento a favor de **limiares ou modelos específicos por sexo**, como sugerem Straw & Wu (2022).
+- **Concordância do ranking entre mulheres e homens: Spearman = 0,988** nos três modelos.
+- **Contribuição média de `Gender`:** 0 no XGBoost e no LightGBM (variável não usada); no Random Forest, **+0,0030 para mulheres e −0,0015 para homens** (probabilidade) — menos de meio ponto percentual.
 
 #### Comparação dos rankings de importância entre métodos
 
-| Variável | SHAP XGB | SHAP RF | \|coef.\| RL |
-|---|---|---|---|
-| Total_Bilirubin | **1** | 3 | 9 |
-| Alkaline_Phosphotase | 2 | **1** | 5 |
-| Total_Proteins | 3 | 9 | **2** |
-| Aspartate_Aminotransferase | 4 | 4 | 8 |
-| Age | 5 | 7 | 7 |
-| AG_Ratio | 6 | 6 | 3 |
-| Alamine_Aminotransferase | 7 | 5 | 4 |
-| Gender | 9 (empate) | 10 | 10 |
-| Direct_Bilirubin | 9 (empate) | 2 | 6 |
-| Albumin | 9 (empate) | 8 | **1** |
+| Variável | SHAP XGB | SHAP LGB | SHAP RF | \|coef.\| RL |
+|---|---|---|---|---|
+| Total_Bilirubin | **1** | 4 | 3 | 9 |
+| Alkaline_Phosphotase | 2 | **1** | **1** | 5 |
+| Total_Proteins | 3 | 9 | 9 | 2 |
+| Aspartate_Aminotransferase | 4 | 3 | 5 | 8 |
+| Age | 5 | 6 | 6 | 7 |
+| AG_Ratio | 6 | 7 | 7 | 3 |
+| Alamine_Aminotransferase | 7 | 5 | 4 | 4 |
+| Gender | 9 (empate) | 10 | 10 | 10 |
+| Direct_Bilirubin | 9 (empate) | 2 | 2 | 6 |
+| Albumin | 9 (empate) | 8 | 8 | **1** |
 
-Correlação de Spearman entre rankings (`results/concordancia_rankings_spearman.csv`): SHAP XGB × SHAP RF = 0,39; SHAP XGB × \|coef.\| RL = −0,14; SHAP RF × \|coef.\| RL = −0,16.
+Spearman (`results/concordancia_rankings_spearman.csv`): LGB × RF = **0,96**; XGB × LGB = XGB × RF = 0,36; RL × (XGB, LGB, RF) = −0,14, −0,20, −0,16.
 
-Duas leituras:
-
-1. **O XGBoost e o Random Forest concordam pouco (ρ = 0,39)** não porque discordem da direção dos efeitos (Seção anterior), mas porque a regularização do XGBoost eliminou variáveis redundantes e concentrou o crédito em `Total_Bilirubin`, enquanto o RF dividiu o crédito entre as duas bilirrubinas. É a mesma informação, atribuída de forma diferente.
-2. **A regressão logística tem ranking negativamente correlacionado com os dois.** `Albumin` e `Total_Proteins` são #1 e #2 pelo |coeficiente|, mas seus coeficientes gigantes e opostos são um artefato da multicolinearidade (Seção 7.3). É a demonstração empírica de que **coeficientes de um modelo linear com preditores correlacionados não são uma medida confiável de importância**.
+1. **LightGBM e Random Forest concordam quase totalmente**, apesar de um usar *boosting* e o outro *bagging*: a forma como a importância se distribui depende mais da configuração (muitas árvores pequenas / `mtry = 1`) do que da estratégia de *ensemble*.
+2. **O XGBoost diverge** porque sua regularização eliminou variáveis redundantes e concentrou o crédito em `Total_Bilirubin`.
+3. **A regressão logística tem ranking negativamente correlacionado com todos.** Os coeficientes gigantes e opostos de `Albumin`/`Total_Proteins` são artefato da multicolinearidade: **coeficientes de um modelo linear com preditores correlacionados não são uma medida confiável de importância**.
 
 ### 7.6 Síntese dos resultados
 
-1. **Todos os modelos superam o acaso** (AUC 0,74–0,78 no teste; nenhum IC 95% inclui 0,5), mas nenhum é excelente. O dataset é pequeno e o problema é genuinamente difícil.
-2. **Não há evidência de que os modelos de caixa-preta superem a regressão logística.** Na CV honesta (SMOTE por fold) a RL tem a maior AUC média (0,753, cerca de 0,03 acima dos ensembles); no teste o RF lidera (0,781) mas nenhuma diferença é significativa (DeLong, todos p > 0,15 antes e ≥ 0,91 após Bonferroni). Para o objetivo 6 da proposta, o trade-off desempenho × interpretabilidade **favorece o modelo interpretável** neste dataset.
+1. **Todos os modelos superam o acaso** (AUC 0,74–0,79 no teste; nenhum IC 95% inclui 0,5), mas nenhum é excelente. O dataset é pequeno e o problema é genuinamente difícil.
+2. **Não há evidência de que os modelos de caixa-preta superem a regressão logística.** Na CV honesta (SMOTE por fold) a RL tem a maior AUC média (0,753, cerca de 0,03 acima dos ensembles); no teste o RF lidera (0,787) mas nenhuma diferença é significativa (DeLong, todos p > 0,09 antes e ≥ 0,54 após Bonferroni). Para o objetivo 6 da proposta, o trade-off desempenho × interpretabilidade **favorece o modelo interpretável** neste dataset.
 3. **O SMOTE antes da CV inflava a AUC dos ensembles em ~0,13** e produzia um ranking enganoso (árvores ≫ RL). Aplicá-lo dentro de cada fold é indispensável para uma comparação justa.
 4. **O Random Search escolheu as configurações mais regularizadas** para os três ensembles — coerente com o sinal essencialmente aditivo dos dados.
 5. **Perfil operacional é de triagem.** Buscar Sens ≥ 90 % (limiar escolhido na CV) custa Spec ≤ 0,31 no teste em todos os modelos; o RF é o melhor nesse regime (22 FP contra 23–26 do LightGBM e da RL, e 5 FN a menos que o XGBoost, que ficou abaixo da meta no teste: Sens 0,84). O limiar deve ser escolhido pelo custo relativo dos erros, não fixado em 0,5.
 6. **Não há sinal de viés discriminatório por sexo na AUC** (diferenças < 0,05), mas há **assimetrias de sensibilidade** — no limiar 0,5, o XGBoost perde 35 % das mulheres doentes vs 27 % dos homens (no limiar clínico a diferença praticamente some: Sens 0,82 vs 0,84). O SHAP mostra que isso não vem do uso da variável `Gender` (que o XGBoost nem usa e que fica em último ou penúltimo lugar de importância em todos os modelos), e sim das distribuições laboratoriais distintas entre sexos, sugerindo limiares específicos por sexo.
 7. **O SHAP confirma a plausibilidade clínica** dos modelos (bilirrubinas, fosfatase alcalina e transaminases ↑ risco; albumina e razão A/G ↓ risco) e recupera a direção correta de `AG_Ratio`, que o coeficiente da RL inverte por multicolinearidade.
-8. **Os erros mais graves (falsos negativos) são pacientes com exames normais** — uma limitação dos dados, não do algoritmo. O SHAP permite fazer essa distinção caso a caso.
+8. **Os piores falsos negativos têm causas diferentes**: no XGBoost e no LightGBM, o modelo ignorou proteínas baixas; no Random Forest, o paciente tinha exames normais (limitação dos dados). O SHAP permite fazer essa distinção caso a caso.
 
 ---
 
