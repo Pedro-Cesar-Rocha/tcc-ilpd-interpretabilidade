@@ -27,7 +27,7 @@ CSV bruto ──► EDA ──► Pré-processamento (split 80/20 ──► impu
                                                 │
                      Treino 4 modelos: CV 5x3 com SMOTE DENTRO de cada fold + Random Search
                                                 │
-   SHAP (XGB TreeSHAP, RF, melhor modelo) ◄── Avaliação no teste (métricas, limiar, por sexo) ◄──┘
+   SHAP (XGB TreeSHAP e RF)               ◄── Avaliação no teste (métricas, limiar, por sexo) ◄──┘
 ```
 
 | Item | Detalhe |
@@ -96,7 +96,7 @@ tcc-ilpd-interpretabilidade/
 ├── 3.Balanceamento.R           # SMOTE no treino completo (diagnóstico e gráfico)
 ├── 4.Modelos.R                 # Treino dos 4 modelos: CV repetida + SMOTE por fold + Random Search
 ├── 5.Avaliacao.R               # Teste: métricas, ROC, PR, DeLong, limiar (todos), estratificação por sexo
-├── 6.SHAP.R                    # Explicabilidade global, local e por sexo (XGB, RF e melhor modelo)
+├── 6.SHAP.R                    # Explicabilidade global, local e por sexo (XGB e RF)
 │
 ├── data/
 │   ├── Indian Liver Patient Dataset (ILPD).csv   # dados brutos
@@ -122,7 +122,6 @@ tcc-ilpd-interpretabilidade/
 │   ├── cv_auc_por_modelo.csv               # AUC, Sens e Spec médias na CV
 │   ├── metricas_teste.csv                  # métricas no limiar padrão e no limiar clínico (Sens ≥ 90 %)
 │   ├── delong_pareado.csv
-│   ├── melhor_modelo.rds                   # nome do melhor modelo (lido pela etapa 6)
 │   ├── metricas_por_sexo.csv               # AUC/Sens/Spec/FN por sexo e modelo
 │   ├── shap_importancia_<m>.csv            # m = xgb | rf | lgb
 │   ├── shap_direcao_efeito_<m>.csv
@@ -273,7 +272,7 @@ Para cada modelo:
 
 Comparação entre modelos:
 
-- Tabela consolidada → `results/metricas_teste.csv`; o nome do melhor modelo (por AUC) é salvo em `results/melhor_modelo.rds` e lido pela etapa 6.
+- Tabela consolidada → `results/metricas_teste.csv`.
 - **Teste de DeLong pareado** para todas as combinações de modelos, com **correção de Bonferroni** para as 6 comparações (`p_valor` original e `p_ajustado_Bonferroni`; a coluna `Significativo_5pct` usa o ajustado) → `results/delong_pareado.csv`.
 - Curvas ROC sobrepostas e gráfico de métricas.
 
@@ -285,12 +284,11 @@ Comparação entre modelos:
 
 ### Etapa 6 — Explicabilidade com SHAP
 
-Aplicada ao **XGBoost**, ao **Random Forest** e ao **melhor modelo do teste** (se for outro), sobre os 113 pacientes do teste:
+Aplicada sempre ao **XGBoost** e ao **Random Forest**, sobre os 113 pacientes do teste:
 
 | Modelo | Método | Escala dos valores SHAP |
 |---|---|---|
 | XGBoost | **TreeSHAP exato** (`predict(..., predcontrib = TRUE)`) | log-odds |
-| LightGBM | **TreeSHAP exato** (`predcontrib` nativo) | log-odds |
 | Random Forest | `fastshap` (Monte Carlo, `nsim = 100`) — RF não possui TreeSHAP nativo em R | probabilidade |
 
 > O `caret::xgbTree` codifica internamente o **primeiro** nível (`saudavel`) como 1; a etapa 6 inverte o sinal das contribuições para que, em todos os modelos, **SHAP > 0 signifique "empurra para doente"**.
@@ -519,7 +517,7 @@ Leitura:
 
 ### 7.5 Explicabilidade (SHAP)
 
-Foram explicados o **XGBoost** (TreeSHAP exato, escala log-odds) e o **Random Forest** (melhor modelo no teste; `fastshap`, escala de probabilidade). Como as escalas diferem, comparam-se **rankings e direções**, não magnitudes.
+Foram explicados o **XGBoost** (TreeSHAP exato, escala log-odds) e o **Random Forest** (maior AUC no teste; `fastshap`, escala de probabilidade). Como as escalas diferem, comparam-se **rankings e direções**, não magnitudes.
 
 #### Importância global
 
@@ -706,8 +704,8 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 | **Postos médios** nos empates dos rankings de importância | Desempatar pela ordem das colunas | A ordem das colunas é arbitrária e alteraria a correlação de Spearman entre rankings |
 | **Estratificação por sexo** (métricas e SHAP) | Avaliar só no agregado | Prevalência e perfil laboratorial diferem entre sexos; um modelo pode ter FN concentrados em um grupo sem que a métrica global revele (Straw & Wu, 2022) |
 | SHAP em vez de só importância nativa | `varImp()` do caret | SHAP fornece direção do efeito, explicações locais e é consistente entre modelos |
-| **TreeSHAP exato** para XGBoost/LightGBM | Monte Carlo (`fastshap`) para todos | Exato, determinístico e instantâneo; `fastshap` fica reservado ao Random Forest, que não tem TreeSHAP nativo em R |
-| SHAP em **XGB + RF + melhor modelo** | Explicar só um modelo | Compara se modelos diferentes "olham" para os mesmos exames; evita explicar um modelo que não é o melhor no teste |
+| **TreeSHAP exato** para o XGBoost | Monte Carlo (`fastshap`) para todos | Exato, determinístico e instantâneo; `fastshap` fica reservado ao Random Forest, que não tem TreeSHAP nativo em R |
+| SHAP sempre em **XGB + RF** | Explicar só um modelo | Compara se um modelo de *boosting* e um de *bagging* "olham" para os mesmos exames |
 | LightGBM via wrapper customizado no caret | Treinar fora do caret | Garante que o LightGBM use exatamente os mesmos folds e a mesma métrica dos outros modelos |
 | Limiar clínico para todos os modelos | Fixar 0,5 | Em triagem, o custo de FN ≠ custo de FP; o limiar é uma decisão clínica, não estatística |
 
@@ -722,7 +720,6 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 - O rótulo "doente" agrupa diferentes patologias hepáticas.
 - SMOTE gera amostras por interpolação linear, o que pode criar pacientes fisiologicamente implausíveis (o `Gender` é devolvido a uma categoria válida, mas as variáveis contínuas continuam interpoladas).
 - Os limiares escolhidos na CV vêm de modelos ajustados com ~80 % do treino; aplicá-los ao modelo final (ajustado no treino completo) é uma aproximação, e a sensibilidade no teste pode ficar abaixo da meta de 90 % — foi o que ocorreu com o XGBoost (0,84).
-- O "melhor modelo", que define qual modelo extra a etapa 6 explica, ainda é escolhido pela AUC no teste. Isso não altera nenhuma métrica reportada, mas é uma escolha feita olhando o teste.
 - Random Search com 30 combinações explora o espaço de hiperparâmetros de forma limitada; a seleção do modelo ainda é feita na mesma CV usada para o tuning (sem CV aninhada), o que pode manter leve otimismo.
 - Os valores SHAP do Random Forest são aproximados (Monte Carlo) e estão em escala diferente (probabilidade) dos de XGBoost/LightGBM (log-odds).
 - Especificidade baixa em todos os modelos no limiar 0,5, e muito baixa no limiar clínico de Sens ≥ 90 %.

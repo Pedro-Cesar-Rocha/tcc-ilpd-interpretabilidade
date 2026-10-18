@@ -329,7 +329,7 @@ Para o \textit{Random Forest}, cuja implementação não dispõe de cálculo nat
 \subsection{Modelos Explicados}
 \label{sec:modelos_explicados}
 
-Foram explicados sempre o XGBoost e o \textit{Random Forest}, representantes das estratégias de \textit{boosting} e de \textit{bagging}, além do modelo com maior AUC-ROC no conjunto de teste, caso este não seja um dos dois anteriores, o que garante que a análise de interpretabilidade inclua o modelo que, na prática, seria o candidato à aplicação. No conjunto de teste, o \textit{Random Forest} obteve a maior AUC-ROC (0,781), de modo que foram explicados apenas o XGBoost e o \textit{Random Forest}. A Regressão Logística só seria explicada por SHAP, pelo mesmo estimador amostral usado no \textit{Random Forest}, se fosse o modelo de maior AUC-ROC no teste; como não foi, sua interpretação baseia-se nos coeficientes, que já descrevem diretamente o efeito de cada variável (Seção~\ref{sec:regressao_logistica}).
+Foram explicados o XGBoost e o \textit{Random Forest}, representantes das estratégias de \textit{boosting} e de \textit{bagging}. O LightGBM, que segue a mesma estratégia do XGBoost, não foi explicado, e a Regressão Logística dispensa o SHAP, pois sua interpretação baseia-se nos coeficientes, que já descrevem diretamente o efeito de cada variável (Seção~\ref{sec:regressao_logistica}).
 
 \subsection{Análises Realizadas}
 \label{sec:analises_shap}

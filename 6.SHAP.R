@@ -1,11 +1,9 @@
 # =============================================================================
 # 6.SHAP.R
-# Explicabilidade com valores SHAP para os modelos de caixa-preta:
+# Explicabilidade com valores SHAP para os dois modelos de caixa-preta explicados:
 #   - XGBoost  : TreeSHAP exato (predcontrib nativo, escala log-odds)
-#   - LightGBM : TreeSHAP exato (somente se for o melhor modelo no teste)
 #   - Random Forest : SHAP amostral (fastshap, Monte Carlo, escala de probabilidade)
-# Sempre sao explicados o XGBoost, o Random Forest e o melhor modelo pela AUC
-# no teste (etapa 5). Para cada um:
+# Para cada um:
 #   - importancia global (bar) e distribuicao dos efeitos (beeswarm)
 #   - grafico de dependencia da variavel mais importante
 #   - explicacao local (waterfall) do verdadeiro positivo de maior confianca e
@@ -55,16 +53,13 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   genero  <- readRDS("data/teste_genero.rds")
   X_teste <- teste %>% select(-Diagnostico)
   real    <- teste$Diagnostico
-  melhor  <- if (file.exists("results/melhor_modelo.rds")) readRDS("results/melhor_modelo.rds") else "XGBoost"
 
-  arquivos <- c("Regressao Logistica" = "models/modelo_lr.rds", "Random Forest" = "models/modelo_rf.rds",
-                "XGBoost" = "models/modelo_xgb.rds", "LightGBM" = "models/modelo_lgb.rds")
-  slugs    <- c("Regressao Logistica" = "lr", "Random Forest" = "rf", "XGBoost" = "xgb", "LightGBM" = "lgb")
+  arquivos <- c("Random Forest" = "models/modelo_rf.rds", "XGBoost" = "models/modelo_xgb.rds")
+  slugs    <- c("Random Forest" = "rf", "XGBoost" = "xgb")
 
-  # [Metodologia - 3.7.1 Modelos Explicados (sec:modelos_explicados)] XGBoost e Random Forest
-  #   (mais o melhor modelo no teste, se for outro).
-  a_explicar <- unique(c("XGBoost", "Random Forest", melhor))
-  log_info("Melhor modelo no teste (etapa 5): %s", melhor)
+  # [Metodologia - 3.7.1 Modelos Explicados (sec:modelos_explicados)] sempre o XGBoost
+  #   (boosting) e o Random Forest (bagging).
+  a_explicar <- c("XGBoost", "Random Forest")
   log_info("Modelos a explicar: %s | %d observacoes de teste | %d preditores",
            paste(a_explicar, collapse = ", "), nrow(X_teste), ncol(X_teste))
   log_info("SHAP decompoe cada previsao em contribuicoes aditivas de cada variavel.")
@@ -80,7 +75,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   #   decomposicao aditiva f(x) = phi_0 + soma(phi_j), Eq. 2.5 (eq:shap_aditivo);
   #   o 'baseline' do shapviz e o valor base phi_0.
   # [Fundamentação Teórica - 2.6.3 Estimacao dos Valores SHAP (sec:fund_estimacao)]
-  #   - XGBoost/LightGBM: TreeSHAP exato, escala do logaritmo da chance (Eq. 2.4);
+  #   - XGBoost: TreeSHAP exato, escala do logaritmo da chance (Eq. 2.4);
   #   - Random Forest: Monte Carlo (fastshap, nsim = 100), escala de probabilidade,
   #     com semente fixada porque a estimativa tem erro aleatorio.
   calcular_shap <- function(nome, modelo) {
@@ -92,10 +87,6 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
       # para que SHAP > 0 signifique "empurra para 'doente'", como nos demais modelos.
       S <- -M[, booster$xNames, drop = FALSE]
       sv <- shapviz(S, X = X_teste, baseline = -mean(M[, "BIAS"]))
-      list(sv = sv, escala = "log-odds")
-    } else if (nome == "LightGBM") {
-      log_info("Metodo: TreeSHAP exato (lightgbm predcontrib) - escala log-odds.")
-      sv <- shapviz(modelo$finalModel$booster, X_pred = as.matrix(X_teste), X = X_teste)
       list(sv = sv, escala = "log-odds")
     } else {
       log_info("Metodo: SHAP amostral (fastshap, Monte Carlo, nsim = 100) - escala de probabilidade.")
@@ -300,7 +291,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   log_info("shap_waterfall_<m>_<caso>.png     : porque o modelo deu determinada previsao para UM paciente.")
   log_info("shap_importancia_por_sexo_<m>.png : se o modelo usa as variaveis de forma diferente para homens e mulheres.")
   log_info("shap_gender_por_sexo_<m>.png      : quanto o sexo, isoladamente, desloca a previsao de risco.")
-  log_info("<m> = xgb (TreeSHAP exato), rf (fastshap), lgb (TreeSHAP exato).")
+  log_info("<m> = xgb (TreeSHAP exato), rf (fastshap).")
 }
 
 timer_end(t0, "Etapa 6")

@@ -143,9 +143,7 @@ log_info("Foco em Recall: desempenho no teste com o limiar que garante Sens >= %
 log_table(tabela %>% select(Modelo, Limiar_Recall90, Sens_Recall90, Spec_Recall90, Precisao_Recall90), digits = 4)
 salvar_csv(tabela, "results/metricas_teste.csv")
 
-melhor <- tabela$Modelo[1]
-log_ok("Melhor modelo pela AUC no teste: %s (AUC = %.4f)", melhor, tabela$AUC[1])
-salvar_rds(melhor, "results/melhor_modelo.rds")
+log_ok("Maior AUC no teste: %s (AUC = %.4f)", tabela$Modelo[1], tabela$AUC[1])
 
 # --- Comparacao estatistica das curvas ROC (DeLong) --------------------------
 # [Metodologia - 3.6.3 Comparacao Estatistica das AUCs (sec:comparacao_auc)] DeLong pareado
