@@ -11,7 +11,7 @@
 #   1.CarregamentoDeDados.R -> Etapa 1, 2.2 Compreensao e Exploracao dos Dados
 #   2.PreProcessamento.R    -> Etapa 2, 2.3 Preparacao dos Dados (2.3.1 a 2.3.3)
 #   3.Balanceamento.R       -> Etapa 2, 2.3.4 Desbalanceamento de Classes e SMOTE
-#   4.Modelos.R             -> Etapa 3, 2.4 Modelagem; Etapa 4, 2.5.1, 2.5.2 e 2.5.6
+#   4.Modelos.R             -> Etapa 3, 2.4 Modelagem; Etapa 4, 2.5.1 e 2.5.2
 #   5.Avaliacao.R           -> Etapa 4, 2.5.3 a 2.5.5; e 2.7 Vies Algoritmico
 #   6.SHAP.R                -> Etapa 5, 2.6 Interpretabilidade; e 2.7 Vies Algoritmico
 #   UtilsPipeline.R         -> semente (2.1), SMOTE por fold (2.3.4) e LightGBM (2.4.5)

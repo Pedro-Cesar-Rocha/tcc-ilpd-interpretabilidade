@@ -132,9 +132,7 @@ salvar_csv(coef_df, "results/coeficientes_regressao_logistica.csv")
 
 # --- Comparacao dos modelos na validacao cruzada -----------------------------
 # [Metodologia - 3.5.3 Selecao e Comparacao dos Modelos (sec:metrica_selecao, sec:comparacao_cv)]
-#   AUC-ROC nas 15 particoes e teste t pareado com Bonferroni.
-# [Fundamentação Teórica - 2.5.6 Comparacao Estatistica entre Modelos na Validacao Cruzada
-#   (sec:fund_comparacao_cv)] mesmas 15 particoes para os quatro modelos.
+#   AUC-ROC media e distribuicao nas 15 particoes (as mesmas para os quatro modelos).
 log_subsection("Comparacao dos modelos na validacao cruzada (resamples)")
 modelos <- list(
   "Regressao Logistica" = modelo_lr,
@@ -171,14 +169,6 @@ p_cv <- ggplot(cv_long, aes(AUC, Modelo)) +
   labs(x = "AUC-ROC na valida\u00e7\u00e3o cruzada (15 parti\u00e7\u00f5es)", y = NULL) +
   tema_tcc()
 salvar_plot(p_cv, "plots/cv_comparacao_modelos.png", width = 13.5, height = 7)
-
-# Teste pareado: diferencas de AUC entre modelos sao estatisticamente significativas?
-# [Fundamentação Teórica - 2.5.6] teste t pareado entre particoes; [Fundamentação Teórica - 2.2.5 (sec:fund_bonferroni)]
-#   correcao de Bonferroni para as seis comparacoes.
-log_subsection("Diferencas de AUC entre modelos (teste t pareado, Bonferroni)")
-dif <- diff(rs, metric = "ROC")
-log_table(summary(dif)$table$ROC, digits = 4)
-log_info("Triangulo superior: diferenca media de AUC | triangulo inferior: p-valor ajustado.")
 
 # --- Persistencia -------------------------------------------------------------
 log_subsection("Salvando modelos")

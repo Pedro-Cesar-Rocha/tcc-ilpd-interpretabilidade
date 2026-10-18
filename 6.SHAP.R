@@ -7,14 +7,14 @@
 # Sempre sao explicados o XGBoost, o Random Forest e o melhor modelo pela AUC
 # no teste (etapa 5). Para cada um:
 #   - importancia global (bar) e distribuicao dos efeitos (beeswarm)
-#   - graficos de dependencia para as variaveis mais importantes
-#   - explicacao local (waterfall) de pacientes individuais
+#   - grafico de dependencia da variavel mais importante
+#   - explicacao local (waterfall) do verdadeiro positivo de maior confianca e
+#     do falso negativo de pior erro
 #   - importancia SHAP estratificada por sexo (auditoria de vies)
-# Ao final, compara os rankings de importancia entre modelos.
-# Postos: calculados a partir dos valores de importancia SEM arredondar; empates
-# reais recebem o posto medio (rank com ties.method = "average"), e o arredondamento
-# ocorre apenas na exportacao dos CSV. Variavel usada com importancia nativa minima
-# (0 apos a reescala) fica a frente das variaveis nao usadas.
+# Ao final, compara tres rankings de importancia: SHAP do XGBoost, SHAP do
+# Random Forest e |coeficiente padronizado| da Regressao Logistica.
+# Postos: calculados a partir dos valores SEM arredondar; empates recebem o
+# posto medio (rank com ties.method = "average").
 # =============================================================================
 # [Fundamentação Teórica - 2.6 Interpretabilidade de Modelos (sec:fund_interpretabilidade)] Etapa 5
 # da Figura 2.1: explicacao post-hoc dos modelos de ensemble (caixa-preta).
@@ -77,7 +77,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   #   invertido porque o caret codifica "saudavel" como positiva) e Monte Carlo no
   #   Random Forest (nsim = 100, semente 42).
   # [Fundamentação Teórica - 2.6.1 Valores de Shapley (sec:fund_shapley)] e [2.6.2 SHAP (sec:fund_shap)]:
-  #   decomposicao aditiva f(x) = phi_0 + soma(phi_j), Eq. 2.6 (eq:shap_aditivo);
+  #   decomposicao aditiva f(x) = phi_0 + soma(phi_j), Eq. 2.5 (eq:shap_aditivo);
   #   o 'baseline' do shapviz e o valor base phi_0.
   # [Fundamentação Teórica - 2.6.3 Estimacao dos Valores SHAP (sec:fund_estimacao)]
   #   - XGBoost/LightGBM: TreeSHAP exato, escala do logaritmo da chance (Eq. 2.4);
@@ -173,10 +173,9 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     salvar_plot(p_bar, sprintf("plots/shap_importancia_%s.png", slug), width = 10, height = 8)
     salvar_plot(p_bee, sprintf("plots/shap_beeswarm_%s.png", slug), width = 10, height = 8)
 
-    # Dependencia (top 4)
+    # Dependencia (apenas a variavel mais importante de cada modelo)
     # [Fundamentação Teórica - 2.6.4] graficos de dependencia.
-    top4 <- head(imp_df$Variavel, 4)
-    for (v in top4) {
+    for (v in head(imp_df$Variavel, 1)) {
       p_dep <- sv_dependence(sv, v = v, color_var = "auto") +
         labs(y = sprintf("SHAP (%s)", esc)) +
         tema_tcc(base_size = 8, legenda = "right")
@@ -188,7 +187,6 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     probs <- pfun(modelo, X_teste)
     casos <- c(
       "VP_maior_confianca" = which(real == "doente")[which.max(probs[real == "doente"])],
-      "VN_maior_confianca" = which(real == "saudavel")[which.min(probs[real == "saudavel"])],
       "FN_pior_erro"       = which(real == "doente")[which.min(probs[real == "doente"])]
     )
     log_info("Explicacoes locais (waterfall):")
@@ -260,22 +258,14 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
 
   # --- Comparacao dos rankings de importancia entre modelos -------------------
   # [Metodologia - 3.7.4 Comparacao das Importancias entre os Modelos (sec:comparacao_importancias)]
-  #   cinco rankings (SHAP XGB, SHAP RF, nativa RF, nativa LGB, |coef| RL) e Spearman.
+  #   tres rankings (SHAP XGB, SHAP RF, |coef| RL) e correlacao de Spearman entre eles.
   # [Fundamentação Teórica - 2.6.3 Estimacao dos Valores SHAP e Efeito da Correlacao (sec:fund_dependencia)]
   #   a correlacao entre variaveis afeta cada medida de importancia de modo distinto:
-  #   permutacao do Random Forest (2.4.3), SHAP, coeficientes da Regressao Logistica (2.4.1).
+  #   SHAP e coeficientes da Regressao Logistica (2.4.1).
   # [Fundamentação Teórica - 2.2.4 Correlacao (sec:fund_correlacao)] Spearman sobre os postos; empates
   #   recebem o posto medio.
   log_subsection("Comparacao dos rankings de importancia entre modelos")
-  rank_nativo <- function(caminho, sufixo) {
-    m   <- readRDS(caminho)
-    imp <- varImp(m, scale = TRUE)$importance
-    tibble(Variavel = rownames(imp), Imp = imp[, 1]) %>%
-      rename_with(~paste0(.x, "_nativa_", sufixo), Imp)
-  }
-  comp <- reduce(importancias, full_join, by = "Variavel") %>%
-    left_join(rank_nativo("models/modelo_rf.rds",  "rf"),  by = "Variavel") %>%
-    left_join(rank_nativo("models/modelo_lgb.rds", "lgb"), by = "Variavel")
+  comp <- reduce(importancias, full_join, by = "Variavel")
   # Regressao logistica: ranking pelo |coeficiente padronizado| (baseline interpretavel).
   # Os coeficientes vem do CSV da etapa 4, ja arredondados a 4 casas (sem empates).
   coef_lr <- read.csv("results/coeficientes_regressao_logistica.csv") %>%
@@ -283,16 +273,14 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     transmute(Variavel, Coef_abs_lr = abs(Coeficiente))
   comp <- comp %>% left_join(coef_lr, by = "Variavel")
 
-  # Postos: a partir dos valores sem arredondar; empates reais recebem o posto medio.
-  # Variavel ausente da medida (nao usada em nenhuma arvore) recebe importancia 0 e fica
-  # atras da variavel usada cuja importancia reescalada e 0 (bonus de 1e-6 so para quem foi usada).
+  # Postos a partir dos valores sem arredondar; empates (por exemplo, variaveis que
+  # o XGBoost nao usa, todas com importancia 0) recebem o posto medio.
   for (col in c(grep("^Imp_", names(comp), value = TRUE), "Coef_abs_lr")) {
-    x     <- comp[[col]]
-    usada <- !is.na(x)
+    x <- comp[[col]]
     x[is.na(x)] <- 0
     comp[[col]] <- x
     nome_rank <- if (col == "Coef_abs_lr") "Rank_lr" else sub("^Imp_", "Rank_", col)
-    comp[[nome_rank]] <- rank(-(x + ifelse(usada, 1e-6, 0)), ties.method = "average")
+    comp[[nome_rank]] <- rank(-x, ties.method = "average")
   }
   comp <- comp %>% arrange(Rank_SHAP_xgb, desc(Imp_SHAP_xgb))
   log_table(comp)
@@ -308,7 +296,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   log_subsection("Como ler os resultados")
   log_info("shap_importancia_<m>.png          : quais variaveis mais pesam nas decisoes do modelo <m>, em media.")
   log_info("shap_beeswarm_<m>.png             : direcao do efeito - pontos a direita aumentam a chance de 'doente'.")
-  log_info("shap_dependencia_<m>_<var>.png    : como o SHAP muda conforme o valor de cada variavel.")
+  log_info("shap_dependencia_<m>_<var>.png    : como o SHAP muda conforme o valor da variavel mais importante.")
   log_info("shap_waterfall_<m>_<caso>.png     : porque o modelo deu determinada previsao para UM paciente.")
   log_info("shap_importancia_por_sexo_<m>.png : se o modelo usa as variaveis de forma diferente para homens e mulheres.")
   log_info("shap_gender_por_sexo_<m>.png      : quanto o sexo, isoladamente, desloca a previsao de risco.")
