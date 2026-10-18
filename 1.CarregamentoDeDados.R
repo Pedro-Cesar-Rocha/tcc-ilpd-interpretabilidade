@@ -6,6 +6,8 @@
 # Etapa 1 da Figura 2.1: Analise Exploratoria de Dados (AED). Os valores
 # calculados aqui sao apenas descritivos e nao transformam os dados dos modelos
 # (ver 2.3.2, vazamento de dados).
+# [Met. 3.2 Analise Exploratoria de Dados (sec:aed)] este script implementa toda
+#   a secao 3.2 da Metodologia e a caracterizacao da base (3.1).
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
   library(tidyverse)
@@ -37,6 +39,8 @@ log_info("Copie as chaves BibTeX geradas (@...{chave, ...) para o arquivo .bib d
 log_info("Reprodutibilidade: a semente fixa PIPELINE_SEED = %d (definida em UtilsPipeline.R) garante resultados reproduziveis em toda a pipeline.", PIPELINE_SEED)
 
 # --- Leitura -----------------------------------------------------------------
+# [Met. 3.1.1 Caracterizacao da Base (sec:caracterizacao_base)] nomes das 11
+#   colunas (Tabela tab:variaveis), atribuidos na leitura do CSV sem cabecalho.
 # [Fund. 2.2.1 Dominio do Problema (sec:fund_figado)] as variaveis sao os
 #   marcadores laboratoriais (bilirrubinas, enzimas, proteinas) descritos no texto.
 # [Fund. 2.2.2 Conceitos Basicos de Dados (sec:fund_conceitos)] cada linha e uma
@@ -52,6 +56,8 @@ df <- read.csv(arquivo, header = FALSE, col.names = colunas)
 log_ok("Base carregada: %d observacoes x %d variaveis", nrow(df), ncol(df))
 
 # --- Estrutura ---------------------------------------------------------------
+# [Met. 3.2.1 Qualidade dos Dados (sec:qualidade_dados)] numero de observacoes,
+#   atributos e tipo de cada variavel.
 log_subsection("Estrutura das variaveis")
 tipos <- data.frame(Variavel = names(df),
                     Tipo     = vapply(df, function(x) class(x)[1], character(1)),
@@ -59,6 +65,7 @@ tipos <- data.frame(Variavel = names(df),
 log_table(tipos)
 
 # --- Valores ausentes --------------------------------------------------------
+# [Met. 3.2.1 Qualidade dos Dados (sec:qualidade_dados)] valores ausentes por variavel.
 log_subsection("Valores ausentes")
 # [Fund. 2.3.1 Valores Ausentes e Imputacao (sec:fund_ausentes)] aqui apenas
 #   identificados; a imputacao pela mediana ocorre na etapa 2.
@@ -72,12 +79,16 @@ if (sum(na_por_coluna) == 0) {
 }
 
 # --- Duplicatas --------------------------------------------------------------
+# [Met. 3.2.1 Qualidade dos Dados (sec:qualidade_dados)] duplicatas apenas
+#   identificadas aqui; a remocao esta em 2.PreProcessamento.R (Met. 3.3.1).
 # [Fund. 2.3.2 Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
 #   aqui apenas contados; a remocao ocorre na etapa 2.
 n_dup <- sum(duplicated(df))
 if (n_dup > 0) log_warn("%d linhas duplicadas detectadas (mantidas nesta etapa).", n_dup) else log_ok("Sem linhas duplicadas.")
 
 # --- Variavel alvo -----------------------------------------------------------
+# [Met. 3.2.2 Distribuicao da Variavel-Alvo e do Sexo (sec:distribuicao_alvo_sexo)]
+#   razao de desbalanceamento ~2,5:1 (ver tambem Met. 3.1.2, sec:distribuicao_classes).
 # [Fund. 2.2.2 Conceitos Basicos (sec:fund_conceitos)] classe positiva/negativa,
 #   base desbalanceada, classe majoritaria/minoritaria e prevalencia.
 log_subsection("Distribuicao da variavel alvo (Diagnostico: 1 = doente, 2 = saudavel)")
@@ -88,6 +99,8 @@ razao <- max(tab_alvo) / min(tab_alvo)
 log_info("Razao de desbalanceamento: %.2f : 1", razao)
 
 # --- Genero ------------------------------------------------------------------
+# [Met. 3.2.2 Distribuicao da Variavel-Alvo e do Sexo (sec:distribuicao_alvo_sexo)]
+#   distribuicao do sexo e prevalencia de doentes por sexo.
 # [Fund. 2.7 Vies Algoritmico e Equidade em Saude (sec:fund_vies)] grupo
 #   sub-representado (mulheres), motivo da analise estratificada por sexo.
 log_subsection("Distribuicao por genero")
@@ -95,6 +108,8 @@ tab_gen <- table(df$Gender, df$Diagnostico, dnn = c("Gender", "Diagnostico"))
 log_table(tab_gen)
 
 # --- Estatisticas descritivas ------------------------------------------------
+# [Met. 3.2.3 Estatisticas Descritivas e Assimetria
+#   (sec:estatisticas_descritivas_assimetria)] Tabela tab:descritivas.
 # [Fund. 2.2.3 Estatisticas Descritivas e Assimetria (sec:fund_assimetria)]
 #   media, desvio-padrao, mediana e coeficiente de assimetria b1 (Eq. 2.1,
 #   eq:assimetria), calculado na linha 'Assimetria' abaixo.
@@ -123,6 +138,8 @@ if (length(assimetricas) > 0) {
 }
 
 # --- Comparacao das medias por classe ---------------------------------------
+# [Met. 3.2.4 Comparacao entre Classes (sec:comparacao_classes)] teste t de Welch
+#   entre doentes e saudaveis (Tabela tab:teste_welch).
 # [Fund. 2.2.5 Testes de Hipotese e Comparacoes Multiplas (sec:fund_welch)]
 #   teste t de Welch (variancias desiguais), valor-p e nivel de significancia 0,05.
 log_subsection("Media das variaveis por classe (teste t de Welch)")
@@ -144,6 +161,8 @@ log_info("Variaveis sem diferenca significativa (p >= 0.05): %s",
          if (length(nao_significativas) > 0) paste(nao_significativas, collapse = ", ") else "nenhuma")
 
 # --- Correlacao --------------------------------------------------------------
+# [Met. 3.2.5 Analise de Correlacao (sec:analise_correlacao)] matriz de Pearson
+#   (Figura fig:eda_correlacao) e pares com |r| > 0,7.
 # [Fund. 2.2.4 Correlacao e Multicolinearidade (sec:fund_correlacao)]
 #   coeficiente de Pearson (Eq. 2.2, eq:pearson) e limiar |r| > 0,7 de correlacao forte.
 log_subsection("Matriz de correlacao (Pearson)")
@@ -175,6 +194,8 @@ invisible(dev.off())
 log_ok("Grafico salvo: plots/eda_correlacao.png")
 
 # --- Graficos exploratorios -------------------------------------------------
+# [Met. 3.2.2] Figura fig:eda_distribuicao_alvo (p_alvo) e
+# [Met. 3.2.4] Figura fig:eda_boxplots (p_box).
 p_alvo <- ggplot(df, aes(x = factor(Diagnostico, labels = c("Doente", "Saud\u00e1vel")), fill = factor(Diagnostico))) +
   geom_bar(show.legend = FALSE, width = 0.6) +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.4, size = 3) +

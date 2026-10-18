@@ -19,6 +19,20 @@
 # (ou equacao) da Fundamentacao em que o conceito usado naquele trecho e explicado.
 # Numeracao conforme a versao atual da monografia; entre parenteses, o \label.
 # -----------------------------------------------------------------------------
+# MAPA ENTRE O CODIGO E A METODOLOGIA (Capitulo 3 da monografia)
+#   1.CarregamentoDeDados.R -> 3.1 Base de Dados e 3.2 Analise Exploratoria de Dados
+#   2.PreProcessamento.R    -> 3.3.1 a 3.3.3 (duplicatas, log, divisao, imputacao,
+#                              padronizacao)
+#   3.Balanceamento.R       -> 3.3.4 Reamostragem com SMOTE (diagnostico no treino)
+#   4.Modelos.R             -> 3.4 Modelos Preditivos e 3.5 Treinamento e Validacao
+#                              Cruzada
+#   5.Avaliacao.R           -> 3.6 Avaliacao de Desempenho (3.6.1 a 3.6.4)
+#   6.SHAP.R                -> 3.7 Interpretabilidade com SHAP (3.7.1 a 3.7.4)
+#   UtilsPipeline.R         -> SMOTE por fold (3.3.4) e LightGBM (3.4.4)
+# Dentro de cada script, comentarios no formato [Met. X.Y ...] indicam a secao da
+# Metodologia que descreve o que aquele trecho faz (entre parenteses, o \label;
+# Tab./Figura indicam a tabela ou figura produzida a partir dele).
+# -----------------------------------------------------------------------------
 project_dir <- getwd()
 source(file.path(project_dir, "UtilsPipeline.R"))
 

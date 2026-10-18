@@ -9,6 +9,9 @@
 # [Fund. 2.3.4 Desbalanceamento de Classes e SMOTE (sec:fund_smote)] Etapa 2 da
 # Figura 2.1 (ultimo item: SMOTE so no treino). A implementacao esta em
 # UtilsPipeline.R (aplicar_smote).
+# [Met. 3.3.4 Reamostragem com SMOTE (sec:balanceamento)] diagnostico do SMOTE no
+#   treino completo (numeros e Figura fig:res_smote dos Resultados). O SMOTE usado
+#   no treinamento e o de UtilsPipeline.R, aplicado por fold em 4.Modelos.R.
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
   library(tidyverse)
@@ -30,6 +33,7 @@ log_kv(paste0("Classe ", names(tab_antes)),
 log_info("Razao majoritaria/minoritaria: %.2f : 1", max(tab_antes) / min(tab_antes))
 
 # --- SMOTE --------------------------------------------------------------------
+# [Met. 3.3.4 (sec:balanceamento)] K = 5 vizinhos; dup_size = 0 (balanceamento automatico).
 # [Fund. 2.3.4] oversampling da classe minoritaria com k = 5 vizinhos mais proximos.
 log_subsection("Executando SMOTE (K = 5, dup_size = 0 -> balanceamento automatico)")
 set.seed(PIPELINE_SEED)
@@ -48,6 +52,8 @@ log_info("Razao majoritaria/minoritaria: %.2f : 1", max(tab_depois) / min(tab_de
 log_info("Tamanho do treino: %d -> %d observacoes", nrow(treino), nrow(df_bal))
 
 # --- Verificacao de integridade ---------------------------------------------
+# [Met. 3.3.4 (sec:balanceamento)] correcao de Gender nas amostras sinteticas e
+#   comparacao das medias sinteticas x originais.
 log_subsection("Verificacao das amostras sinteticas")
 minoritaria <- names(tab_antes)[which.min(tab_antes)]
 comp <- data.frame(

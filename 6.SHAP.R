@@ -18,6 +18,8 @@
 # =============================================================================
 # [Fund. 2.6 Interpretabilidade de Modelos (sec:fund_interpretabilidade)] Etapa 5
 # da Figura 2.1: explicacao post-hoc dos modelos de ensemble (caixa-preta).
+# [Met. 3.7 Interpretabilidade com SHAP (sec:shap)] este script implementa as
+#   secoes 3.7.1 a 3.7.4 da Metodologia.
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
   library(tidyverse)
@@ -59,6 +61,8 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
                 "XGBoost" = "models/modelo_xgb.rds", "LightGBM" = "models/modelo_lgb.rds")
   slugs    <- c("Regressao Logistica" = "lr", "Random Forest" = "rf", "XGBoost" = "xgb", "LightGBM" = "lgb")
 
+  # [Met. 3.7.1 Modelos Explicados (sec:modelos_explicados)] XGBoost e Random Forest
+  #   (mais o melhor modelo no teste, se for outro).
   a_explicar <- unique(c("XGBoost", "Random Forest", melhor))
   log_info("Melhor modelo no teste (etapa 5): %s", melhor)
   log_info("Modelos a explicar: %s | %d observacoes de teste | %d preditores",
@@ -69,6 +73,9 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   pfun <- function(object, newdata) predict(object, newdata, type = "prob")[, "doente"]
 
   # --- Calculo dos valores SHAP conforme o tipo de modelo ---------------------
+  # [Met. 3.7.1 Modelos Explicados (sec:modelos_explicados)] TreeSHAP no XGBoost (sinal
+  #   invertido porque o caret codifica "saudavel" como positiva) e Monte Carlo no
+  #   Random Forest (nsim = 100, semente 42).
   # [Fund. 2.6.1 Valores de Shapley (sec:fund_shapley)] e [2.6.2 SHAP (sec:fund_shap)]:
   #   decomposicao aditiva f(x) = phi_0 + soma(phi_j), Eq. 2.7 (eq:shap_aditivo);
   #   o 'baseline' do shapviz e o valor base phi_0.
@@ -100,6 +107,10 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   }
 
   # --- Explicacao completa de um modelo ---------------------------------------
+  # [Met. 3.7.2 Analises Realizadas (sec:analises_shap)] importancia global, direcao
+  #   do efeito, dependencia, waterfall (VP, VN e FN selecionados) e
+  # [Met. 3.7.3 Auditoria de Vies por Sexo (sec:shap_sexo)] importancia SHAP por sexo
+  #   e contribuicao da variavel Gender.
   explicar <- function(nome) {
     slug   <- slugs[[nome]]
     modelo <- readRDS(arquivos[[nome]])
@@ -248,6 +259,8 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   names(importancias) <- a_explicar
 
   # --- Comparacao dos rankings de importancia entre modelos -------------------
+  # [Met. 3.7.4 Comparacao das Importancias entre os Modelos (sec:comparacao_importancias)]
+  #   cinco rankings (SHAP XGB, SHAP RF, nativa RF, nativa LGB, |coef| RL) e Spearman.
   # [Fund. 2.6.3 Estimacao dos Valores SHAP e Efeito da Correlacao (sec:fund_dependencia)]
   #   a correlacao entre variaveis afeta cada medida de importancia de modo distinto:
   #   permutacao do Random Forest (2.4.3), SHAP, coeficientes da Regressao Logistica (2.4.1).

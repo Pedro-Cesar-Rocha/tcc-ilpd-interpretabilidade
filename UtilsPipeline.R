@@ -128,6 +128,8 @@ salvar_csv <- function(df, caminho) {
 #   - Correcao de Gender: mesma ideia da variante SMOTE-NC para variaveis binarias.
 # [Fund. 2.3.2 Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
 #   - SMOTE dentro de cada fold: a terceira origem de vazamento descrita no texto.
+# [Met. 3.3.4 Reamostragem com SMOTE (sec:balanceamento)] SMOTE com K = 5 e
+#   correcao de Gender, usado por fold na validacao cruzada (Met. 3.5.1).
 VARS_BINARIAS <- c("Gender")
 
 categoria_mais_proxima <- function(valores, categorias) {
@@ -171,6 +173,8 @@ smote_caret <- list(
 #   crescimento leaf-wise; num_leaves e min_data_in_leaf controlam o sobreajuste.
 # [Fund. 2.5.2 Hiperparametros e Sua Otimizacao (sec:fund_hiperparametros)]
 #   a funcao grid(search = "random") define o espaco da busca aleatoria.
+# [Met. 3.4.4 LightGBM (sec:lightgbm)] espaco de busca da Tabela tab:espaco_busca
+#   (funcao grid) e treinamento com uma unica linha de execucao (num_threads = 1).
 lightgbm_caret <- list(
   label   = "LightGBM",
   library = "lightgbm",

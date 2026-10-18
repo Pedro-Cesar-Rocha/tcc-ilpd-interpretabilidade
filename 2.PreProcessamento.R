@@ -8,6 +8,9 @@
 # A ordem das operacoes segue a secao 2.1: o que nao depende de parametros
 # estimados (duplicatas, log) vem antes da divisao; o que depende (imputacao,
 # padronizacao, SMOTE) e ajustado somente no treino (2.3.2, vazamento de dados).
+# [Met. 3.3 Pre-processamento (sec:preprocessamento)] este script implementa as
+#   secoes 3.3.1 a 3.3.3 da Metodologia; o SMOTE (3.3.4) esta em 3.Balanceamento.R,
+#   UtilsPipeline.R e 4.Modelos.R.
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
   library(tidyverse)
@@ -21,6 +24,8 @@ df <- readRDS("data/df_raw.rds")
 log_info("Dados brutos carregados: %d x %d", nrow(df), ncol(df))
 
 # --- Duplicatas --------------------------------------------------------------
+# [Met. 3.3.1 Remocao de Duplicatas e Transformacao Logaritmica (sec:preproc_duplicatas)]
+#   remocao dos 13 registros duplicados (583 -> 570).
 # [Fund. 2.3.2 Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
 #   primeira origem de vazamento: um registro no treino e sua copia no teste.
 log_subsection("Remocao de duplicatas")
@@ -29,6 +34,8 @@ df <- distinct(df)
 log_info("Removidas %d linhas duplicadas (%d -> %d).", n_antes - nrow(df), n_antes, nrow(df))
 
 # --- Encoding ----------------------------------------------------------------
+# [Met. 3.3.3 Imputacao e Padronizacao (sec:padronizacao)] Gender codificada
+#   como masculino = 1, feminino = 0; Diagnostico -> "doente" / "saudavel".
 # [Fund. 2.2.2 Conceitos Basicos (sec:fund_conceitos)] variavel binaria (Gender)
 #   e classe positiva ('doente') x negativa ('saudavel').
 log_subsection("Codificacao de variaveis categoricas")
@@ -41,6 +48,8 @@ log_info("Diagnostico -> 'doente' (classe positiva) / 'saudavel'")
 log_kv(paste0("Classe ", levels(df$Diagnostico)), as.vector(table(df$Diagnostico)))
 
 # --- Transformacao log das variaveis assimetricas ---------------------------
+# [Met. 3.3.1 (sec:preproc_duplicatas)] ln(1 + x) nas cinco variaveis assimetricas;
+#   a assimetria antes/depois impressa aqui e a da Tabela tab:assimetria_log.
 # [Fund. 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_log)]
 #   log1p(x) = ln(1 + x), Eq. 2.3 (eq:log); o efeito e conferido pelo coeficiente
 #   de assimetria antes e depois (Eq. 2.1). Nao usa parametros estimados dos dados,
@@ -56,6 +65,8 @@ for (v in vars_log) {
 }
 
 # --- Divisao treino/teste (estratificada) -----------------------------------
+# [Met. 3.3.2 Divisao Treino/Teste (sec:divisao_treino_teste)] 80/20 estratificada,
+#   semente 42 fixada imediatamente antes do sorteio.
 # [Fund. 2.2.2 Conceitos Basicos (sec:fund_conceitos)] conjunto de treino e de teste.
 # [Fund. 2.5.1 Validacao Cruzada (sec:fund_cv)] estratificacao: mantem a proporcao
 #   de classes. [Fund. 2.1] semente fixada antes do sorteio.
@@ -69,6 +80,7 @@ log_info("Proporcao 'doente' - treino: %.1f%%  |  teste: %.1f%%",
          100 * mean(treino$Diagnostico == "doente"), 100 * mean(teste$Diagnostico == "doente"))
 
 # --- Imputacao (mediana estimada SOMENTE no treino) -------------------------
+# [Met. 3.3.3 Imputacao e Padronizacao (sec:padronizacao)] mediana do treino.
 # [Fund. 2.3.1 Valores Ausentes e Imputacao (sec:fund_ausentes)] mediana, robusta
 #   a assimetria; [Fund. 2.3.2] estimada so no treino (segunda origem de vazamento).
 log_subsection("Imputacao de valores ausentes (mediana do treino aplicada a treino e teste)")
@@ -81,6 +93,8 @@ log_info("AG_Ratio: mediana do treino = %.2f | imputados: %d no treino, %d no te
 log_ok("Total de NAs restantes: treino = %d | teste = %d", sum(is.na(treino)), sum(is.na(teste)))
 
 # --- Normalizacao (ajustada SOMENTE no treino) ------------------------------
+# [Met. 3.3.3 Imputacao e Padronizacao (sec:padronizacao)] z-score com media e
+#   desvio-padrao do treino, aplicados ao treino e ao teste.
 # [Fund. 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_padronizacao)]
 #   z-score z = (x - media) / desvio-padrao, com media e desvio estimados so no treino.
 log_subsection("Normalizacao (center + scale) ajustada no conjunto de treino")
@@ -107,6 +121,8 @@ log_subsection("Salvando artefatos")
 salvar_rds(treino_proc, "data/df_proc.rds")   # treino pre-processado (entrada do SMOTE e da CV)
 salvar_rds(teste_proc,  "data/teste.rds")     # teste intocado pelo SMOTE
 salvar_rds(preproc,     "data/preproc.rds")
+# [Met. 3.6.4 Avaliacao Estratificada por Sexo (sec:avaliacao_sexo)] sexo dos
+#   pacientes de teste guardado para as analises por subgrupo.
 # Genero em rotulo legivel, para a analise estratificada por sexo (etapas 5 e 6)
 # [Fund. 2.7 Vies Algoritmico e Equidade em Saude (sec:fund_vies)]
 genero_teste <- factor(ifelse(teste$Gender == 1, "Masculino", "Feminino"),

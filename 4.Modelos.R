@@ -11,6 +11,8 @@
 # [Fund. 2.4 Modelagem e Classificacao (sec:fund_modelos)] Etapa 3 da Figura 2.1.
 # [Fund. 2.5 Treinamento, Validacao e Avaliacao (sec:fund_validacao)] Etapa 4,
 #   parte de treinamento e validacao (a avaliacao no teste esta em 5.Avaliacao.R).
+# [Met. 3.4 Modelos Preditivos (sec:modelos_preditivos)] e
+# [Met. 3.5 Treinamento e Validacao Cruzada (sec:treinamento_validacao)].
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
   library(tidyverse)
@@ -28,6 +30,11 @@ log_kv(paste0("Classe ", levels(treino$Diagnostico)), as.vector(table(treino$Dia
 log_info("O SMOTE sera aplicado dentro de cada fold da CV e no ajuste final (caret::trainControl(sampling)).")
 
 # --- Configuracao da validacao cruzada --------------------------------------
+# [Met. 3.5.1 Validacao Cruzada Repetida (sec:validacao_cruzada)] 5 folds x 3
+#   repeticoes, SMOTE dentro de cada fold (Met. 3.3.4).
+# [Met. 3.5.2 Otimizacao de Hiperparametros (sec:otimizacao_hiperparametros)]
+#   busca aleatoria com N_RANDOM = 30 sorteios por modelo (Tabela tab:espaco_busca).
+# [Met. 3.5.3 Selecao e Comparacao dos Modelos (sec:metrica_selecao)] selecao pela AUC-ROC.
 log_subsection("Configuracao da validacao cruzada")
 # [Fund. 2.5.2 Hiperparametros e Sua Otimizacao (sec:fund_hiperparametros)]
 #   busca aleatoria (Random Search) com numero fixo de combinacoes.
@@ -65,6 +72,8 @@ xgboost::xgb.set.config(verbosity = 0)
 
 # [Fund. 2.1] semente redefinida antes de cada train(): mesmas particoes para
 #   todos os modelos. [Fund. 2.4] sobreajuste e a razao da validacao cruzada.
+# [Met. 3.5.1 (sec:validacao_cruzada)] semente 42 redefinida antes de cada modelo,
+#   para que todos usem as mesmas 15 particoes.
 treinar <- function(nome, ...) {
   log_subsection(sprintf("Treinando: %s", nome))
   ti <- timer_start()
@@ -95,12 +104,18 @@ treinar <- function(nome, ...) {
 #   eta, gamma etc. sao os ajustes contra sobreajuste descritos no texto.
 # [Fund. 2.4.5 LightGBM (sec:fund_lgbm)] wrapper em UtilsPipeline.R.
 # [Fund. 2.4.2 Arvores de Decisao e Metodos de Ensemble (sec:fund_arvores)]
+# [Met. 3.4.1 Regressao Logistica (sec:regressao_logistica)] glm sem penalizacao.
+# [Met. 3.4.2 Random Forest (sec:random_forest)] ntree = 500; mtry otimizado.
+# [Met. 3.4.3 XGBoost (sec:xgboost)] sete hiperparametros otimizados (tab:espaco_busca).
+# [Met. 3.4.4 LightGBM (sec:lightgbm)] wrapper lightgbm_caret em UtilsPipeline.R.
 modelo_lr  <- treinar("Regressao Logistica", method = "glm", family = "binomial")
 modelo_rf  <- treinar("Random Forest",       method = "rf", tuneLength = N_RANDOM, ntree = 500, importance = TRUE)
 modelo_xgb <- treinar("XGBoost",             method = "xgbTree", tuneLength = N_RANDOM, verbosity = 0)
 modelo_lgb <- treinar("LightGBM",            method = lightgbm_caret, tuneLength = N_RANDOM)
 
 # --- Coeficientes da regressao logistica (interpretacao direta) -------------
+# [Met. 3.4.1 Regressao Logistica (sec:regressao_logistica)] coeficientes, razoes de
+#   chances e valores-p de Wald (tambem usados no ranking da Met. 3.7.4).
 # [Fund. 2.4.1 Regressao Logistica (sec:fund_lr)] razao de chances OR = exp(beta)
 #   e valor-p do teste de Wald; instabilidade sob multicolinearidade (2.2.4).
 log_subsection("Coeficientes da Regressao Logistica (odds ratio)")
@@ -116,6 +131,8 @@ log_info("OR > 1: aumento de 1 DP na variavel eleva a chance de 'doente'; OR < 1
 salvar_csv(coef_df, "results/coeficientes_regressao_logistica.csv")
 
 # --- Comparacao dos modelos na validacao cruzada -----------------------------
+# [Met. 3.5.3 Selecao e Comparacao dos Modelos (sec:metrica_selecao, sec:comparacao_cv)]
+#   AUC-ROC nas 15 particoes e teste t pareado com Bonferroni.
 # [Fund. 2.5.6 Comparacao Estatistica entre Modelos na Validacao Cruzada
 #   (sec:fund_comparacao_cv)] mesmas 15 particoes para os quatro modelos.
 log_subsection("Comparacao dos modelos na validacao cruzada (resamples)")
