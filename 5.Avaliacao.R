@@ -7,10 +7,10 @@
 # comparacao pareada das AUCs (DeLong com correcao de Bonferroni) e analise
 # de desempenho estratificada por sexo (vies).
 # =============================================================================
-# [Fund. 2.5 Treinamento, Validacao e Avaliacao (sec:fund_validacao)] Etapa 4 da
+# [Fundamentação Teórica - 2.5 Treinamento, Validacao e Avaliacao (sec:fund_validacao)] Etapa 4 da
 # Figura 2.1, parte de avaliacao no conjunto de teste (2.5.3 a 2.5.5), e
-# [Fund. 2.7 Vies Algoritmico (sec:fund_vies)] na analise por sexo.
-# [Met. 3.6 Avaliacao de Desempenho (sec:avaliacao_desempenho)] este script
+# [Fundamentação Teórica - 2.7 Vies Algoritmico (sec:fund_vies)] na analise por sexo.
+# [Metodologia - 3.6 Avaliacao de Desempenho (sec:avaliacao_desempenho)] este script
 #   implementa as secoes 3.6.1 a 3.6.4 da Metodologia.
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
@@ -32,9 +32,9 @@ teste  <- readRDS("data/teste.rds")
 genero <- readRDS("data/teste_genero.rds")
 xgboost::xgb.set.config(verbosity = 0)
 
-# [Fund. 2.5.5 Limiar de Decisao (sec:fund_limiar)] meta minima de sensibilidade
+# [Fundamentação Teórica - 2.5.5 Limiar de Decisao (sec:fund_limiar)] meta minima de sensibilidade
 #   (triagem clinica: falso negativo e o erro mais custoso).
-# [Met. 3.6.2 Analise do Limiar de Decisao (sec:limiar_decisao)] meta de 90% de sensibilidade.
+# [Metodologia - 3.6.2 Analise do Limiar de Decisao (sec:limiar_decisao)] meta de 90% de sensibilidade.
 RECALL_ALVO <- 0.90   # sensibilidade minima desejada em cenario de triagem clinica
 
 log_info("Conjunto de teste: %d observacoes (nunca vistas no treino nem no SMOTE)", nrow(teste))
@@ -63,9 +63,9 @@ metricas_no_limiar <- function(prob, real, limiar) {
 # Com savePredictions = "final", o caret guarda, para os hiperparametros finais,
 # a probabilidade prevista para cada paciente do treino pelo modelo do fold em
 # que ele ficou de fora (uma vez por repeticao: 5 folds x 3 repeticoes).
-# [Fund. 2.5.1 Validacao Cruzada (sec:fund_cv)] previsoes fora da particao.
-# [Fund. 2.5.5] limiar escolhido fora das previsoes de avaliacao (Leeflang et al.).
-# [Met. 3.6.2 (sec:limiar_decisao)] limiares escolhidos nas previsoes out-of-fold
+# [Fundamentação Teórica - 2.5.1 Validacao Cruzada (sec:fund_cv)] previsoes fora da particao.
+# [Fundamentação Teórica - 2.5.5] limiar escolhido fora das previsoes de avaliacao (Leeflang et al.).
+# [Metodologia - 3.6.2 (sec:limiar_decisao)] limiares escolhidos nas previsoes out-of-fold
 #   da validacao cruzada e apenas aplicados ao teste.
 roc_oof <- function(modelo) {
   oof <- modelo$pred
@@ -73,18 +73,18 @@ roc_oof <- function(modelo) {
 }
 
 # --- Avaliacao individual -----------------------------------------------------
-# [Met. 3.6.1 Metricas e Curvas de Desempenho (sec:metricas)] matriz de confusao,
+# [Metodologia - 3.6.1 Metricas e Curvas de Desempenho (sec:metricas)] matriz de confusao,
 #   metricas no limiar 0,5, AUC-ROC e IC 95% (DeLong) de cada modelo;
-# [Met. 3.6.2 (sec:limiar_decisao)] limiares de Youden e clinico.
+# [Metodologia - 3.6.2 (sec:limiar_decisao)] limiares de Youden e clinico.
 avaliar <- function(modelo, nome) {
   log_subsection(sprintf("Modelo: %s", nome))
 
   prob   <- predict(modelo, teste, type = "prob")[, "doente"]
   classe <- predict(modelo, teste)
-  # [Fund. 2.5.3 Metricas de Desempenho (sec:fund_matriz)] matriz de confusao
+  # [Fundamentação Teórica - 2.5.3 Metricas de Desempenho (sec:fund_matriz)] matriz de confusao
   #   (Tabela tab:matriz_confusao): VP, FN, VN, FP.
   cm     <- confusionMatrix(classe, teste$Diagnostico, positive = "doente")
-  # [Fund. 2.5.4 Curva ROC, AUC e Teste de DeLong (sec:fund_roc, sec:fund_delong)]
+  # [Fundamentação Teórica - 2.5.4 Curva ROC, AUC e Teste de DeLong (sec:fund_roc, sec:fund_delong)]
   #   curva ROC, AUC-ROC e intervalo de confianca de 95% pelo metodo de DeLong.
   roc_o  <- roc(teste$Diagnostico, prob, levels = c("saudavel", "doente"), direction = "<", quiet = TRUE)
   ic     <- ci.auc(roc_o, method = "delong")
@@ -97,7 +97,7 @@ avaliar <- function(modelo, nome) {
   log_info("VP = %d | FP = %d | FN = %d | VN = %d", tp, fp, fn, tn)
   log_info("Falsos negativos (doentes classificados como saudaveis) sao o erro mais critico no contexto clinico.")
 
-  # [Fund. 2.5.3] acuracia, acuracia balanceada, sensibilidade, especificidade,
+  # [Fundamentação Teórica - 2.5.3] acuracia, acuracia balanceada, sensibilidade, especificidade,
   #   precisao, F1 e Kappa de Cohen (mesmas definicoes do exemplo de 100 pacientes).
   metricas <- c(
     Acuracia       = unname(cm$overall["Accuracy"]),
@@ -120,14 +120,14 @@ avaliar <- function(modelo, nome) {
   log_info("ROC out-of-fold da CV: %d predicoes | AUC = %.4f", length(roc_cv$response), as.numeric(auc(roc_cv)))
 
   # Limiar otimo pelo indice de Youden (Sens + Spec - 1)
-  # [Fund. 2.5.5 Limiar de Decisao] indice de Youden, Eq. 2.6 (eq:youden).
+  # [Fundamentação Teórica - 2.5.5 Limiar de Decisao] indice de Youden, Eq. 2.6 (eq:youden).
   yj   <- coords(roc_cv, "best", best.method = "youden", ret = c("threshold", "sensitivity", "specificity"))
   m_yj <- metricas_no_limiar(prob, teste$Diagnostico, yj$threshold[1])
   log_info("Limiar otimo (Youden, CV): %.3f -> CV: Sens = %.3f | Spec = %.3f || teste: Sens = %.3f | Spec = %.3f",
            yj$threshold[1], yj$sensitivity[1], yj$specificity[1], m_yj["Sensibilidade"], m_yj["Especificidade"])
 
   # Limiar clinico: menor sacrificio de especificidade que garante Recall >= alvo na CV
-  # [Fund. 2.5.5] maior limiar que atinge a meta minima de sensibilidade.
+  # [Fundamentação Teórica - 2.5.5] maior limiar que atinge a meta minima de sensibilidade.
   lr   <- limiar_recall(roc_cv, RECALL_ALVO)
   m_lr <- metricas_no_limiar(prob, teste$Diagnostico, lr$threshold)
   log_info("Limiar clinico (Recall >= %.0f%% na CV): %.3f -> CV: Sens = %.3f | Spec = %.3f || teste: Sens = %.3f | Spec = %.3f | Precisao = %.3f",
@@ -148,7 +148,7 @@ avaliar <- function(modelo, nome) {
 resultados <- imap(modelos, ~avaliar(.x, .y))
 
 # --- Tabela comparativa -------------------------------------------------------
-# [Met. 3.6.1 Metricas e Curvas de Desempenho (sec:metricas)] tabela de metricas no teste.
+# [Metodologia - 3.6.1 Metricas e Curvas de Desempenho (sec:metricas)] tabela de metricas no teste.
 log_subsection("Tabela comparativa no conjunto de teste")
 tabela <- map_dfr(resultados, ~as.data.frame(t(.x$metricas), stringsAsFactors = FALSE)) %>%
   mutate(across(-Modelo, as.numeric)) %>%
@@ -165,13 +165,13 @@ log_ok("Melhor modelo pela AUC no teste: %s (AUC = %.4f)", melhor, tabela$AUC[1]
 salvar_rds(melhor, "results/melhor_modelo.rds")
 
 # --- Comparacao estatistica das curvas ROC (DeLong) --------------------------
-# [Met. 3.6.3 Comparacao Estatistica das AUCs (sec:comparacao_auc)] DeLong pareado
+# [Metodologia - 3.6.3 Comparacao Estatistica das AUCs (sec:comparacao_auc)] DeLong pareado
 #   nos seis pares de modelos, com correcao de Bonferroni.
 # Seis comparacoes simultaneas (todos os pares de modelos): os p-valores sao
 # ajustados por Bonferroni para controlar a taxa de erro do tipo I da familia,
 # como na comparacao das AUCs da validacao cruzada.
-# [Fund. 2.5.4 (sec:fund_delong)] teste de DeLong para curvas ROC nos mesmos pacientes;
-# [Fund. 2.2.5 (sec:fund_bonferroni)] correcao de Bonferroni.
+# [Fundamentação Teórica - 2.5.4 (sec:fund_delong)] teste de DeLong para curvas ROC nos mesmos pacientes;
+# [Fundamentação Teórica - 2.2.5 (sec:fund_bonferroni)] correcao de Bonferroni.
 log_subsection("Comparacao pareada das AUCs (teste de DeLong, correcao de Bonferroni)")
 nomes <- names(resultados)
 pares <- combn(nomes, 2, simplify = FALSE)
@@ -190,7 +190,7 @@ log_info("Significancia avaliada no p-valor ajustado (Bonferroni, %d comparacoes
 salvar_csv(delong, "results/delong_pareado.csv")
 
 # --- Curvas ROC ---------------------------------------------------------------
-# [Met. 3.6.1 (sec:curvas_roc_pr)] curvas ROC no teste.
+# [Metodologia - 3.6.1 (sec:curvas_roc_pr)] curvas ROC no teste.
 log_subsection("Gerando graficos")
 roc_df <- map_dfr(resultados, function(r) {
   data.frame(Modelo = sprintf("%s (AUC = %.3f)", rotulo_modelo(r$nome), as.numeric(auc(r$roc))),
@@ -207,8 +207,8 @@ p_roc <- ggplot(roc_df, aes(FPR, TPR, colour = Modelo)) +
 salvar_plot(p_roc, "plots/roc_teste.png", width = 11, height = 12.5)
 
 # --- Curvas Precision-Recall --------------------------------------------------
-# [Met. 3.6.1 (sec:curvas_roc_pr)] curvas Precision-Recall no teste.
-# [Fund. 2.5.4] curva Precision-Recall, complemento da ROC em dados desbalanceados;
+# [Metodologia - 3.6.1 (sec:curvas_roc_pr)] curvas Precision-Recall no teste.
+# [Fundamentação Teórica - 2.5.4] curva Precision-Recall, complemento da ROC em dados desbalanceados;
 #   linha de referencia = prevalencia (2.2.2).
 pr_df <- map_dfr(resultados, function(r) {
   co <- coords(r$roc, "all", ret = c("recall", "precision"))
@@ -239,9 +239,9 @@ p_met <- ggplot(met_long, aes(Metrica, Valor, colour = Modelo, shape = Modelo)) 
 salvar_plot(p_met, "plots/metricas_teste.png", width = 16, height = 8)
 
 # --- Sensibilidade ao limiar (todos os modelos) -------------------------------
-# [Met. 3.6.2 Analise do Limiar de Decisao (sec:limiar_decisao)] varredura descritiva
+# [Metodologia - 3.6.2 Analise do Limiar de Decisao (sec:limiar_decisao)] varredura descritiva
 #   de limiares de 0,1 a 0,9.
-# [Fund. 2.5.5 Limiar de Decisao] troca entre sensibilidade e especificidade
+# [Fundamentação Teórica - 2.5.5 Limiar de Decisao] troca entre sensibilidade e especificidade
 #   conforme o limiar (varredura apenas descritiva).
 log_subsection("Analise de limiar de decisao - todos os modelos")
 limiares <- seq(0.1, 0.9, by = 0.1)
@@ -275,9 +275,9 @@ p_lim <- sens_lim %>%
 salvar_plot(p_lim, "plots/limiar_sens_spec_modelos.png", width = 16, height = 11)
 
 # --- Analise estratificada por sexo (vies diagnostico) ------------------------
-# [Met. 3.6.4 Avaliacao Estratificada por Sexo (sec:avaliacao_sexo)] metricas por sexo,
+# [Metodologia - 3.6.4 Avaliacao Estratificada por Sexo (sec:avaliacao_sexo)] metricas por sexo,
 #   DeLong para amostras independentes e Bonferroni.
-# [Fund. 2.7 Vies Algoritmico e Equidade em Saude (sec:fund_vies)] auditoria por
+# [Fundamentação Teórica - 2.7 Vies Algoritmico e Equidade em Saude (sec:fund_vies)] auditoria por
 #   subgrupo com sensibilidade, especificidade e AUC-ROC (independentes da prevalencia);
 #   DeLong para amostras independentes e Bonferroni (2.5.4 e 2.2.5).
 log_subsection("Desempenho estratificado por sexo (Straw & Wu, 2022)")

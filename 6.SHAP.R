@@ -16,9 +16,9 @@
 # ocorre apenas na exportacao dos CSV. Variavel usada com importancia nativa minima
 # (0 apos a reescala) fica a frente das variaveis nao usadas.
 # =============================================================================
-# [Fund. 2.6 Interpretabilidade de Modelos (sec:fund_interpretabilidade)] Etapa 5
+# [Fundamentação Teórica - 2.6 Interpretabilidade de Modelos (sec:fund_interpretabilidade)] Etapa 5
 # da Figura 2.1: explicacao post-hoc dos modelos de ensemble (caixa-preta).
-# [Met. 3.7 Interpretabilidade com SHAP (sec:shap)] este script implementa as
+# [Metodologia - 3.7 Interpretabilidade com SHAP (sec:shap)] este script implementa as
 #   secoes 3.7.1 a 3.7.4 da Metodologia.
 source("UtilsPipeline.R")
 suppressWarnings(suppressPackageStartupMessages({
@@ -61,7 +61,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
                 "XGBoost" = "models/modelo_xgb.rds", "LightGBM" = "models/modelo_lgb.rds")
   slugs    <- c("Regressao Logistica" = "lr", "Random Forest" = "rf", "XGBoost" = "xgb", "LightGBM" = "lgb")
 
-  # [Met. 3.7.1 Modelos Explicados (sec:modelos_explicados)] XGBoost e Random Forest
+  # [Metodologia - 3.7.1 Modelos Explicados (sec:modelos_explicados)] XGBoost e Random Forest
   #   (mais o melhor modelo no teste, se for outro).
   a_explicar <- unique(c("XGBoost", "Random Forest", melhor))
   log_info("Melhor modelo no teste (etapa 5): %s", melhor)
@@ -73,13 +73,13 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   pfun <- function(object, newdata) predict(object, newdata, type = "prob")[, "doente"]
 
   # --- Calculo dos valores SHAP conforme o tipo de modelo ---------------------
-  # [Met. 3.7.1 Modelos Explicados (sec:modelos_explicados)] TreeSHAP no XGBoost (sinal
+  # [Metodologia - 3.7.1 Modelos Explicados (sec:modelos_explicados)] TreeSHAP no XGBoost (sinal
   #   invertido porque o caret codifica "saudavel" como positiva) e Monte Carlo no
   #   Random Forest (nsim = 100, semente 42).
-  # [Fund. 2.6.1 Valores de Shapley (sec:fund_shapley)] e [2.6.2 SHAP (sec:fund_shap)]:
+  # [Fundamentação Teórica - 2.6.1 Valores de Shapley (sec:fund_shapley)] e [2.6.2 SHAP (sec:fund_shap)]:
   #   decomposicao aditiva f(x) = phi_0 + soma(phi_j), Eq. 2.7 (eq:shap_aditivo);
   #   o 'baseline' do shapviz e o valor base phi_0.
-  # [Fund. 2.6.3 Estimacao dos Valores SHAP (sec:fund_estimacao)]
+  # [Fundamentação Teórica - 2.6.3 Estimacao dos Valores SHAP (sec:fund_estimacao)]
   #   - XGBoost/LightGBM: TreeSHAP exato, escala do logaritmo da chance (Eq. 2.5);
   #   - Random Forest: Monte Carlo (fastshap, nsim = 100), escala de probabilidade,
   #     com semente fixada porque a estimativa tem erro aleatorio.
@@ -107,9 +107,9 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   }
 
   # --- Explicacao completa de um modelo ---------------------------------------
-  # [Met. 3.7.2 Analises Realizadas (sec:analises_shap)] importancia global, direcao
+  # [Metodologia - 3.7.2 Analises Realizadas (sec:analises_shap)] importancia global, direcao
   #   do efeito, dependencia, waterfall (VP, VN e FN selecionados) e
-  # [Met. 3.7.3 Auditoria de Vies por Sexo (sec:shap_sexo)] importancia SHAP por sexo
+  # [Metodologia - 3.7.3 Auditoria de Vies por Sexo (sec:shap_sexo)] importancia SHAP por sexo
   #   e contribuicao da variavel Gender.
   explicar <- function(nome) {
     slug   <- slugs[[nome]]
@@ -125,7 +125,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     esc <- if (res$escala == "log-odds") "log da chance" else "probabilidade"
 
     # Importancia global
-    # [Fund. 2.6.4 Visualizacoes e Resumos dos Valores SHAP (sec:fund_visualizacoes)]
+    # [Fundamentação Teórica - 2.6.4 Visualizacoes e Resumos dos Valores SHAP (sec:fund_visualizacoes)]
     #   importancia global = media dos valores SHAP absolutos.
     imp <- colMeans(abs(S))
     imp_df <- data.frame(Variavel = names(imp), Importancia_SHAP = round(imp, 4), row.names = NULL) %>%
@@ -139,7 +139,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     salvar_csv(imp_df, sprintf("results/shap_importancia_%s.csv", slug))
 
     # Direcao do efeito
-    # [Fund. 2.6.4] sentido da associacao entre o valor da variavel e seu valor SHAP
+    # [Fundamentação Teórica - 2.6.4] sentido da associacao entre o valor da variavel e seu valor SHAP
     #   (resumo numerico do beeswarm); correlacao de Pearson (2.2.4).
     direcao <- map_dfr(names(imp), function(v) {
       r <- suppressWarnings(cor(X_teste[[v]], S[, v]))
@@ -155,7 +155,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     salvar_csv(direcao, sprintf("results/shap_direcao_efeito_%s.csv", slug))
 
     # Graficos globais
-    # [Fund. 2.6.4] graficos de barras (importancia global) e beeswarm.
+    # [Fundamentação Teórica - 2.6.4] graficos de barras (importancia global) e beeswarm.
     # Estes graficos entram lado a lado no TCC (XGBoost e Random Forest, cada um com
     # 0,49 da largura do texto, ~8 cm). Sao salvos com 10 cm e fonte 8, o que da
     # cerca de 6,5 pt impressos; o eixo informa a escala dos valores SHAP.
@@ -174,7 +174,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     salvar_plot(p_bee, sprintf("plots/shap_beeswarm_%s.png", slug), width = 10, height = 8)
 
     # Dependencia (top 4)
-    # [Fund. 2.6.4] graficos de dependencia.
+    # [Fundamentação Teórica - 2.6.4] graficos de dependencia.
     top4 <- head(imp_df$Variavel, 4)
     for (v in top4) {
       p_dep <- sv_dependence(sv, v = v, color_var = "auto") +
@@ -184,7 +184,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     }
 
     # Explicacoes locais
-    # [Fund. 2.6.4] graficos waterfall: explicacoes locais de pacientes individuais.
+    # [Fundamentação Teórica - 2.6.4] graficos waterfall: explicacoes locais de pacientes individuais.
     probs <- pfun(modelo, X_teste)
     casos <- c(
       "VP_maior_confianca" = which(real == "doente")[which.max(probs[real == "doente"])],
@@ -205,7 +205,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
     }
 
     # SHAP estratificado por sexo (auditoria de vies)
-    # [Fund. 2.7 Vies Algoritmico (sec:fund_vies)] verifica se as variaveis que orientam
+    # [Fundamentação Teórica - 2.7 Vies Algoritmico (sec:fund_vies)] verifica se as variaveis que orientam
     #   as previsoes diferem entre os grupos; postos comparados por Spearman (2.2.4).
     log_info("Importancia SHAP estratificada por sexo:")
     imp_sexo <- map_dfr(levels(genero), function(g) {
@@ -259,12 +259,12 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   names(importancias) <- a_explicar
 
   # --- Comparacao dos rankings de importancia entre modelos -------------------
-  # [Met. 3.7.4 Comparacao das Importancias entre os Modelos (sec:comparacao_importancias)]
+  # [Metodologia - 3.7.4 Comparacao das Importancias entre os Modelos (sec:comparacao_importancias)]
   #   cinco rankings (SHAP XGB, SHAP RF, nativa RF, nativa LGB, |coef| RL) e Spearman.
-  # [Fund. 2.6.3 Estimacao dos Valores SHAP e Efeito da Correlacao (sec:fund_dependencia)]
+  # [Fundamentação Teórica - 2.6.3 Estimacao dos Valores SHAP e Efeito da Correlacao (sec:fund_dependencia)]
   #   a correlacao entre variaveis afeta cada medida de importancia de modo distinto:
   #   permutacao do Random Forest (2.4.3), SHAP, coeficientes da Regressao Logistica (2.4.1).
-  # [Fund. 2.2.4 Correlacao (sec:fund_correlacao)] Spearman sobre os postos; empates
+  # [Fundamentação Teórica - 2.2.4 Correlacao (sec:fund_correlacao)] Spearman sobre os postos; empates
   #   recebem o posto medio.
   log_subsection("Comparacao dos rankings de importancia entre modelos")
   rank_nativo <- function(caminho, sufixo) {

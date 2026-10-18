@@ -15,7 +15,7 @@
 #   5.Avaliacao.R           -> Etapa 4, 2.5.3 a 2.5.5; e 2.7 Vies Algoritmico
 #   6.SHAP.R                -> Etapa 5, 2.6 Interpretabilidade; e 2.7 Vies Algoritmico
 #   UtilsPipeline.R         -> semente (2.1), SMOTE por fold (2.3.4) e LightGBM (2.4.5)
-# Dentro de cada script, comentarios no formato [Fund. X.Y ...] indicam a secao
+# Dentro de cada script, comentarios no formato [Fundamentação Teórica - X.Y ...] indicam a secao
 # (ou equacao) da Fundamentacao em que o conceito usado naquele trecho e explicado.
 # Numeracao conforme a versao atual da monografia; entre parenteses, o \label.
 # -----------------------------------------------------------------------------
@@ -29,7 +29,7 @@
 #   5.Avaliacao.R           -> 3.6 Avaliacao de Desempenho (3.6.1 a 3.6.4)
 #   6.SHAP.R                -> 3.7 Interpretabilidade com SHAP (3.7.1 a 3.7.4)
 #   UtilsPipeline.R         -> SMOTE por fold (3.3.4) e LightGBM (3.4.4)
-# Dentro de cada script, comentarios no formato [Met. X.Y ...] indicam a secao da
+# Dentro de cada script, comentarios no formato [Metodologia - X.Y ...] indicam a secao da
 # Metodologia que descreve o que aquele trecho faz (entre parenteses, o \label;
 # Tab./Figura indicam a tabela ou figura produzida a partir dele).
 # -----------------------------------------------------------------------------
