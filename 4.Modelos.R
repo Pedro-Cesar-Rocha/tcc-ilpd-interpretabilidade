@@ -98,8 +98,7 @@ treinar <- function(nome, ...) {
 }
 
 # [Fundamentação Teórica - 2.4.1 Regressao Logistica (sec:fund_lr)] Eq. 2.3 (eq:logit).
-# [Fundamentação Teórica - 2.4.3 Random Forest (sec:fund_rf)] bagging, bootstrap, mtry, ntree = 500,
-#   importance = TRUE -> importancia por permutacao nas amostras out-of-bag.
+# [Fundamentação Teórica - 2.4.3 Random Forest (sec:fund_rf)] bagging, bootstrap, mtry, ntree = 500.
 # [Fundamentação Teórica - 2.4.4 XGBoost (sec:fund_xgb)] gradient boosting, Eq. 2.4 (eq:boosting);
 #   eta, gamma etc. sao os ajustes contra sobreajuste descritos no texto.
 # [Fundamentação Teórica - 2.4.5 LightGBM (sec:fund_lgbm)] wrapper em UtilsPipeline.R.
@@ -109,7 +108,7 @@ treinar <- function(nome, ...) {
 # [Metodologia - 3.4.3 XGBoost (sec:xgboost)] sete hiperparametros otimizados (tab:espaco_busca).
 # [Metodologia - 3.4.4 LightGBM (sec:lightgbm)] wrapper lightgbm_caret em UtilsPipeline.R.
 modelo_lr  <- treinar("Regressao Logistica", method = "glm", family = "binomial")
-modelo_rf  <- treinar("Random Forest",       method = "rf", tuneLength = N_RANDOM, ntree = 500, importance = TRUE)
+modelo_rf  <- treinar("Random Forest",       method = "rf", tuneLength = N_RANDOM, ntree = 500)
 modelo_xgb <- treinar("XGBoost",             method = "xgbTree", tuneLength = N_RANDOM, verbosity = 0)
 modelo_lgb <- treinar("LightGBM",            method = lightgbm_caret, tuneLength = N_RANDOM)
 
