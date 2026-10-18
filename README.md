@@ -27,7 +27,7 @@ CSV bruto ──► EDA ──► Pré-processamento (split 80/20 ──► impu
                                                 │
                      Treino 4 modelos: CV 5x3 com SMOTE DENTRO de cada fold + Random Search
                                                 │
-   SHAP (XGB TreeSHAP e RF)               ◄── Avaliação no teste (métricas, limiar, por sexo) ◄──┘
+   SHAP (XGB, LightGBM e RF)              ◄── Avaliação no teste (métricas, limiar, por sexo) ◄──┘
 ```
 
 | Item | Detalhe |
@@ -96,7 +96,7 @@ tcc-ilpd-interpretabilidade/
 ├── 3.Balanceamento.R           # SMOTE no treino completo (diagnóstico e gráfico)
 ├── 4.Modelos.R                 # Treino dos 4 modelos: CV repetida + SMOTE por fold + Random Search
 ├── 5.Avaliacao.R               # Teste: métricas, ROC, PR, DeLong, limiar (todos), estratificação por sexo
-├── 6.SHAP.R                    # Explicabilidade global, local e por sexo (XGB e RF)
+├── 6.SHAP.R                    # Explicabilidade global, local e por sexo (XGB, LightGBM e RF)
 │
 ├── data/
 │   ├── Indian Liver Patient Dataset (ILPD).csv   # dados brutos
@@ -126,7 +126,7 @@ tcc-ilpd-interpretabilidade/
 │   ├── shap_importancia_<m>.csv            # m = xgb | rf | lgb
 │   ├── shap_direcao_efeito_<m>.csv
 │   ├── shap_importancia_por_sexo_<m>.csv
-│   ├── comparacao_importancia_modelos.csv  # rankings SHAP (XGB, RF) × |coef. RL|
+│   ├── comparacao_importancia_modelos.csv  # rankings SHAP (XGB, LightGBM, RF) × |coef. RL|
 │   └── concordancia_rankings_spearman.csv
 │
 ├── plots/                      # figuras (PNG, 150 dpi)
@@ -284,11 +284,12 @@ Comparação entre modelos:
 
 ### Etapa 6 — Explicabilidade com SHAP
 
-Aplicada sempre ao **XGBoost** e ao **Random Forest**, sobre os 113 pacientes do teste:
+Aplicada aos três modelos de *ensemble* — **XGBoost**, **LightGBM** e **Random Forest** —, sobre os 113 pacientes do teste:
 
 | Modelo | Método | Escala dos valores SHAP |
 |---|---|---|
 | XGBoost | **TreeSHAP exato** (`predict(..., predcontrib = TRUE)`) | log-odds |
+| LightGBM | **TreeSHAP exato** (`predcontrib` nativo) | log-odds |
 | Random Forest | `fastshap` (Monte Carlo, `nsim = 100`) — RF não possui TreeSHAP nativo em R | probabilidade |
 
 > O `caret::xgbTree` codifica internamente o **primeiro** nível (`saudavel`) como 1; a etapa 6 inverte o sinal das contribuições para que, em todos os modelos, **SHAP > 0 signifique "empurra para doente"**.
@@ -302,8 +303,8 @@ Aplicada sempre ao **XGBoost** e ao **Random Forest**, sobre os 113 pacientes do
 | `shap_waterfall_<m>_*.png` | Por que o modelo decidiu assim para **um paciente específico**? Dois casos: o verdadeiro positivo mais confiante e o **pior falso negativo** |
 | `shap_importancia_por_sexo_<m>.png` + `.csv` | O modelo usa as variáveis de forma diferente para homens e mulheres? (ranking por sexo + Spearman) |
 | `shap_gender_por_sexo_<m>.png` | Quanto a variável `Gender`, isoladamente, desloca a previsão de risco em cada sexo? |
-| `comparacao_importancia_modelos.csv` | Rankings SHAP (XGB, RF) × \|coeficiente\| da regressão logística |
-| `concordancia_rankings_spearman.csv` | Correlação de Spearman entre os três rankings |
+| `comparacao_importancia_modelos.csv` | Rankings SHAP (XGB, LightGBM, RF) × \|coeficiente\| da regressão logística |
+| `concordancia_rankings_spearman.csv` | Correlação de Spearman entre os quatro rankings |
 
 > **Empates nos rankings:** em todos os rankings (SHAP global, SHAP por sexo e coeficientes), variáveis com importância exatamente igual — tipicamente as que um modelo não usa — recebem o **posto médio**, calculado antes do arredondamento (ex.: as três variáveis que o XGBoost não usa empatam nas posições 8 a 10 e recebem posto 9). Assim o empate não é desfeito pela ordem das colunas, e o Spearman é calculado sobre os postos médios.
 
@@ -704,8 +705,8 @@ Começa no valor base (previsão média) e, barra a barra, mostra como cada vari
 | **Postos médios** nos empates dos rankings de importância | Desempatar pela ordem das colunas | A ordem das colunas é arbitrária e alteraria a correlação de Spearman entre rankings |
 | **Estratificação por sexo** (métricas e SHAP) | Avaliar só no agregado | Prevalência e perfil laboratorial diferem entre sexos; um modelo pode ter FN concentrados em um grupo sem que a métrica global revele (Straw & Wu, 2022) |
 | SHAP em vez de só importância nativa | `varImp()` do caret | SHAP fornece direção do efeito, explicações locais e é consistente entre modelos |
-| **TreeSHAP exato** para o XGBoost | Monte Carlo (`fastshap`) para todos | Exato, determinístico e instantâneo; `fastshap` fica reservado ao Random Forest, que não tem TreeSHAP nativo em R |
-| SHAP sempre em **XGB + RF** | Explicar só um modelo | Compara se um modelo de *boosting* e um de *bagging* "olham" para os mesmos exames |
+| **TreeSHAP exato** para XGBoost e LightGBM | Monte Carlo (`fastshap`) para todos | Exato, determinístico e instantâneo; `fastshap` fica reservado ao Random Forest, que não tem TreeSHAP nativo em R |
+| SHAP nos três *ensembles* (XGB, LightGBM, RF) | Explicar só um modelo | Compara se modelos de *boosting* e de *bagging* "olham" para os mesmos exames |
 | LightGBM via wrapper customizado no caret | Treinar fora do caret | Garante que o LightGBM use exatamente os mesmos folds e a mesma métrica dos outros modelos |
 | Limiar clínico para todos os modelos | Fixar 0,5 | Em triagem, o custo de FN ≠ custo de FP; o limiar é uma decisão clínica, não estatística |
 

@@ -1,7 +1,8 @@
 # =============================================================================
 # 6.SHAP.R
-# Explicabilidade com valores SHAP para os dois modelos de caixa-preta explicados:
+# Explicabilidade com valores SHAP para os tres modelos de caixa-preta:
 #   - XGBoost  : TreeSHAP exato (predcontrib nativo, escala log-odds)
+#   - LightGBM : TreeSHAP exato (predcontrib nativo, escala log-odds)
 #   - Random Forest : SHAP amostral (fastshap, Monte Carlo, escala de probabilidade)
 # Para cada um:
 #   - importancia global (bar) e distribuicao dos efeitos (beeswarm)
@@ -9,8 +10,8 @@
 #   - explicacao local (waterfall) do verdadeiro positivo de maior confianca e
 #     do falso negativo de pior erro
 #   - importancia SHAP estratificada por sexo (auditoria de vies)
-# Ao final, compara tres rankings de importancia: SHAP do XGBoost, SHAP do
-# Random Forest e |coeficiente padronizado| da Regressao Logistica.
+# Ao final, compara quatro rankings de importancia: SHAP do XGBoost, do LightGBM
+# e do Random Forest e |coeficiente padronizado| da Regressao Logistica.
 # Postos: calculados a partir dos valores SEM arredondar; empates recebem o
 # posto medio (rank com ties.method = "average").
 # =============================================================================
@@ -54,12 +55,13 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   X_teste <- teste %>% select(-Diagnostico)
   real    <- teste$Diagnostico
 
-  arquivos <- c("Random Forest" = "models/modelo_rf.rds", "XGBoost" = "models/modelo_xgb.rds")
-  slugs    <- c("Random Forest" = "rf", "XGBoost" = "xgb")
+  arquivos <- c("Random Forest" = "models/modelo_rf.rds", "XGBoost" = "models/modelo_xgb.rds",
+                "LightGBM" = "models/modelo_lgb.rds")
+  slugs    <- c("Random Forest" = "rf", "XGBoost" = "xgb", "LightGBM" = "lgb")
 
-  # [Metodologia - 3.7.1 Modelos Explicados (sec:modelos_explicados)] sempre o XGBoost
-  #   (boosting) e o Random Forest (bagging).
-  a_explicar <- c("XGBoost", "Random Forest")
+  # [Metodologia - 3.7.1 Modelos Explicados (sec:modelos_explicados)] os tres modelos
+  #   de ensemble (caixa-preta): XGBoost e LightGBM (boosting) e Random Forest (bagging).
+  a_explicar <- c("XGBoost", "LightGBM", "Random Forest")
   log_info("Modelos a explicar: %s | %d observacoes de teste | %d preditores",
            paste(a_explicar, collapse = ", "), nrow(X_teste), ncol(X_teste))
   log_info("SHAP decompoe cada previsao em contribuicoes aditivas de cada variavel.")
@@ -68,14 +70,14 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   pfun <- function(object, newdata) predict(object, newdata, type = "prob")[, "doente"]
 
   # --- Calculo dos valores SHAP conforme o tipo de modelo ---------------------
-  # [Metodologia - 3.7.1 Modelos Explicados (sec:modelos_explicados)] TreeSHAP no XGBoost (sinal
+  # [Metodologia - 3.7.1 Modelos Explicados (sec:modelos_explicados)] TreeSHAP no XGBoost e no LightGBM (sinal do XGBoost
   #   invertido porque o caret codifica "saudavel" como positiva) e Monte Carlo no
   #   Random Forest (nsim = 100, semente 42).
   # [Fundamentação Teórica - 2.6.1 Valores de Shapley (sec:fund_shapley)] e [2.6.2 SHAP (sec:fund_shap)]:
   #   decomposicao aditiva f(x) = phi_0 + soma(phi_j), Eq. 2.5 (eq:shap_aditivo);
   #   o 'baseline' do shapviz e o valor base phi_0.
   # [Fundamentação Teórica - 2.6.3 Estimacao dos Valores SHAP (sec:fund_estimacao)]
-  #   - XGBoost: TreeSHAP exato, escala do logaritmo da chance (Eq. 2.4);
+  #   - XGBoost/LightGBM: TreeSHAP exato, escala do logaritmo da chance (Eq. 2.4);
   #   - Random Forest: Monte Carlo (fastshap, nsim = 100), escala de probabilidade,
   #     com semente fixada porque a estimativa tem erro aleatorio.
   calcular_shap <- function(nome, modelo) {
@@ -87,6 +89,11 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
       # para que SHAP > 0 signifique "empurra para 'doente'", como nos demais modelos.
       S <- -M[, booster$xNames, drop = FALSE]
       sv <- shapviz(S, X = X_teste, baseline = -mean(M[, "BIAS"]))
+      list(sv = sv, escala = "log-odds")
+    } else if (nome == "LightGBM") {
+      # No wrapper lightgbm_caret a classe positiva ja e "doente" (lev[2]); sem inversao.
+      log_info("Metodo: TreeSHAP exato (lightgbm predcontrib) - escala log-odds.")
+      sv <- shapviz(modelo$finalModel$booster, X_pred = as.matrix(X_teste), X = X_teste)
       list(sv = sv, escala = "log-odds")
     } else {
       log_info("Metodo: SHAP amostral (fastshap, Monte Carlo, nsim = 100) - escala de probabilidade.")
@@ -249,7 +256,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
 
   # --- Comparacao dos rankings de importancia entre modelos -------------------
   # [Metodologia - 3.7.4 Comparacao das Importancias entre os Modelos (sec:comparacao_importancias)]
-  #   tres rankings (SHAP XGB, SHAP RF, |coef| RL) e correlacao de Spearman entre eles.
+  #   quatro rankings (SHAP XGB, SHAP LGB, SHAP RF, |coef| RL) e correlacao de Spearman.
   # [Fundamentação Teórica - 2.6.3 Estimacao dos Valores SHAP e Efeito da Correlacao (sec:fund_dependencia)]
   #   a correlacao entre variaveis afeta cada medida de importancia de modo distinto:
   #   SHAP e coeficientes da Regressao Logistica (2.4.1).
@@ -291,7 +298,7 @@ if (!requireNamespace("fastshap", quietly = TRUE)) {
   log_info("shap_waterfall_<m>_<caso>.png     : porque o modelo deu determinada previsao para UM paciente.")
   log_info("shap_importancia_por_sexo_<m>.png : se o modelo usa as variaveis de forma diferente para homens e mulheres.")
   log_info("shap_gender_por_sexo_<m>.png      : quanto o sexo, isoladamente, desloca a previsao de risco.")
-  log_info("<m> = xgb (TreeSHAP exato), rf (fastshap).")
+  log_info("<m> = xgb e lgb (TreeSHAP exato), rf (fastshap).")
 }
 
 timer_end(t0, "Etapa 6")
