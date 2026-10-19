@@ -1,6 +1,8 @@
 \chapter{Fundamentação Teórica} \label{cap:fundamentacao}
 
-Este capítulo apresenta, de forma conceitual, as ideias que sustentam o trabalho, na ordem das etapas do \textit{pipeline}. Os termos técnicos estão no Glossário (página~\pageref{glossario}), e as escolhas e parâmetros adotados, no Capítulo~\ref{metodologia}.
+Este capítulo apresenta os conceitos que sustentam o trabalho, de forma conceitual e com exemplos, sempre que possível, tirados da própria base de dados estudada. Os conceitos são organizados segundo as etapas do processo de descoberta de conhecimento em bases de dados, a mesma ordem seguida pela metodologia.
+
+Inicialmente, apresentam-se esse processo e suas etapas (Seção~\ref{sec:fund_kdd}). Em seguida, discutem-se os conceitos de cada etapa: a compreensão e exploração dos dados, incluindo o domínio médico do problema (Seção~\ref{sec:fund_estatistica}); a preparação dos dados (Seção~\ref{sec:fund_preparacao}); os modelos de classificação utilizados (Seção~\ref{sec:fund_modelos}); o treinamento, a validação e a avaliação dos modelos (Seção~\ref{sec:fund_validacao}); e a interpretação dos modelos (Seção~\ref{sec:fund_interpretabilidade}). Por fim, discute-se o viés algorítmico em saúde (Seção~\ref{sec:fund_vies}). Os termos básicos de estatística e aprendizado de máquina estão reunidos no Glossário (página~\pageref{glossario}), e os símbolos matemáticos, na Lista de Símbolos.
 
 \section{Mineração de Dados e Descoberta de Conhecimento}
 \label{sec:fund_kdd}
@@ -36,6 +38,26 @@ Como várias etapas envolvem sorteios, como a divisão entre treino e teste, a v
 \label{fig:fund_kdd}
 {\small Fonte: elaborado pelo autor, com base em \citeonline{Fayyad1996KDD}.}
 \end{figure}
+
+A Tabela~\ref{tab:fund_kdd} mostra como cada etapa desse processo corresponde aos procedimentos realizados neste trabalho, que são detalhados no Capítulo~\ref{metodologia}.
+
+\begin{table}[htbp]
+\centering
+\caption{Correspondência entre as etapas do processo de descoberta de conhecimento e os procedimentos deste trabalho.}
+\label{tab:fund_kdd}
+\begin{tabular}{>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{9.8cm}}
+\hline
+\textbf{Etapa} & \textbf{Procedimentos realizados} \\
+\hline
+Compreensão e exploração dos dados & Escolha da base ILPD; verificação de qualidade, valores ausentes e duplicatas; estatísticas descritivas, assimetria, comparação entre doentes e saudáveis e correlação entre os exames. \\[0.1cm]
+Preparação dos dados & Remoção de duplicatas; transformação logarítmica dos exames assimétricos; divisão em treino e teste; imputação pela mediana; padronização; balanceamento com SMOTE apenas no treino. \\[0.1cm]
+Modelagem & Treinamento da Regressão Logística, do \textit{Random Forest}, do XGBoost e do LightGBM. \\[0.1cm]
+Treinamento, validação e avaliação & Validação cruzada repetida; busca aleatória de hiperparâmetros; avaliação no conjunto de teste com matriz de confusão, AUC e teste de DeLong; limiar clínico; avaliação por sexo. \\[0.1cm]
+Interpretação dos modelos & Valores SHAP: importância das variáveis, sentido e forma dos efeitos, explicação de pacientes individuais, auditoria por sexo e comparação entre modelos. \\
+\hline
+\end{tabular}
+\par\vspace{2pt}{\small Fonte: elaborado pelo autor.}
+\end{table}
 
 \section{Compreensão e Exploração dos Dados}
 \label{sec:fund_estatistica}
@@ -307,3 +329,10 @@ Os valores SHAP de um conjunto de pacientes formam uma tabela com uma linha por 
 Viés algorítmico é a tendência de um modelo a produzir resultados sistematicamente piores para determinados grupos de pessoas \cite{Rajkomar2018Ensuring}. Ele costuma surgir quando um grupo está sub-representado nos dados, pois o modelo aprende sobretudo os padrões do grupo majoritário, ou quando a doença se manifesta de forma diferente entre os grupos e o modelo não capta essa diferença. No ILPD, cerca de três em cada quatro pacientes são homens, e \citeonline{investigatingbiashealth} observaram, ao reproduzir modelos publicados para essa base, mais falsos negativos entre as mulheres, isto é, mais pacientes do sexo feminino doentes classificadas como saudáveis. Em um sistema de triagem, isso significaria que as mulheres teriam maior chance de não serem encaminhadas para investigação.
 
 Para auditar esse tipo de viés, avalia-se o desempenho separadamente em cada grupo. As métricas mais adequadas para essa comparação são a sensibilidade, a especificidade e a AUC, que são calculadas dentro de cada classe e, por isso, não dependem da prevalência do grupo; a precisão, ao contrário, fica naturalmente maior no grupo em que há mais doentes, mesmo que o modelo seja igualmente bom nos dois \cite{FAWCETT2006861}. Uma disparidade de desempenho mostra que o modelo erra mais em um grupo, mas não explica por quê. Para investigar o mecanismo, a análise de interpretabilidade pode verificar se as variáveis que orientam as previsões diferem entre os grupos e se o próprio sexo está sendo usado para deslocar as previsões \cite{investigatingbiashealth}.
+
+\section{Considerações Finais do Capítulo}
+\label{sec:fund_consideracoes}
+
+Este capítulo apresentou os conceitos necessários para acompanhar o restante do trabalho, seguindo as etapas do processo de descoberta de conhecimento: as características dos exames hepáticos e as ferramentas para descrevê-los, os cuidados na preparação dos dados para evitar o vazamento de informação, o funcionamento dos quatro modelos comparados, as formas de medir e comparar seu desempenho e os métodos para interpretar suas previsões, com destaque para os valores SHAP. Discutiu-se ainda como os modelos podem ter desempenho desigual entre grupos de pacientes, o que motiva a análise por sexo.
+
+O capítulo seguinte descreve como esses conceitos foram aplicados à base ILPD, detalhando as escolhas e os parâmetros adotados em cada etapa.

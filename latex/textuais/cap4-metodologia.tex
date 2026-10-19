@@ -1,6 +1,8 @@
 \chapter{Metodologia} \label{metodologia}
 
-Este capítulo descreve o que foi feito em cada etapa do \textit{pipeline}, com quais parâmetros e como os resultados foram avaliados; as justificativas teóricas estão no Capítulo~\ref{cap:fundamentacao}. O \textit{pipeline} foi implementado na linguagem R \cite{linguagemr} (Seção~\ref{sec:ferramentas}) e segue as etapas do processo de descoberta de conhecimento em bases de dados \cite{Fayyad1996KDD}, com a ordem das operações definida para evitar o vazamento de dados \cite{KaufmanScharRosset2012, KAPOOR2023100804} (Seção~\ref{sec:fund_kdd}). Os resultados são apresentados no Capítulo~\ref{cap:resultados}.
+Este capítulo descreve como o trabalho foi realizado: o que foi feito em cada etapa do \textit{pipeline}, com quais parâmetros e como os resultados foram avaliados. Os conceitos usados aqui foram apresentados no Capítulo~\ref{cap:fundamentacao}, e as seções seguem a mesma ordem das etapas do processo de descoberta de conhecimento (Seção~\ref{sec:fund_kdd}) \cite{Fayyad1996KDD}.
+
+Inicialmente, descrevem-se a base de dados (Seção~\ref{sec:base_dados}) e a análise exploratória (Seção~\ref{sec:aed}). Em seguida, apresentam-se o pré-processamento (Seção~\ref{sec:preprocessamento}), os quatro modelos comparados (Seção~\ref{sec:modelos_preditivos}), o protocolo de treinamento e validação (Seção~\ref{sec:treinamento_validacao}) e a forma de avaliação no conjunto de teste (Seção~\ref{sec:avaliacao_desempenho}). Por fim, descrevem-se a análise de interpretabilidade com SHAP (Seção~\ref{sec:shap}) e as ferramentas computacionais utilizadas (Seção~\ref{sec:ferramentas}). Em todas as etapas, a ordem das operações foi definida para evitar o vazamento de dados \cite{KaufmanScharRosset2012, KAPOOR2023100804}, e os resultados obtidos são apresentados no Capítulo~\ref{cap:resultados}.
 
 \section{Base de Dados}
 \label{sec:base_dados}
@@ -8,7 +10,7 @@ Este capítulo descreve o que foi feito em cada etapa do \textit{pipeline}, com 
 \subsection{Caracterização da Base}
 \label{sec:caracterizacao_base}
 
-Foi utilizado o \textit{Indian Liver Patient Dataset} (ILPD) \cite{ramana2022ilpd}, com 583 pacientes, dez atributos preditores (nove exames bioquímicos e o sexo) e a variável-alvo, descritos na Tabela~\ref{tab:variaveis}.
+Foi utilizado o \textit{Indian Liver Patient Dataset} (ILPD) \cite{ramana2022ilpd}, uma base pública disponível no repositório da Universidade da Califórnia em Irvine (UCI). Ela reúne 583 pacientes e, para cada um, dez atributos preditores, isto é, as informações usadas pelos modelos para fazer a previsão: nove exames de sangue relacionados ao fígado e o sexo. Há ainda a variável-alvo, que indica se o paciente foi diagnosticado com doença hepática. Todas as variáveis estão descritas na Tabela~\ref{tab:variaveis}.
 
 \begin{table}[htbp]
 \centering
@@ -38,22 +40,30 @@ O rótulo \textit{Diagnostico} = 2 indica apenas ausência de diagnóstico de do
 \subsection{Distribuição das Classes e Limitações}
 \label{sec:distribuicao_classes}
 
-A base é desbalanceada: 416 pacientes doentes (71,4\%) e 167 saudáveis (28,6\%), razão de cerca de 2,5:1, de modo que um classificador que declarasse todos doentes já teria acurácia alta (Seção~\ref{sec:fund_smote}). Os dados vêm de uma única região da Índia (nordeste de Andhra Pradesh), a ``doença hepática'' não é diferenciada por patologia e a amostra é pequena, o que limita a generalização dos resultados.
+A base é desbalanceada: há 416 pacientes doentes (71,4\%) e apenas 167 saudáveis (28,6\%), ou seja, cerca de dois doentes e meio para cada saudável. Na prática, isso significa que um classificador que declarasse todos os pacientes doentes já acertaria mais de 70\% dos casos sem ter aprendido nada (Seção~\ref{sec:fund_smote}), o que orientou várias decisões descritas adiante.
+
+A base também tem limitações que restringem o alcance das conclusões. Os dados vêm de uma única região da Índia, o nordeste do estado de Andhra Pradesh; a ``doença hepática'' é registrada de forma geral, sem distinguir, por exemplo, hepatite de cirrose; e a amostra é pequena. Por isso, os resultados deste trabalho não podem ser generalizados diretamente para outras populações.
 
 \section{Análise Exploratória de Dados}
 \label{sec:aed}
 
-A AED \cite{exploratorydataanalysis} foi feita antes de qualquer transformação, sobre a base completa e com finalidade apenas descritiva: nenhum parâmetro calculado nela foi usado para transformar os dados dos modelos (Seção~\ref{sec:fund_vazamento}). As decisões de pré-processamento das seções seguintes foram tomadas com base no que ela revelou. Foram usados os pacotes \texttt{tidyverse} \cite{tidyverse} e \texttt{corrplot} \cite{corrplot2024}.
+A AED \cite{exploratorydataanalysis} foi a primeira etapa do trabalho, feita sobre a base completa e antes de qualquer transformação. Seu objetivo foi conhecer os dados: verificar sua qualidade, a distribuição das classes e do sexo, o comportamento de cada exame e as relações entre eles. As decisões de pré-processamento descritas na Seção~\ref{sec:preprocessamento} foram tomadas com base no que essa análise revelou.
+
+A AED teve finalidade apenas descritiva. Nenhum valor calculado nela, como médias ou medianas, foi usado para transformar os dados que alimentam os modelos, pois isso misturaria informação do conjunto de teste ao treinamento (Seção~\ref{sec:fund_vazamento}).
 
 \subsection{Qualidade dos Dados}
 \label{sec:qualidade_dados}
 
-O arquivo original não tem cabeçalho, e os nomes das colunas foram atribuídos conforme a documentação da UCI \cite{ramana2022ilpd}; a variável-alvo, chamada \textit{Selector} nessa documentação, foi renomeada para \textit{Diagnostico}. Conferiram-se o número de linhas e colunas, o tipo de cada variável, os valores ausentes e os registros exatamente duplicados, que nesta etapa foram apenas identificados.
+O arquivo original não traz o nome das colunas, que foram atribuídos conforme a documentação da UCI \cite{ramana2022ilpd}. A variável-alvo, chamada \textit{Selector} nessa documentação, foi renomeada para \textit{Diagnostico}, nome que descreve melhor o seu conteúdo.
+
+Em seguida, conferiu-se se o número de pacientes e de variáveis correspondia ao documentado e se cada variável havia sido lida com o tipo correto, numérico ou categórico. Verificaram-se também os valores ausentes, isto é, exames não registrados, e os registros duplicados, linhas idênticas em todas as variáveis. Nesta etapa, esses problemas foram apenas identificados; seu tratamento é descrito na Seção~\ref{sec:preprocessamento}.
 
 \subsection{Distribuição da Variável-Alvo e do Sexo}
 \label{sec:distribuicao_alvo_sexo}
 
-A frequência das classes (Figura~\ref{fig:eda_distribuicao_alvo}) justificou a divisão estratificada (Seção~\ref{sec:divisao_treino_teste}), o balanceamento apenas no treino (Seção~\ref{sec:balanceamento}) e o uso de métricas além da acurácia, como AUC, sensibilidade e especificidade \cite{FAWCETT2006861}. A tabela de contingência entre sexo e diagnóstico mostrou que cerca de 76\% dos pacientes são homens; como um grupo sub-representado pode ter desempenho pior \cite{Rajkomar2018Ensuring, investigatingbiashealth} (Seção~\ref{sec:fund_vies}), a avaliação e a análise SHAP foram feitas também por sexo.
+Contou-se quantos pacientes pertencem a cada classe (Figura~\ref{fig:eda_distribuicao_alvo}). O desbalanceamento observado levou a três decisões: dividir os dados mantendo a mesma proporção de doentes no treino e no teste (Seção~\ref{sec:divisao_treino_teste}), equilibrar as classes apenas no treino (Seção~\ref{sec:balanceamento}) e avaliar os modelos por métricas que não se deixam enganar pela classe majoritária, como a AUC, a sensibilidade e a especificidade \cite{FAWCETT2006861}.
+
+Também se cruzou o sexo dos pacientes com o diagnóstico, em uma tabela de contingência. Cerca de 76\% dos pacientes são homens, e um grupo pouco representado nos dados pode ser atendido pior pelo modelo \cite{Rajkomar2018Ensuring, investigatingbiashealth} (Seção~\ref{sec:fund_vies}). Por isso, tanto a avaliação de desempenho quanto a análise de interpretabilidade foram feitas também separadamente para homens e mulheres.
 
 \begin{figure}[htbp]
 \centering
@@ -65,7 +75,7 @@ A frequência das classes (Figura~\ref{fig:eda_distribuicao_alvo}) justificou a 
 \subsection{Estatísticas Descritivas e Assimetria}
 \label{sec:estatisticas_descritivas_assimetria}
 
-Para as nove variáveis numéricas calcularam-se média, desvio-padrão, mínimo, mediana, máximo e coeficiente de assimetria (Tabela~\ref{tab:descritivas}; Seção~\ref{sec:fund_assimetria}).
+Para cada uma das nove variáveis numéricas, calcularam-se a média, o desvio-padrão, o mínimo, a mediana, o máximo e o coeficiente de assimetria, que mede o tamanho da cauda de valores altos (Tabela~\ref{tab:descritivas}; Seção~\ref{sec:fund_assimetria}).
 
 \begin{table}[htbp]
 \centering
@@ -90,12 +100,16 @@ AG\_Ratio\textsuperscript{a} & 0,95  & 0,32   & 0,3  & 0,93 & 2,8   & 0,99 \\
 \end{tabular}
 \end{table}
 
-Adotou-se $|b_1| > 2$ como critério de assimetria forte, uma convenção heurística \cite[p.~26]{curran1996robustness}. Cinco variáveis o ultrapassaram, as duas bilirrubinas, a fosfatase alcalina e as duas aminotransferases (entre 3,20 e 10,49), enquanto as demais ficaram abaixo de 1,0, de modo que a escolha não depende do valor exato do limiar. Os valores extremos dessas variáveis são compatíveis com a própria doença (Seção~\ref{sec:fund_figado}) e, por isso, os \textit{outliers} não foram removidos \cite[p.~237]{Aggarwal2015}.
+Adotou-se como critério de assimetria forte um coeficiente maior que 2 em valor absoluto, uma convenção usada na literatura \cite[p.~26]{curran1996robustness}. Cinco variáveis ultrapassaram esse valor: as duas bilirrubinas, a fosfatase alcalina e as duas aminotransferases, com coeficientes entre 3,20 e 10,49. As demais ficaram abaixo de 1,0. Como a separação entre os dois grupos é nítida, a escolha dessas cinco variáveis não depende do valor exato do critério.
+
+Os valores muito altos dessas variáveis (\textit{outliers}) não foram removidos. Eles são compatíveis com a própria doença, já que exames hepáticos podem chegar a várias vezes o normal em pacientes doentes (Seção~\ref{sec:fund_figado}), e descartá-los significaria perder justamente os casos mais informativos \cite[p.~237]{Aggarwal2015}.
 
 \subsection{Comparação entre Classes}
 \label{sec:comparacao_classes}
 
-Compararam-se as médias de cada variável entre doentes e saudáveis (Tabela~\ref{tab:medias_classe}) e as distribuições por \textit{boxplots} (Figura~\ref{fig:eda_boxplots}), com as cinco variáveis assimétricas em escala logarítmica apenas para visualização. Essa comparação olha uma variável por vez e serve só para descrever os dados.
+Para ter uma primeira ideia de quais exames diferem entre os grupos, compararam-se as médias de cada variável entre doentes e saudáveis (Tabela~\ref{tab:medias_classe}) e suas distribuições por meio de \textit{boxplots} (Figura~\ref{fig:eda_boxplots}). Nos gráficos, as cinco variáveis assimétricas aparecem em escala logarítmica apenas para facilitar a visualização.
+
+Essa comparação olha um exame de cada vez e, por isso, serve apenas para descrever os dados. Os modelos, ao contrário, combinam todos os exames ao mesmo tempo e podem captar padrões que nenhuma variável isolada mostra.
 
 \begin{table}[htbp]
 \centering
@@ -128,7 +142,9 @@ AG\_Ratio                   & 0,91   & 1,03  \\
 \subsection{Análise de Correlação}
 \label{sec:analise_correlacao}
 
-Calculou-se a matriz de correlação de Pearson entre as variáveis numéricas (Figura~\ref{fig:eda_correlacao}), com $|r| > 0{,}7$ como limiar de correlação forte \cite{Dormann2013Collinearity, Mukaka2012Statistics} (Seção~\ref{sec:fund_correlacao}). Mesmo com pares fortemente correlacionados, todas as variáveis foram mantidas: modelos de árvore toleram bem a multicolinearidade quando ela é a mesma no treino e no teste \cite{Dormann2013Collinearity}, excluir exames contrariaria o objetivo de entender como os modelos os usam, e o efeito principal da correlação recai sobre a interpretação \cite{Strobl2008Conditional}, o que é considerado na discussão dos resultados (Seção~\ref{sec:fund_dependencia}).
+Para identificar exames que carregam informação parecida, calculou-se a correlação de Pearson entre cada par de variáveis numéricas, reunida em uma matriz (Figura~\ref{fig:eda_correlacao}). Valores acima de 0,7 em valor absoluto foram considerados correlação forte \cite{Dormann2013Collinearity, Mukaka2012Statistics} (Seção~\ref{sec:fund_correlacao}).
+
+Mesmo com pares fortemente correlacionados, todas as variáveis foram mantidas, por três motivos. Primeiro, modelos baseados em árvores costumam prever bem mesmo com variáveis correlacionadas, desde que essa relação seja a mesma no treino e no teste \cite{Dormann2013Collinearity}. Segundo, excluir exames contrariaria o objetivo do trabalho, que é entender como os modelos usam os exames disponíveis. Terceiro, o principal efeito da correlação recai sobre a interpretação, e não sobre a previsão \cite{Strobl2008Conditional}; esse efeito é levado em conta na discussão dos resultados (Seção~\ref{sec:fund_dependencia}).
 
 \begin{figure}[htbp]
 \centering
@@ -140,10 +156,14 @@ Calculou-se a matriz de correlação de Pearson entre as variáveis numéricas (
 \section{Pré-processamento}
 \label{sec:preprocessamento}
 
+O pré-processamento prepara os dados para os modelos, sempre respeitando uma regra: tudo o que depende de valores calculados a partir dos dados é feito depois da divisão entre treino e teste e usando apenas o treino.
+
 \subsection{Remoção de Duplicatas e Transformação Logarítmica}
 \label{sec:preproc_duplicatas}
 
-Os 13 registros duplicados foram removidos (583 $\rightarrow$ 570) antes da divisão treino/teste, para que um mesmo registro não aparecesse nos dois conjuntos \cite{KAPOOR2023100804} (Seção~\ref{sec:fund_vazamento}). Às cinco variáveis assimétricas aplicou-se $x' = \ln(1 + x)$ \cite{logtransformation} (Seção~\ref{sec:fund_log}), e o efeito foi conferido recalculando a assimetria na base sem duplicatas (Tabela~\ref{tab:assimetria_log}). Por ser determinística e sem parâmetros, a transformação pode ser feita antes da divisão sem causar vazamento \cite{KaufmanScharRosset2012}, e foi aplicada a todos os modelos.
+Os 13 registros duplicados encontrados na AED foram removidos, e a base passou de 583 para 570 pacientes. A remoção foi feita antes da divisão treino/teste para evitar que um registro caísse no treino e sua cópia no teste, o que faria o modelo ser avaliado em um caso que já ``conhecia'' \cite{KAPOOR2023100804} (Seção~\ref{sec:fund_vazamento}).
+
+Em seguida, aplicou-se a transformação logarítmica $x' = \ln(1 + x)$ às cinco variáveis assimétricas \cite{logtransformation} (Seção~\ref{sec:fund_log}). Seu efeito foi conferido recalculando o coeficiente de assimetria (Tabela~\ref{tab:assimetria_log}). Como a transformação depende apenas do valor de cada paciente, ela pôde ser feita antes da divisão sem causar vazamento \cite{KaufmanScharRosset2012}, e foi aplicada igualmente para os quatro modelos.
 
 \begin{table}[htbp]
 \centering
@@ -165,57 +185,89 @@ Aspartate\_Aminotransferase & 10,50 & 1,24 \\
 \subsection{Divisão Treino/Teste}
 \label{sec:divisao_treino_teste}
 
-Os dados foram divididos em 80\% para treino (457 pacientes) e 20\% para teste (113) com a função \texttt{createDataPartition} do \texttt{caret}, estratificada pela variável-alvo e com semente aleatória 42 \cite{Pineau2020Improving}. A divisão ocorre antes da imputação e da padronização, cujos parâmetros são estimados só no treino \cite{KaufmanScharRosset2012}.
+Os 570 pacientes foram divididos em dois conjuntos: 80\% para treino (457 pacientes), usados para ajustar os modelos, e 20\% para teste (113 pacientes), guardados até a avaliação final. A divisão foi estratificada, isto é, manteve aproximadamente a mesma proporção de doentes nos dois conjuntos, e foi feita com a função \texttt{createDataPartition} do pacote \texttt{caret}. A semente aleatória foi fixada em 42, para que a mesma divisão seja obtida sempre que o código for executado \cite{Pineau2020Improving}.
+
+A divisão foi feita antes da imputação e da padronização, porque essas duas etapas usam valores calculados a partir dos dados, que devem vir apenas do treino \cite{KaufmanScharRosset2012}.
 
 \subsection{Imputação e Padronização}
 \label{sec:padronizacao}
 
-Os quatro valores ausentes de \textit{AG\_Ratio} (0,69\% da base) foram imputados com a mediana do treino (Seção~\ref{sec:fund_ausentes}). Em seguida, todos os preditores, inclusive \textit{Gender} codificado como 1 (masculino) e 0 (feminino), foram padronizados por \textit{z-score} com média e desvio-padrão do treino, aplicados também ao teste (Seção~\ref{sec:fund_padronizacao}).
+A única variável com valores ausentes é a razão albumina/globulina (\textit{AG\_Ratio}), com quatro registros, 0,69\% da base. Como são poucos, optou-se por preencher cada valor faltante com a mediana dessa variável no treino, em vez de descartar os pacientes (Seção~\ref{sec:fund_ausentes}).
+
+Depois da imputação, todos os preditores foram padronizados pelo \textit{z-score}, de modo que passassem a ter média zero e desvio-padrão um (Seção~\ref{sec:fund_padronizacao}). A média e o desvio-padrão foram calculados no treino e depois aplicados também ao teste. O sexo, codificado como 1 para masculino e 0 para feminino, foi padronizado da mesma forma.
 
 \subsection{Reamostragem com SMOTE}
 \label{sec:balanceamento}
 
-Aplicou-se o SMOTE \cite{smote} com cinco vizinhos mais próximos, implementado no pacote \texttt{smotefamily}, que define automaticamente o número de amostras sintéticas (Seção~\ref{sec:fund_smote}). A reamostragem é feita apenas no treino: na validação cruzada, dentro da partição de treino de cada \textit{fold}, para não contaminar a validação \cite{Santos2018CrossValidation}, e, no ajuste final, sobre todo o treino. O teste mantém a distribuição original. Como a interpolação pode gerar valores intermediários de \textit{Gender}, cada amostra sintética recebe o sexo do paciente de origem mais próximo, solução análoga à do SMOTE-NC \cite{smote}.
+Para reduzir o desbalanceamento, aplicou-se o SMOTE \cite{smote}, que cria pacientes saudáveis sintéticos a partir dos reais (Seção~\ref{sec:fund_smote}). Usaram-se cinco vizinhos mais próximos, e o número de pacientes sintéticos foi definido automaticamente pelo pacote \texttt{smotefamily}.
+
+O SMOTE foi aplicado apenas aos dados de treino. Durante a validação cruzada, ele foi refeito dentro de cada rodada, usando somente a parte reservada ao treino naquela rodada, para que pacientes sintéticos não contaminassem a parte de validação \cite{Santos2018CrossValidation}. No ajuste final de cada modelo, foi aplicado sobre todo o conjunto de treino. O conjunto de teste nunca foi reamostrado e manteve a proporção real de doentes.
+
+Como o SMOTE cria valores intermediários entre dois pacientes, um paciente sintético gerado a partir de um homem e de uma mulher teria um valor de sexo sem sentido. Para evitar isso, cada paciente sintético recebeu o sexo do paciente de origem do qual ficou mais próximo, solução análoga à da variante SMOTE-NC \cite{smote}.
 
 \section{Modelos Preditivos}
 \label{sec:modelos_preditivos}
 
-Foram comparados quatro classificadores (Seção~\ref{sec:fund_modelos}): a Regressão Logística, como linha de base interpretável, e três \textit{ensembles} de árvores, \textit{Random Forest}, XGBoost e LightGBM. Todos recebem os mesmos dez preditores e estimam a probabilidade de a classe ser ``doente''. A complexidade dos \textit{ensembles} só se justifica se eles superarem a Regressão Logística (Seções~\ref{sec:comparacao_cv} e~\ref{sec:comparacao_auc}).
+Foram comparados quatro modelos de classificação (Seção~\ref{sec:fund_modelos}). A Regressão Logística serve como referência, por ser simples e interpretável. Os outros três, \textit{Random Forest}, XGBoost e LightGBM, são \textit{ensembles} de árvores de decisão, mais complexos e considerados caixas-pretas.
+
+Todos receberam os mesmos dez preditores e devolvem a probabilidade de o paciente ser doente. A comparação parte de uma pergunta simples: a complexidade dos \textit{ensembles} traz ganho de desempenho em relação à Regressão Logística? Essa pergunta é respondida nas Seções~\ref{sec:comparacao_cv} e~\ref{sec:comparacao_auc}.
 
 \subsection{Regressão Logística}
 \label{sec:regressao_logistica}
 
-Ajustada sem penalização (Equação~\ref{eq:logit}) e, portanto, sem hiperparâmetros. Foram extraídos os coeficientes, as razões de chances ($e^{\hat{\beta}_j}$) e os valores-$p$ de Wald \cite{Hosmer2005Applied}. Com preditores padronizados, cada razão de chances corresponde ao aumento de um desvio-padrão da variável e os coeficientes podem ser comparados em magnitude (Seção~\ref{sec:fund_lr}). Duas ressalvas: a correlação entre preditores torna os coeficientes instáveis \cite{Dormann2013Collinearity}, e as amostras sintéticas do SMOTE subestimam os erros-padrão, de modo que os valores-$p$ são apenas indicativos.
+A Regressão Logística foi ajustada na forma usual (Equação~\ref{eq:logit}), sem nenhuma configuração a escolher, ou seja, sem hiperparâmetros. Após o ajuste, foram extraídos os coeficientes de cada variável, as razões de chances ($e^{\hat{\beta}_j}$) e os valores-$p$ do teste de Wald, que indicam se cada coeficiente é estatisticamente diferente de zero \cite{Hosmer2005Applied}. Como os preditores foram padronizados, cada razão de chances mostra o efeito de aumentar a variável em um desvio-padrão, o que permite comparar os coeficientes entre si (Seção~\ref{sec:fund_lr}).
+
+Duas ressalvas orientam a leitura desses valores. A primeira é que a correlação entre alguns exames torna seus coeficientes instáveis, podendo até inverter o sinal esperado \cite{Dormann2013Collinearity}. A segunda é que os pacientes sintéticos do SMOTE não são observações independentes, o que faz os valores-$p$ parecerem mais significativos do que são; por isso, eles foram tratados apenas como indicativos.
 
 \subsection{\textit{Random Forest}}
 \label{sec:random_forest}
 
-Utilizou-se o pacote \texttt{randomForest} \cite{Liaw2002Classification} com 500 árvores, valor padrão que não foi otimizado porque mais árvores não causam sobreajuste (Seção~\ref{sec:fund_rf}). Otimizou-se apenas o \texttt{mtry}.
+Utilizou-se o pacote \texttt{randomForest} \cite{Liaw2002Classification} com 500 árvores, valor padrão da biblioteca. Esse número não foi otimizado, pois aumentar a quantidade de árvores não causa sobreajuste (Seção~\ref{sec:fund_rf}). O único hiperparâmetro otimizado foi o \texttt{mtry}, o número de variáveis sorteadas como candidatas em cada divisão das árvores, que, com dez preditores, pode variar de 1 a 10.
 
 \subsection{XGBoost}
 \label{sec:xgboost}
 
-Foram otimizados sete hiperparâmetros (Tabela~\ref{tab:espaco_busca}): número de iterações (\texttt{nrounds}), profundidade máxima (\texttt{max\_depth}), taxa de aprendizado (\texttt{eta}), redução mínima da perda para uma divisão (\texttt{gamma}), fração de preditores por árvore (\texttt{colsample\_bytree}), peso mínimo por nó-filho (\texttt{min\_child\_weight}) e fração de observações por árvore (\texttt{subsample}) (Seção~\ref{sec:fund_xgb}).
+No XGBoost, foram otimizados sete hiperparâmetros (Tabela~\ref{tab:espaco_busca}), que controlam o tamanho e a cautela do modelo (Seção~\ref{sec:fund_xgb}):
+
+\begin{itemize}
+    \item \texttt{nrounds}: quantas árvores são construídas em sequência;
+    \item \texttt{max\_depth}: quantas perguntas seguidas cada árvore pode fazer;
+    \item \texttt{eta}: a taxa de aprendizado, isto é, quanto de cada correção é aplicado;
+    \item \texttt{gamma}: quanto uma nova divisão precisa reduzir o erro para ser aceita;
+    \item \texttt{colsample\_bytree}: a fração das variáveis que cada árvore pode usar;
+    \item \texttt{min\_child\_weight}: o tamanho mínimo, em termos de informação, de cada grupo criado por uma divisão;
+    \item \texttt{subsample}: a fração dos pacientes sorteada para construir cada árvore.
+\end{itemize}
 
 \subsection{LightGBM}
 \label{sec:lightgbm}
 
-Usou-se o \textit{boosting} padrão da biblioteca \cite{Ke2017LightGBM}. Como o crescimento por folha pode causar sobreajuste em bases pequenas (Seção~\ref{sec:fund_lgbm}), a busca incluiu o número máximo de folhas (\texttt{num\_leaves}) e o mínimo de observações por folha (\texttt{min\_data\_in\_leaf}), além de \texttt{learning\_rate}, \texttt{nrounds} e \texttt{feature\_fraction} (Tabela~\ref{tab:espaco_busca}). Como o \texttt{caret} não suporta o LightGBM nativamente, foi implementada uma especificação de modelo customizada, para que ele fosse treinado com as mesmas partições, métrica e reamostragem dos demais, com uma única \textit{thread} e semente 42 \cite{Pineau2020Improving}.
+Usou-se o modo de \textit{boosting} padrão da biblioteca \cite{Ke2017LightGBM}. Como o crescimento das árvores pela folha mais promissora pode causar sobreajuste em bases pequenas (Seção~\ref{sec:fund_lgbm}), a busca incluiu os dois hiperparâmetros que limitam o tamanho das árvores: o número máximo de folhas (\texttt{num\_leaves}) e o número mínimo de pacientes em cada folha (\texttt{min\_data\_in\_leaf}). Também foram otimizados a taxa de aprendizado (\texttt{learning\_rate}), o número de árvores (\texttt{nrounds}) e a fração de variáveis usada por árvore (\texttt{feature\_fraction}) (Tabela~\ref{tab:espaco_busca}).
+
+O pacote \texttt{caret}, usado para treinar os demais modelos, não oferece suporte direto ao LightGBM. Por isso, foi escrita uma adaptação que permite treiná-lo dentro do \texttt{caret}, garantindo que ele usasse exatamente as mesmas partições, a mesma métrica e o mesmo balanceamento dos outros modelos. Para que os resultados fossem reproduzíveis, o treinamento usou uma única linha de execução (\textit{thread}) e semente 42 \cite{Pineau2020Improving}.
 
 \section{Treinamento e Validação Cruzada}
 \label{sec:treinamento_validacao}
 
-Os modelos foram treinados com o pacote \texttt{caret} \cite{Kuhn2008Building}, usando apenas os 457 pacientes do treino e ``doente'' como classe positiva.
+Os quatro modelos foram treinados com o pacote \texttt{caret} \cite{Kuhn2008Building}, seguindo o mesmo protocolo e usando apenas os 457 pacientes do treino. Em todos eles, a classe positiva, aquela que se deseja detectar, é ``doente''. O conjunto de teste não foi usado em nenhuma etapa desta seção.
 
 \subsection{Validação Cruzada Repetida}
 \label{sec:validacao_cruzada}
 
-Adotou-se a validação cruzada estratificada com $k = 5$, repetida três vezes (15 ajustes por combinação de hiperparâmetros) \cite{elementsofstatiscal, Kim2009Estimating} (Seção~\ref{sec:fund_cv}). Preferiu-se $k = 5$ a $k = 10$ para que cada partição de validação tivesse cerca de 26 pacientes saudáveis, e não 13. A semente foi redefinida para 42 antes de cada modelo, de modo que os quatro fossem avaliados nas mesmas 15 partições \cite{Pineau2020Improving}. O SMOTE foi aplicado dentro de cada iteração (Seção~\ref{sec:balanceamento}).
+Para estimar o desempenho dos modelos sem usar o teste, adotou-se a validação cruzada estratificada com $k = 5$ partes, repetida três vezes com sorteios diferentes (Seção~\ref{sec:fund_cv}) \cite{elementsofstatiscal, Kim2009Estimating}. Cada configuração de cada modelo foi, portanto, treinada e avaliada $5 \times 3 = 15$ vezes, e seu desempenho é a média dessas 15 avaliações.
+
+A escolha de $k = 5$, e não de $k = 10$, levou em conta o pequeno número de pacientes saudáveis. Com cinco partes, cada parte de validação tem cerca de 26 saudáveis; com dez, teria apenas 13, o que tornaria cada avaliação muito instável.
+
+Antes do treinamento de cada modelo, a semente aleatória foi redefinida para 42. Assim, os quatro modelos foram avaliados exatamente nas mesmas 15 partições, o que torna a comparação entre eles justa \cite{Pineau2020Improving}. Em cada uma das 15 rodadas, o SMOTE foi aplicado apenas à parte de treino daquela rodada (Seção~\ref{sec:balanceamento}).
 
 \subsection{Otimização de Hiperparâmetros}
 \label{sec:otimizacao_hiperparametros}
 
-Utilizou-se a busca aleatória \cite{Bergstra2012Random} (Seção~\ref{sec:fund_hiperparametros}): 30 combinações sorteadas por modelo no espaço da Tabela~\ref{tab:espaco_busca}, cada uma avaliada pela validação cruzada; a de maior AUC-ROC média foi usada para reajustar o modelo sobre todo o treino. No \textit{Random Forest}, sorteios repetidos de \texttt{mtry} são descartados (no máximo dez candidatos), e a Regressão Logística foi avaliada uma única vez. Como a mesma validação escolhe os hiperparâmetros e estima o desempenho, a AUC da validação tende a ser otimista \cite{Cawley2010OverFitting}, o que reforça a avaliação final em um conjunto de teste separado.
+Os hiperparâmetros foram escolhidos por busca aleatória (Seção~\ref{sec:fund_hiperparametros}) \cite{Bergstra2012Random}. Para cada modelo, sortearam-se 30 combinações dentro das faixas da Tabela~\ref{tab:espaco_busca}, e cada combinação foi avaliada pela validação cruzada descrita na seção anterior. A combinação com maior AUC-ROC média foi a escolhida, e o modelo foi então treinado novamente com ela sobre todo o conjunto de treino.
+
+Há duas exceções. No \textit{Random Forest}, como o \texttt{mtry} só pode assumir dez valores, sorteios repetidos foram descartados, e no máximo dez candidatos foram avaliados. A Regressão Logística, por não ter hiperparâmetros, foi avaliada uma única vez.
+
+Como a mesma validação cruzada foi usada para escolher a melhor combinação e para medir seu desempenho, esse desempenho tende a ser um pouco otimista \cite{Cawley2010OverFitting}. Esse é mais um motivo para que a avaliação final seja feita em um conjunto de teste que não participou de nenhuma escolha.
 
 \begin{table}[htbp]
 \centering
@@ -258,65 +310,81 @@ possui hiperparâmetros a otimizar.} \\
 \label{sec:metrica_selecao}
 \label{sec:comparacao_cv}
 
-A métrica de seleção foi a AUC-ROC (Seção~\ref{sec:fund_roc}). Ela foi preferida à acurácia, que seria alta mesmo para o classificador trivial, e à sensibilidade, que favoreceria esse mesmo classificador. Além disso, como o SMOTE altera a proporção de classes vista no treino, as probabilidades previstas deixam de refletir a prevalência real \cite{vandenGoorbergh2022Harm}; a AUC depende apenas da ordenação das previsões, e a escolha do limiar fica para uma etapa própria (Seção~\ref{sec:limiar_decisao}). As 15 AUCs de cada modelo foram resumidas em \textit{boxplots}, de forma descritiva; a comparação estatística foi feita no teste (Seção~\ref{sec:comparacao_auc}).
+A métrica usada para escolher os hiperparâmetros e comparar os modelos na validação cruzada foi a AUC-ROC (Seção~\ref{sec:fund_roc}). Ela foi preferida a outras opções por três motivos. A acurácia seria alta mesmo para o classificador que declara todos doentes. A sensibilidade, se otimizada sozinha, também favoreceria esse classificador. E, como o SMOTE altera a proporção de doentes vista no treino, as probabilidades previstas deixam de corresponder à proporção real \cite{vandenGoorbergh2022Harm}; a AUC não é afetada por isso, porque depende apenas de os doentes receberem probabilidades maiores que os saudáveis.
+
+Dessa forma, os modelos foram escolhidos pela capacidade de separar doentes de saudáveis, e a decisão sobre o ponto de corte ficou para uma etapa própria (Seção~\ref{sec:limiar_decisao}). As 15 AUCs de cada modelo foram resumidas em \textit{boxplots}, apenas de forma descritiva; a comparação estatística entre os modelos foi feita no teste (Seção~\ref{sec:comparacao_auc}).
 
 \section{Avaliação de Desempenho}
 \label{sec:avaliacao_desempenho}
 
-Os modelos finais foram avaliados nos 113 pacientes do teste (81 doentes e 32 saudáveis), que não participaram do treino, da seleção de hiperparâmetros nem do balanceamento.
+Depois de treinados, os quatro modelos finais foram avaliados nos 113 pacientes do teste, 81 doentes e 32 saudáveis. Esses pacientes não participaram do treinamento, da escolha dos hiperparâmetros nem do balanceamento, e por isso simulam pacientes novos. O conjunto de teste manteve a proporção real de doentes, para que as métricas reflitam o desempenho esperado em uma população semelhante à da base.
 
 \subsection{Métricas e Curva ROC}
 \label{sec:metricas}
 
-Com o limiar padrão (0,5 na probabilidade, ou voto majoritário no \textit{Random Forest}), construiu-se a matriz de confusão (Tabela~\ref{tab:matriz_confusao}) e calcularam-se acurácia, sensibilidade, especificidade, precisão e AUC-ROC (Seção~\ref{sec:fund_matriz}), esta com intervalo de confiança de 95\% pelo método de DeLong \cite{DeLong1988Comparing}. As curvas ROC dos quatro modelos foram sobrepostas em um mesmo gráfico. Esses cálculos usaram o pacote \texttt{pROC} \cite{Robin2011pROC}.
+Inicialmente, os pacientes foram classificados pela regra padrão de cada modelo: probabilidade de doença de pelo menos 0,5 na Regressão Logística, no XGBoost e no LightGBM, e voto da maioria das árvores no \textit{Random Forest}. Com essas classificações, montou-se a matriz de confusão (Tabela~\ref{tab:matriz_confusao}) e calcularam-se a acurácia, a sensibilidade, a especificidade e a precisão (Seção~\ref{sec:fund_matriz}).
+
+Calculou-se também a AUC-ROC de cada modelo, acompanhada de seu intervalo de confiança de 95\% pelo método de DeLong \cite{DeLong1988Comparing}, que indica a faixa de valores plausíveis para a AUC dada a pequena quantidade de pacientes. As curvas ROC dos quatro modelos foram desenhadas em um mesmo gráfico, para comparação visual. Esses cálculos foram feitos com o pacote \texttt{pROC} \cite{Robin2011pROC}.
 
 \subsection{Análise do Limiar de Decisão}
 \label{sec:limiar_decisao}
 
-Como na triagem o falso negativo é o erro mais grave \cite{Habibzadeh2016Determining} e o limiar de 0,5 não leva isso em conta \cite{Elkan2001Foundations} (Seção~\ref{sec:fund_limiar}), definiu-se para cada modelo um \textit{limiar clínico}: o maior limiar que garante sensibilidade de pelo menos 90\%. Ele foi escolhido nas predições fora da partição (\textit{out-of-fold}) da validação cruzada, isto é, só com dados de treino, e depois aplicado sem ajuste ao teste \cite{Leeflang2008Bias}. Assim, a sensibilidade observada no teste mostra se a meta se mantém em pacientes novos.
+Em uma triagem, deixar passar um paciente doente é o erro mais grave \cite{Habibzadeh2016Determining}, e o limiar de 0,5 não leva isso em conta \cite{Elkan2001Foundations} (Seção~\ref{sec:fund_limiar}). Por isso, além do limiar padrão, definiu-se para cada modelo um \textit{limiar clínico}: o maior limiar que encontra pelo menos 90\% dos doentes.
+
+Esse limiar foi escolhido usando apenas dados de treino, a partir das previsões fora da partição (\textit{out-of-fold}) da validação cruzada, em que cada paciente recebe uma previsão de um modelo que não o viu. Depois, foi aplicado sem nenhum ajuste ao conjunto de teste \cite{Leeflang2008Bias}. Assim, a sensibilidade observada no teste mostra se a meta de 90\% se mantém em pacientes novos.
 
 \subsection{Comparação Estatística das AUCs}
 \label{sec:comparacao_auc}
 
-As AUCs no teste foram comparadas pelo teste de DeLong para curvas ROC pareadas \cite{DeLong1988Comparing} (Seção~\ref{sec:fund_delong}), nos seis pares de modelos, com correção de Bonferroni \cite{Demsar2006Statistical}: cada valor-$p$ é multiplicado por seis e comparado a 5\%.
+Para saber se as diferenças de AUC entre os modelos no teste são reais ou poderiam ter surgido por acaso, aplicou-se o teste de DeLong, adequado a modelos avaliados nos mesmos pacientes \cite{DeLong1988Comparing} (Seção~\ref{sec:fund_delong}). O teste foi feito para os seis pares possíveis entre os quatro modelos. Como são seis comparações, aplicou-se a correção de Bonferroni \cite{Demsar2006Statistical}: cada valor-$p$ foi multiplicado por seis, e a diferença só foi considerada significativa se o resultado ficasse abaixo de 0,05.
 
 \subsection{Avaliação Estratificada por Sexo}
 \label{sec:avaliacao_sexo}
 
-O desempenho foi recalculado separadamente para as 32 mulheres e os 81 homens do teste (Seção~\ref{sec:fund_vies}): prevalência, AUC com intervalo de confiança e, nos limiares padrão e clínico, sensibilidade, especificidade e precisão. Pelos tamanhos dos subgrupos, a comparação é descritiva.
+Para verificar se os modelos funcionam igualmente bem para homens e mulheres (Seção~\ref{sec:fund_vies}), o desempenho foi recalculado separadamente para as 32 mulheres e os 81 homens do teste. Para cada grupo, calcularam-se a proporção de doentes, a AUC com seu intervalo de confiança e, nos limiares padrão e clínico, a sensibilidade, a especificidade e a precisão.
+
+Como os grupos são pequenos, especialmente o feminino, não foram aplicados testes estatísticos, e a comparação entre os sexos é apenas descritiva.
 
 \section{Interpretabilidade com SHAP}
 \label{sec:shap}\label{sec:estimacao_shap}
 
-Os valores SHAP \cite{Lundberg2017Unified} foram calculados para os 113 pacientes do teste. No XGBoost e no LightGBM usou-se o TreeSHAP \cite{Lundberg2020Trees}, pelas funções nativas das bibliotecas, na escala do logaritmo da razão de chances; no XGBoost, cuja interface no \texttt{caret} modela a classe ``saudável'', os valores foram multiplicados por $-1$ para se referirem à classe ``doente''. No \textit{Random Forest} usou-se a estimação por Monte Carlo \cite{Strumbelj2014Explaining} do pacote \texttt{fastshap} \cite{Greenwell2024fastshap}, com 100 repetições, sobre a probabilidade de doença (Seção~\ref{sec:fund_estimacao}). Como as escalas diferem, as comparações entre modelos usam a ordem das variáveis e a direção dos efeitos, e não as magnitudes.
+Para entender como os modelos chegam às suas previsões, calcularam-se os valores SHAP \cite{Lundberg2017Unified} de cada variável para os 113 pacientes do teste, de modo que as explicações se referem a pacientes que os modelos não viram durante o treinamento.
+
+O método de cálculo dependeu do modelo (Seção~\ref{sec:fund_estimacao}). No XGBoost e no LightGBM, usou-se o TreeSHAP \cite{Lundberg2020Trees}, já disponível nas próprias bibliotecas, que produz valores na escala do logaritmo da chance. No XGBoost, a forma como o \texttt{caret} organiza as classes faz o modelo calcular a chance de ser saudável; por isso, os valores foram multiplicados por $-1$, para que se refiram à chance de ser doente, como nos demais. No \textit{Random Forest}, usou-se a estimação por Monte Carlo \cite{Strumbelj2014Explaining} do pacote \texttt{fastshap} \cite{Greenwell2024fastshap}, com 100 repetições, que produz valores na escala de probabilidade.
+
+Como as escalas são diferentes, os valores de um modelo não podem ser comparados diretamente com os de outro. As comparações entre modelos se baseiam, portanto, na ordem de importância das variáveis e no sentido de seus efeitos.
 
 \subsection{Modelos Explicados}
 \label{sec:modelos_explicados}
 
-Foram explicados os três modelos de caixa-preta: XGBoost, LightGBM e \textit{Random Forest}. A Regressão Logística dispensa o SHAP, pois seus coeficientes já descrevem o efeito de cada variável.
+Foram explicados os três modelos de caixa-preta: XGBoost, LightGBM e \textit{Random Forest}. A Regressão Logística não precisou do SHAP, pois seus coeficientes já mostram diretamente o efeito de cada variável (Seção~\ref{sec:regressao_logistica}).
 
 \subsection{Análises Realizadas}
 \label{sec:analises_shap}
 
-Com o pacote \texttt{shapviz} \cite{Mayer2026shapviz}, foram produzidas, para cada modelo (Seção~\ref{sec:fund_visualizacoes}):
+Para cada modelo explicado, foram produzidas as seguintes análises, com o pacote \texttt{shapviz} \cite{Mayer2026shapviz} (Seção~\ref{sec:fund_visualizacoes}):
 
 \begin{enumerate}
-    \item \textit{Importância global}: média dos valores SHAP absolutos de cada variável e sua participação percentual no total;
-    \item \textit{Beeswarm}: cada paciente é um ponto, posicionado pelo valor SHAP e colorido pelo valor da variável;
-    \item \textit{Direção do efeito}: correlação entre o valor da variável e seu valor SHAP, lida como positiva acima de 0,3, negativa abaixo de $-0{,}3$ e fraca ou não linear entre esses limites, um ponto de corte apenas heurístico \cite{Schober2018Correlation};
-    \item \textit{Gráfico de dependência} da variável mais importante de cada modelo;
-    \item \textit{Waterfall} de dois pacientes: o verdadeiro positivo com maior probabilidade prevista e o falso negativo com menor probabilidade, isto é, o erro mais grave.
+    \item \textit{Importância global}: a média dos valores SHAP absolutos de cada variável e sua participação percentual no total, que mostram em quais exames o modelo mais se apoia;
+    \item \textit{Beeswarm}: um gráfico em que cada paciente é um ponto, posicionado pelo valor SHAP e colorido pelo valor da variável, que mostra se valores altos de um exame aumentam ou reduzem a previsão de doença;
+    \item \textit{Direção do efeito}: a correlação entre o valor de cada variável e seu valor SHAP, resumida como positiva (acima de 0,3), negativa (abaixo de $-0{,}3$) ou fraca, um ponto de corte apenas convencional \cite{Schober2018Correlation};
+    \item \textit{Gráfico de dependência}: a forma do efeito da variável mais importante de cada modelo, mostrando, por exemplo, se o risco cresce de forma gradual ou em degraus;
+    \item \textit{Waterfall}: a decomposição da previsão de dois pacientes, o doente que o modelo identificou com mais confiança e o doente que o modelo, com mais confiança, classificou como saudável, que é o erro mais grave.
 \end{enumerate}
 
 \subsection{Auditoria de Viés por Sexo}
 \label{sec:shap_sexo}
 
-A importância SHAP foi recalculada dentro de cada sexo, e a concordância entre os rankings de homens e mulheres foi medida pela correlação de Spearman \cite{Schober2018Correlation}. Calculou-se também a média do valor SHAP da própria variável \textit{Gender} em cada sexo, para verificar se o modelo desloca as previsões com base no sexo, independentemente dos exames \cite{investigatingbiashealth}.
+Para complementar a avaliação por sexo, a importância SHAP das variáveis foi recalculada separadamente para homens e mulheres. A semelhança entre os dois rankings foi medida pela correlação de Spearman \cite{Schober2018Correlation}: um valor próximo de 1 indica que o modelo se apoia nos mesmos exames para os dois grupos.
+
+Calculou-se também a contribuição média da própria variável sexo (\textit{Gender}) para as previsões de cada grupo. Se essa contribuição fosse sistematicamente positiva para um sexo e negativa para o outro, o modelo estaria aumentando ou reduzindo o risco previsto apenas pelo sexo do paciente, independentemente dos exames \cite{investigatingbiashealth}.
 
 \subsection{Comparação das Importâncias entre os Modelos}
 \label{sec:comparacao_importancias}
 
-Compararam-se, pela correlação de Spearman (Seção~\ref{sec:fund_correlacao}), quatro rankings: a importância SHAP do XGBoost, do LightGBM e do \textit{Random Forest} e o valor absoluto dos coeficientes da Regressão Logística. Empates receberam o posto médio. Discordâncias podem refletir padrões aprendidos diferentes ou o efeito das variáveis correlacionadas, entre as quais o SHAP pode dividir o crédito \cite{Chen2023Algorithms} e os coeficientes ficam instáveis \cite{Dormann2013Collinearity}. Os rankings também foram confrontados com as médias por classe (Tabela~\ref{tab:medias_classe}).
+Por fim, verificou-se se os quatro modelos concordam sobre quais exames são mais importantes. Compararam-se quatro rankings de importância: os do SHAP no XGBoost, no LightGBM e no \textit{Random Forest} e o da Regressão Logística, ordenado pelo tamanho dos coeficientes. A concordância entre cada par de rankings foi medida pela correlação de Spearman (Seção~\ref{sec:fund_correlacao}), e variáveis empatadas receberam a posição média.
+
+Discordâncias entre os rankings podem ter duas origens: os modelos podem ter aprendido padrões diferentes, ou as medidas de importância podem estar sendo afetadas pelas variáveis correlacionadas, entre as quais o SHAP pode dividir o crédito \cite{Chen2023Algorithms} e os coeficientes ficam instáveis \cite{Dormann2013Collinearity}. Os rankings também foram comparados com as médias por classe (Tabela~\ref{tab:medias_classe}), para verificar se os exames mais importantes para os modelos são os que mais diferem entre doentes e saudáveis.
 
 \section{Ferramentas Computacionais}
 \label{sec:ferramentas}\label{sec:fund_ferramentas}
@@ -329,3 +397,10 @@ Todo o \textit{pipeline} descrito neste capítulo foi implementado na linguagem 
     \item \textit{avaliação}: \texttt{pROC} \cite{Robin2011pROC}, para curvas ROC, AUC, intervalos de confiança e teste de DeLong;
     \item \textit{interpretação}: \texttt{fastshap} \cite{Greenwell2024fastshap}, para estimar valores SHAP por Monte Carlo, e \texttt{shapviz} \cite{Mayer2026shapviz}, que organiza os valores SHAP e produz os gráficos descritos na Seção~\ref{sec:fund_visualizacoes}.
 \end{itemize}
+
+\section{Considerações Finais do Capítulo}
+\label{sec:met_consideracoes}
+
+Este capítulo descreveu o percurso metodológico do trabalho, desde a análise exploratória do ILPD até a interpretação dos modelos com SHAP. Os dados foram preparados com cuidado para evitar o vazamento de informação do conjunto de teste, os quatro modelos foram treinados e comparados sob o mesmo protocolo de validação cruzada, e o desempenho final foi medido em pacientes que não participaram de nenhuma escolha, tanto no limiar padrão quanto em um limiar voltado à triagem. A análise de interpretabilidade foi planejada para responder não apenas quais exames os modelos usam, mas também se essas explicações mudam entre os modelos e entre os sexos.
+
+O capítulo seguinte apresenta os resultados obtidos com a aplicação dessa metodologia e os discute à luz dos conceitos apresentados no Capítulo~\ref{cap:fundamentacao}.
