@@ -1,0 +1,11 @@
+"Variavel","Imp_SHAP_xgb","Imp_SHAP_lgb","Imp_SHAP_rf","Coef_abs_lr","Rank_SHAP_xgb","Rank_SHAP_lgb","Rank_SHAP_rf","Rank_lr"
+"Total_Bilirubin",0.5151,0.2307,0.0455,0.2781,1,4,3,9
+"Alkaline_Phosphotase",0.3616,0.321,0.0605,0.4279,2,1,1,5
+"Total_Proteins",0.117,0.0091,0.0162,2.0604,3,9,9,2
+"Aspartate_Aminotransferase",0.1112,0.2348,0.0388,0.2795,4,3,5,8
+"Age",0.1078,0.1012,0.0267,0.3174,5,6,6,7
+"AG_Ratio",0.08,0.0749,0.0242,1.3375,6,7,7,3
+"Alamine_Aminotransferase",0.076,0.1265,0.0394,0.5822,7,5,4,4
+"Gender",0,0,0.0101,0.2092,9,10,10,10
+"Direct_Bilirubin",0,0.2674,0.0484,0.3765,9,2,2,6
+"Albumin",0,0.0287,0.0199,2.851,9,8,8,1
