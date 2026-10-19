@@ -157,7 +157,16 @@ Hiperparâmetros são configurações definidas antes do treino, como a profundi
 \label{sec:fund_metricas}
 \label{sec:fund_matriz}
 
-Para obter classes, compara-se a probabilidade prevista a um limiar de decisão. A matriz de confusão (Tabela~\ref{tab:matriz_confusao}) cruza as classes previstas com as reais \cite{FAWCETT2006861}. Dela derivam a acurácia (proporção de acertos), a sensibilidade (proporção de doentes encontrados, VP/(VP+FN)), a especificidade (proporção de saudáveis reconhecidos, VN/(VN+FP)) e a precisão (proporção de doentes entre os classificados como doentes, VP/(VP+FP)). A acurácia sozinha engana: com 70\% de doentes, declarar todos doentes dá 70\% de acurácia e especificidade nula \cite{FAWCETT2006861}.
+Para obter classes, compara-se a probabilidade prevista a um limiar de decisão. A matriz de confusão (Tabela~\ref{tab:matriz_confusao}) cruza as classes previstas com as reais \cite{FAWCETT2006861}. Dela derivam a acurácia (proporção de acertos), a sensibilidade (proporção de doentes encontrados, VP/(VP+FN)), a especificidade (proporção de saudáveis reconhecidos, VN/(VN+FP)) e a precisão (proporção de doentes entre os classificados como doentes, VP/(VP+FP)). Para tornar as métricas concretas, considere 100 pacientes, 70 doentes e 30 saudáveis, e um modelo que acerta 60 dos doentes (VP~=~60, FN~=~10) e 15 dos saudáveis (VN~=~15, FP~=~15):
+
+\begin{itemize}
+    \item \textit{acurácia}: $(60 + 15)/100 = 75\%$;
+    \item \textit{sensibilidade}: $60/70 \approx 86\%$ dos doentes foram encontrados;
+    \item \textit{especificidade}: $15/30 = 50\%$ dos saudáveis foram reconhecidos;
+    \item \textit{precisão}: $60/75 = 80\%$ dos classificados como doentes de fato o são.
+\end{itemize}
+
+O exemplo mostra por que a acurácia sozinha engana \cite{FAWCETT2006861}: 75\% parece bom, mas o modelo erra metade dos saudáveis, o que só a especificidade revela. No caso extremo, declarar todos os pacientes doentes daria 70\% de acurácia e 100\% de sensibilidade, mas especificidade nula.
 
 \begin{table}[htbp]
 \centering
@@ -209,7 +218,9 @@ em que $\phi_0$ é o valor base (a previsão média) e $\phi_j$ é a contribuiç
 \label{sec:fund_estimacao}
 \label{sec:fund_dependencia}
 
-O cálculo exato é inviável em geral, mas o TreeSHAP \cite{Lundberg2020Trees} aproveita a estrutura das árvores para obtê-lo de forma rápida. Para outros modelos, os valores podem ser estimados por simulação de Monte Carlo \cite{Strumbelj2014Explaining}: troca-se o valor de uma variável pelo de um paciente sorteado e mede-se quanto a previsão muda, repetindo muitas vezes; a estimativa tem erro aleatório, que diminui com as repetições. Quando as variáveis são correlacionadas, o crédito pode ser dividido entre elas ou atribuído a uma só, conforme o método \cite{Chen2020TrueToModel, Chen2023Algorithms, Aas2021Explaining}, de modo que diferenças entre rankings podem refletir a medida, e não só o modelo.
+O cálculo exato é inviável em geral, mas o TreeSHAP \cite{Lundberg2020Trees} aproveita a estrutura das árvores para obtê-lo de forma rápida. Para outros modelos, os valores podem ser estimados por simulação de Monte Carlo \cite{Strumbelj2014Explaining}: troca-se o valor de uma variável pelo de um paciente sorteado e mede-se quanto a previsão muda, repetindo muitas vezes; a estimativa tem erro aleatório, que diminui com as repetições. Há ainda uma escolha conceitual. Para medir a contribuição de uma variável, é preciso decidir o que fazer com as demais quando ela é ``retirada''. Na forma \textit{marginal}, as variáveis retiradas recebem valores de outros pacientes sorteados ao acaso, sem considerar as que continuam conhecidas; na forma \textit{condicional}, os valores são sorteados respeitando a relação com as conhecidas. A primeira descreve como o modelo funciona, e a segunda, como as variáveis se relacionam com a previsão nos dados \cite{Chen2020TrueToModel, Chen2023Algorithms}. A simulação de Monte Carlo corresponde à forma marginal, enquanto o TreeSHAP se aproxima da condicional.
+
+A diferença importa quando as variáveis são correlacionadas, como as duas bilirrubinas. Na forma condicional, retirar uma delas tem pouco efeito, porque a outra ``conta'' quase a mesma informação, e o crédito tende a ser dividido entre as duas \cite{Chen2023Algorithms, Aas2021Explaining}. Na forma marginal, o crédito vai para a variável que o modelo de fato usa, mas o modelo passa a ser avaliado em combinações pouco realistas, como bilirrubina total baixa com bilirrubina direta alta \cite{Chen2020TrueToModel}. Por isso, diferenças entre os rankings de importância de dois modelos podem refletir tanto padrões aprendidos diferentes quanto o método de estimação.
 
 \subsection{Visualizações e Resumos dos Valores SHAP}
 \label{sec:fund_visualizacoes}
