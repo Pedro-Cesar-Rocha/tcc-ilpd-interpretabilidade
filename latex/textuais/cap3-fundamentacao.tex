@@ -105,44 +105,44 @@ Em uma base desbalanceada, um classificador pode ter alta acurácia apenas preve
 \section{Modelagem e Classificação}
 \label{sec:fund_modelos}
 
-Um modelo de classificação recebe os preditores de um paciente e devolve a probabilidade de ele pertencer à classe positiva. O risco central do treinamento é o sobreajuste (\textit{overfitting}): o modelo decora particularidades do treino e generaliza mal para pacientes novos. Foram usados quatro modelos: a Regressão Logística e três \textit{ensembles} de árvores. Uma revisão de 71 estudos clínicos não encontrou, nas comparações com baixo risco de viés, vantagem do aprendizado de máquina sobre a regressão logística \cite{Christodoulou2019Systematic}; por isso, ela serve aqui de referência.
+Um modelo de classificação recebe os preditores de um paciente e devolve a probabilidade de ele pertencer à classe positiva. O risco central do treinamento é o sobreajuste (\textit{overfitting}): o modelo decora particularidades do treino e generaliza mal para pacientes novos. É a diferença entre aprender que ``AST alta aumenta o risco'' e decorar que ``o paciente de 45 anos com AST de 87~IU/L é doente'', regra que não serve para mais ninguém. Foram usados quatro modelos: a Regressão Logística e três \textit{ensembles} de árvores. Uma revisão de 71 estudos clínicos não encontrou, nas comparações com baixo risco de viés, vantagem do aprendizado de máquina sobre a regressão logística \cite{Christodoulou2019Systematic}; por isso, ela serve aqui de referência.
 
 \subsection{Regressão Logística}
 \label{sec:fund_lr}
 
-A Regressão Logística \cite{Cox1958Regression} modela o logaritmo da chance (\textit{odds}), razão entre a probabilidade de o evento ocorrer e a de não ocorrer, como uma soma ponderada dos preditores \cite{Hosmer2005Applied}:
+A Regressão Logística \cite{Cox1958Regression} modela o logaritmo da chance (\textit{odds}), razão entre a probabilidade de o evento ocorrer e a de não ocorrer (uma probabilidade de doença de 0,75 corresponde a uma chance de 3 para 1), como uma soma ponderada dos preditores \cite{Hosmer2005Applied}:
 \begin{equation}
     \ln\left(\frac{\pi(\mathbf{x})}{1 - \pi(\mathbf{x})}\right) = \beta_0 + \sum_{j=1}^{p} \beta_j x_j,
     \label{eq:logit}
 \end{equation}
-em que $\pi(\mathbf{x})$ é a probabilidade de doença, $\beta_0$ é o intercepto e $\beta_j$, o coeficiente do preditor $x_j$. A significância de cada coeficiente é avaliada pelo teste de Wald. A interpretação é direta: o aumento de uma unidade em $x_j$ multiplica a chance de doença pela razão de chances $e^{\beta_j}$ \cite{Hosmer2005Applied}. Essa leitura é pouco confiável com preditores muito correlacionados, cujos coeficientes ficam instáveis e podem até trocar de sinal \cite{Dormann2013Collinearity}.
+em que $\pi(\mathbf{x})$ é a probabilidade de doença, $\beta_0$ é o intercepto e $\beta_j$, o coeficiente do preditor $x_j$. A significância de cada coeficiente é avaliada pelo teste de Wald. A interpretação é direta: o aumento de uma unidade em $x_j$ multiplica a chance de doença pela razão de chances $e^{\beta_j}$ \cite{Hosmer2005Applied}. Se a razão de chances da idade for 1,5, por exemplo, cada aumento de um desvio-padrão na idade multiplica a chance de doença por 1,5; se for 0,5, a chance cai pela metade. Essa leitura é pouco confiável com preditores muito correlacionados, cujos coeficientes ficam instáveis e podem até trocar de sinal \cite{Dormann2013Collinearity}.
 
 \subsection{Árvores de Decisão e Métodos de \textit{Ensemble}}
 \label{sec:fund_arvores}
 
-Uma árvore de decisão classifica por uma sequência de perguntas sobre as variáveis, como um fluxograma, até chegar a uma folha com a classe prevista \cite{elementsofstatiscal}. Árvores isoladas são fáceis de ler, mas instáveis. Os \textit{ensembles} combinam muitas árvores: no \textit{bagging}, elas são treinadas de forma independente, cada uma com uma amostra diferente, e votam; no \textit{boosting}, são treinadas em sequência, cada uma corrigindo os erros das anteriores. O preço é a perda da interpretabilidade direta: o modelo vira uma caixa-preta.
+Uma árvore de decisão classifica por uma sequência de perguntas sobre as variáveis, como um fluxograma, até chegar a uma folha com a classe prevista \cite{elementsofstatiscal}: ``a bilirrubina total é maior que 1,8~mg/dL? Se sim, a AST é maior que 60~IU/L?'', e assim por diante. Árvores isoladas são fáceis de ler, mas instáveis. Os \textit{ensembles} combinam muitas árvores: no \textit{bagging}, elas são treinadas de forma independente, cada uma com uma amostra diferente, e votam, como um comitê de médicos em que cada um examinou casos diferentes; no \textit{boosting}, são treinadas em sequência, cada uma corrigindo os erros das anteriores, como especialistas que revisam o laudo do colega anterior. O preço é a perda da interpretabilidade direta: o modelo vira uma caixa-preta.
 
 \subsection{\textit{Random Forest}}
 \label{sec:fund_rf}
 
-O \textit{Random Forest} \cite{Breiman2001RandomForests} aplica o \textit{bagging}: cada árvore é treinada em uma amostra \textit{bootstrap} (sorteada com reposição) e, a cada divisão, só pode usar \texttt{mtry} variáveis sorteadas, o que torna as árvores diferentes entre si. A probabilidade de doença é a fração de árvores que votam ``doente''. Mais árvores não causam sobreajuste, e o método costuma funcionar bem com os valores padrão \cite{Breiman2001RandomForests, Probst2019Hyperparameters}.
+O \textit{Random Forest} \cite{Breiman2001RandomForests} aplica o \textit{bagging}: cada árvore é treinada em uma amostra \textit{bootstrap} (sorteada com reposição, de modo que alguns pacientes aparecem repetidos e outros ficam de fora) e, a cada divisão, só pode usar \texttt{mtry} variáveis sorteadas, o que torna as árvores diferentes entre si. A probabilidade de doença é a fração de árvores que votam ``doente'': se 350 de 500 árvores votam nessa classe, a probabilidade é 0,70. Mais árvores não causam sobreajuste, e o método costuma funcionar bem com os valores padrão \cite{Breiman2001RandomForests, Probst2019Hyperparameters}.
 
 \subsection{XGBoost}
 \label{sec:fund_xgb}
 
-O XGBoost \cite{Chen2016XGBoost} é uma implementação regularizada do \textit{gradient boosting} \cite{Friedman2001Greedy}. A primeira árvore faz uma previsão grosseira, a segunda tenta prever o erro que sobrou, a terceira corrige o novo erro, e assim por diante. A previsão final é a soma das árvores, convertida em probabilidade pela mesma função da Regressão Logística:
+O XGBoost \cite{Chen2016XGBoost} é uma implementação regularizada do \textit{gradient boosting} \cite{Friedman2001Greedy}. A primeira árvore faz uma previsão grosseira, a segunda tenta prever o erro que sobrou, a terceira corrige o novo erro, e assim por diante. Se a primeira árvore atribui probabilidade de 0,40 a um paciente que de fato é doente (valor 1), o erro é 0,60, e a árvore seguinte é ajustada para reduzi-lo. A previsão final é a soma das árvores, convertida em probabilidade pela mesma função da Regressão Logística:
 \begin{equation}
     F(\mathbf{x}) = \sum_{m=1}^{M} f_m(\mathbf{x}),
     \qquad
     \hat{\pi}(\mathbf{x}) = \frac{1}{1 + e^{-F(\mathbf{x})}},
     \label{eq:boosting}
 \end{equation}
-em que $f_m$ é a $m$-ésima árvore e $F(\mathbf{x})$ está na escala do logaritmo da chance. Para evitar sobreajuste, a taxa de aprendizado $\eta$ faz cada árvore aplicar só parte da correção, e a regularização ($\gamma$ e $\lambda$) penaliza árvores complexas \cite{Chen2016XGBoost}. Em dados tabulares, o XGBoost está entre os métodos de melhor desempenho \cite{Grinsztajn2022Why}.
+em que $f_m$ é a $m$-ésima árvore e $F(\mathbf{x})$ está na escala do logaritmo da chance. Para evitar sobreajuste, a taxa de aprendizado $\eta$ faz cada árvore aplicar só parte da correção (com $\eta = 0{,}1$, apenas 10\%), e a regularização ($\gamma$ e $\lambda$) penaliza árvores complexas \cite{Chen2016XGBoost}. Em dados tabulares, o XGBoost está entre os métodos de melhor desempenho \cite{Grinsztajn2022Why}.
 
 \subsection{LightGBM}
 \label{sec:fund_lgbm}
 
-O LightGBM \cite{Ke2017LightGBM} segue a mesma ideia (Equação~\ref{eq:boosting}), com foco em eficiência: agrupa os valores em faixas e cresce cada árvore pela folha que mais reduz o erro (\textit{leaf-wise}), e não nível por nível. Em bases pequenas, isso pode causar sobreajuste, e recomenda-se limitar o número de folhas e exigir um mínimo de observações por folha \cite{LightGBMDocsTuning}.
+O LightGBM \cite{Ke2017LightGBM} segue a mesma ideia (Equação~\ref{eq:boosting}), com foco em eficiência: agrupa os valores em faixas e cresce cada árvore pela folha que mais reduz o erro (\textit{leaf-wise}), e não nível por nível: em vez de dividir todos os grupos de pacientes ao mesmo tempo, aprofunda apenas o grupo em que a nova pergunta mais ajuda. Em bases pequenas, isso pode causar sobreajuste, e recomenda-se limitar o número de folhas e exigir um mínimo de observações por folha \cite{LightGBMDocsTuning}.
 
 \section{Treinamento, Validação e Avaliação}
 \label{sec:fund_validacao}
