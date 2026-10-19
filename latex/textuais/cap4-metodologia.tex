@@ -1,6 +1,6 @@
 \chapter{Metodologia} \label{metodologia}
 
-Este capítulo descreve o que foi feito em cada etapa do \textit{pipeline}, com quais parâmetros e como os resultados foram avaliados; as justificativas teóricas estão no Capítulo~\ref{cap:fundamentacao}. O \textit{pipeline} foi implementado na linguagem R \cite{linguagemr} e segue as etapas do processo de descoberta de conhecimento em bases de dados \cite{Fayyad1996KDD}, com a ordem das operações definida para evitar o vazamento de dados \cite{KaufmanScharRosset2012, KAPOOR2023100804} (Seção~\ref{sec:fund_kdd}). Os resultados são apresentados no Capítulo~\ref{cap:resultados}.
+Este capítulo descreve o que foi feito em cada etapa do \textit{pipeline}, com quais parâmetros e como os resultados foram avaliados; as justificativas teóricas estão no Capítulo~\ref{cap:fundamentacao}. O \textit{pipeline} foi implementado na linguagem R \cite{linguagemr} (Seção~\ref{sec:ferramentas}) e segue as etapas do processo de descoberta de conhecimento em bases de dados \cite{Fayyad1996KDD}, com a ordem das operações definida para evitar o vazamento de dados \cite{KaufmanScharRosset2012, KAPOOR2023100804} (Seção~\ref{sec:fund_kdd}). Os resultados são apresentados no Capítulo~\ref{cap:resultados}.
 
 \section{Base de Dados}
 \label{sec:base_dados}
@@ -317,3 +317,15 @@ A importância SHAP foi recalculada dentro de cada sexo, e a concordância entre
 \label{sec:comparacao_importancias}
 
 Compararam-se, pela correlação de Spearman (Seção~\ref{sec:fund_correlacao}), quatro rankings: a importância SHAP do XGBoost, do LightGBM e do \textit{Random Forest} e o valor absoluto dos coeficientes da Regressão Logística. Empates receberam o posto médio. Discordâncias podem refletir padrões aprendidos diferentes ou o efeito das variáveis correlacionadas, entre as quais o SHAP pode dividir o crédito \cite{Chen2023Algorithms} e os coeficientes ficam instáveis \cite{Dormann2013Collinearity}. Os rankings também foram confrontados com as médias por classe (Tabela~\ref{tab:medias_classe}).
+
+\section{Ferramentas Computacionais}
+\label{sec:ferramentas}\label{sec:fund_ferramentas}
+
+Todo o \textit{pipeline} descrito neste capítulo foi implementado na linguagem R \cite{linguagemr}, voltada à estatística e à análise de dados, cujas funcionalidades são ampliadas por pacotes, isto é, conjuntos de funções prontas desenvolvidas pela comunidade. Os principais pacotes, por etapa, são:
+
+\begin{itemize}
+    \item \textit{exploração e preparação dos dados}: \texttt{tidyverse} \cite{tidyverse}, conjunto de pacotes para manipulação e visualização de dados; \texttt{corrplot} \cite{corrplot2024}, para matrizes de correlação; e \texttt{smotefamily}, que implementa o SMOTE;
+    \item \textit{treinamento e validação}: \texttt{caret} \cite{Kuhn2008Building}, que oferece uma interface única para dividir os dados, treinar diferentes algoritmos, executar a validação cruzada e buscar hiperparâmetros, garantindo que todos os modelos sigam o mesmo protocolo; e os pacotes que implementam os algoritmos, \texttt{randomForest} \cite{Liaw2002Classification}, \texttt{xgboost} \cite{Chen2016XGBoost} e \texttt{lightgbm} \cite{Ke2017LightGBM};
+    \item \textit{avaliação}: \texttt{pROC} \cite{Robin2011pROC}, para curvas ROC, AUC, intervalos de confiança e teste de DeLong;
+    \item \textit{interpretação}: \texttt{fastshap} \cite{Greenwell2024fastshap}, para estimar valores SHAP por Monte Carlo, e \texttt{shapviz} \cite{Mayer2026shapviz}, que organiza os valores SHAP e produz os gráficos descritos na Seção~\ref{sec:fund_visualizacoes}.
+\end{itemize}

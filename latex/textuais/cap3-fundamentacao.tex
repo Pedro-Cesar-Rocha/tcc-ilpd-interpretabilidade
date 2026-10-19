@@ -307,15 +307,3 @@ Os valores SHAP de um conjunto de pacientes formam uma tabela com uma linha por 
 Viés algorítmico é a tendência de um modelo a produzir resultados sistematicamente piores para determinados grupos de pessoas \cite{Rajkomar2018Ensuring}. Ele costuma surgir quando um grupo está sub-representado nos dados, pois o modelo aprende sobretudo os padrões do grupo majoritário, ou quando a doença se manifesta de forma diferente entre os grupos e o modelo não capta essa diferença. No ILPD, cerca de três em cada quatro pacientes são homens, e \citeonline{investigatingbiashealth} observaram, ao reproduzir modelos publicados para essa base, mais falsos negativos entre as mulheres, isto é, mais pacientes do sexo feminino doentes classificadas como saudáveis. Em um sistema de triagem, isso significaria que as mulheres teriam maior chance de não serem encaminhadas para investigação.
 
 Para auditar esse tipo de viés, avalia-se o desempenho separadamente em cada grupo. As métricas mais adequadas para essa comparação são a sensibilidade, a especificidade e a AUC, que são calculadas dentro de cada classe e, por isso, não dependem da prevalência do grupo; a precisão, ao contrário, fica naturalmente maior no grupo em que há mais doentes, mesmo que o modelo seja igualmente bom nos dois \cite{FAWCETT2006861}. Uma disparidade de desempenho mostra que o modelo erra mais em um grupo, mas não explica por quê. Para investigar o mecanismo, a análise de interpretabilidade pode verificar se as variáveis que orientam as previsões diferem entre os grupos e se o próprio sexo está sendo usado para deslocar as previsões \cite{investigatingbiashealth}.
-
-\section{Ferramentas Computacionais}
-\label{sec:fund_ferramentas}
-
-O \textit{pipeline} foi implementado na linguagem R \cite{linguagemr}, voltada à estatística e à análise de dados, cujas funcionalidades são ampliadas por pacotes, isto é, conjuntos de funções prontas desenvolvidas pela comunidade. Os principais pacotes, por etapa, são:
-
-\begin{itemize}
-    \item \textit{exploração e preparação dos dados}: \texttt{tidyverse} \cite{tidyverse}, conjunto de pacotes para manipulação e visualização de dados; \texttt{corrplot} \cite{corrplot2024}, para matrizes de correlação; e \texttt{smotefamily}, que implementa o SMOTE;
-    \item \textit{treinamento e validação}: \texttt{caret} \cite{Kuhn2008Building}, que oferece uma interface única para dividir os dados, treinar diferentes algoritmos, executar a validação cruzada e buscar hiperparâmetros, garantindo que todos os modelos sigam o mesmo protocolo; e os pacotes que implementam os algoritmos, \texttt{randomForest} \cite{Liaw2002Classification}, \texttt{xgboost} \cite{Chen2016XGBoost} e \texttt{lightgbm} \cite{Ke2017LightGBM};
-    \item \textit{avaliação}: \texttt{pROC} \cite{Robin2011pROC}, para curvas ROC, AUC, intervalos de confiança e teste de DeLong;
-    \item \textit{interpretação}: \texttt{fastshap} \cite{Greenwell2024fastshap}, para estimar valores SHAP por Monte Carlo, e \texttt{shapviz} \cite{Mayer2026shapviz}, que organiza os valores SHAP e produz os gráficos descritos na Seção~\ref{sec:fund_visualizacoes}.
-\end{itemize}
