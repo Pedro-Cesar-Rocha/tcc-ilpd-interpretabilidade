@@ -86,12 +86,16 @@ Os dois casos se relacionam ao vazamento de dados (\textit{data leakage}), que o
 \label{sec:fund_log}
 \label{sec:fund_padronizacao}
 
-A transformação logarítmica \cite{logtransformation},
+Variáveis com cauda longa, como os exames hepáticos, podem ser aproximadas de uma distribuição mais equilibrada pela transformação logarítmica \cite{logtransformation}:
 \begin{equation}
     x' = \ln(1 + x),
     \label{eq:log}
 \end{equation}
-comprime a cauda de uma variável positiva sem alterar a ordem dos valores; a soma de uma unidade evita problemas com valores próximos de zero. Como não garante a redução da assimetria, seu efeito deve ser conferido \cite{logtransformation}. Por não depender de parâmetros estimados, pode ser aplicada antes da divisão sem vazamento. A padronização (\textit{z-score}), $z = (x - \bar{x})/s$, deixa todas as variáveis com média zero e desvio-padrão um, com média e desvio calculados apenas no treino. As duas operações interessam sobretudo à Regressão Logística, cujos coeficientes ficam comparáveis \cite{Hosmer2005Applied}, e pouco às árvores, que dependem só da ordem dos valores \cite{elementsofstatiscal}.
+em que $x$ é o valor original e $x'$ o transformado. O logaritmo comprime muito mais os valores grandes do que os pequenos, sem alterar a ordem entre eles: no ILPD, por exemplo, a AST tem mediana de 42~IU/L e máximo de 4.929~IU/L, mais de cem vezes maior; após a transformação, esses valores passam a 3,76 e 8,50, e o máximo fica pouco mais que o dobro da mediana. A soma de uma unidade evita problemas com valores próximos de zero, para os quais o logaritmo não é definido ou é muito negativo. Como a transformação nem sempre reduz a assimetria, seu efeito deve ser conferido recalculando o coeficiente de assimetria \cite{logtransformation}. Além disso, ela depende apenas do valor de cada paciente, e não de números calculados com os demais, e por isso pode ser aplicada antes da divisão em treino e teste sem causar vazamento.
+
+A padronização (\textit{z-score}), $z = (x - \bar{x})/s$, coloca as variáveis na mesma escala: ela indica quantos desvios-padrão um valor está acima ou abaixo da média, de modo que todas passam a ter média zero e desvio-padrão um. Sem ela, um aumento de ``uma unidade'' significaria um ano na idade, que varia de 4 a 90, e 1~g/dL na albumina, que varia de 0,9 a 5,5. Como a média $\bar{x}$ e o desvio-padrão $s$ são calculados a partir dos dados, devem ser obtidos apenas no treino e depois reaplicados ao teste.
+
+As duas operações interessam sobretudo à Regressão Logística, que soma as variáveis multiplicadas por coeficientes: com a padronização, cada coeficiente passa a expressar o efeito de um desvio-padrão, e os coeficientes ficam comparáveis entre si \cite{Hosmer2005Applied}; com o logaritmo, os poucos pacientes com valores extremos deixam de dominar o ajuste. Para as árvores, elas fazem pouca diferença, pois uma pergunta como ``a bilirrubina é maior que 1,8?'' separa os mesmos pacientes antes e depois de qualquer transformação que preserve a ordem dos valores \cite{elementsofstatiscal}.
 
 \subsection{Desbalanceamento de Classes e SMOTE}
 \label{sec:fund_smote}
