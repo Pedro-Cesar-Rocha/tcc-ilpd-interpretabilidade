@@ -39,7 +39,7 @@ Os pacientes sintéticos ficaram parecidos com os saudáveis reais: suas médias
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.6\textwidth]{figuras/cap5-resultados/smote_antes_depois.png}
+\includegraphics[width=0.75\textwidth]{figuras/cap5-resultados/smote_antes_depois.png}
 \caption{Distribuição das classes no conjunto de treino antes e depois do SMOTE.}
 \label{fig:res_smote}
 \end{figure}
@@ -63,8 +63,6 @@ Em uma base pequena e com doentes e saudáveis muito parecidos, a validação cr
 
 \begin{table}[htbp]
 \centering
-\caption{Hiperparâmetros selecionados pela busca aleatória (maior AUC-ROC média na validação cruzada).}
-\label{tab:res_hiper}
 \begin{tabular}{lll}
 \hline
 \textbf{Modelo} & \textbf{Hiperparâmetro} & \textbf{Valor selecionado} \\
@@ -87,6 +85,8 @@ LightGBM & \texttt{num\_leaves} & 4 \\
  & \texttt{min\_data\_in\_leaf} & 40 \\
 \hline
 \end{tabular}
+\caption{Hiperparâmetros selecionados pela busca aleatória (maior AUC-ROC média na validação cruzada).}
+\label{tab:res_hiper}
 \end{table}
 
 \subsection{Desempenho na Validação Cruzada}
@@ -97,8 +97,6 @@ Essa diferença, porém, deve ser vista com cautela. A variação entre as 15 pa
 
 \begin{table}[htbp]
 \centering
-\caption{AUC-ROC nas 15 partições de validação e sensibilidade e especificidade médias no limiar de 0,5.}
-\label{tab:res_cv}
 \begin{tabular}{lcccccc}
 \hline
 \textbf{Modelo} & \textbf{AUC média} & \textbf{DP} & \textbf{Mín.} & \textbf{Máx.} & \textbf{Sens.} & \textbf{Espec.} \\
@@ -110,11 +108,13 @@ LightGBM               & 0,720 & 0,064 & 0,607 & 0,792 & 0,685 & 0,659 \\
 \hline
 \multicolumn{7}{l}{\footnotesize DP: desvio-padrão entre as 15 partições.} \\
 \end{tabular}
+\caption{AUC-ROC nas 15 partições de validação e sensibilidade e especificidade médias no limiar de 0,5.}
+\label{tab:res_cv}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.75\textwidth]{figuras/cap5-resultados/cv_comparacao_modelos.png}
+\includegraphics[width=0.9\textwidth]{figuras/cap5-resultados/cv_comparacao_modelos.png}
 \caption{Distribuição da AUC-ROC nas 15 partições de validação. Cada ponto é uma partição, e o losango indica a média.}
 \label{fig:res_cv}
 \end{figure}
@@ -132,8 +132,6 @@ Por fim, o coeficiente do sexo foi negativo (razão de chances de 0,81; $p = 0{,
 
 \begin{table}[htbp]
 \centering
-\caption{Coeficientes da Regressão Logística ajustada ao conjunto de treino (preditores padronizados).}
-\label{tab:res_coef_lr}
 \begin{tabular}{lrrr}
 \hline
 \textbf{Variável} & \textbf{Coeficiente} & \textbf{OR} & \textbf{$p$-valor} \\
@@ -153,6 +151,8 @@ AG\_Ratio                   & 1,338  & 3,809 & 0,002 \\
 \multicolumn{4}{l}{\footnotesize OR: razão de chances para o aumento de um desvio-padrão.} \\
 \multicolumn{4}{l}{\footnotesize \textit{Gender}: 1 = masculino, 0 = feminino, antes da padronização.} \\
 \end{tabular}
+\caption{Coeficientes da Regressão Logística ajustada ao conjunto de treino (preditores padronizados).}
+\label{tab:res_coef_lr}
 \end{table}
 
 % =============================================================================
@@ -170,8 +170,6 @@ As demais métricas mostram as limitações práticas dos modelos. A acurácia, 
 
 \begin{table}[htbp]
 \centering
-\caption{Métricas no conjunto de teste ($n = 113$; 81 doentes e 32 saudáveis), com a regra de decisão padrão de cada modelo.}
-\label{tab:res_teste}
 \begin{tabular}{lccccc}
 \hline
 \textbf{Modelo} & \textbf{Acur.} & \textbf{Sens.} & \textbf{Espec.} & \textbf{Prec.} & \textbf{AUC-ROC [IC 95\%]} \\
@@ -182,13 +180,13 @@ XGBoost                & 0,717 & 0,716 & 0,719 & 0,866 & 0,745 [0,650; 0,840] \\
 LightGBM               & 0,681 & 0,691 & 0,656 & 0,836 & 0,761 [0,671; 0,851] \\
 \hline
 \end{tabular}
+\caption{Métricas no conjunto de teste ($n = 113$; 81 doentes e 32 saudáveis), com a regra de decisão padrão de cada modelo.}
+\label{tab:res_teste}
 \par\vspace{2pt}{\footnotesize IC: intervalo de confiança pelo método de DeLong. Classificador trivial (todos doentes): acurácia 0,717 e especificidade 0.}
 \end{table}
 
 \begin{table}[htbp]
 \centering
-\caption{Matrizes de confusão no conjunto de teste (regra de decisão padrão).}
-\label{tab:res_confusao}
 \begin{tabular}{lcccc}
 \hline
 \textbf{Modelo} & \textbf{VP} & \textbf{FN} & \textbf{VN} & \textbf{FP} \\
@@ -200,6 +198,8 @@ LightGBM               & 56 & 25 & 21 & 11 \\
 \hline
 \multicolumn{5}{l}{\footnotesize VP e FN: entre os 81 doentes; VN e FP: entre os 32 saudáveis.} \\
 \end{tabular}
+\caption{Matrizes de confusão no conjunto de teste (regra de decisão padrão).}
+\label{tab:res_confusao}
 \end{table}
 
 Nenhuma das seis comparações pelo teste de DeLong foi estatisticamente significativa. A maior diferença, de 0,051 entre o \textit{Random Forest} e a Regressão Logística, teve valor-$p$ de 0,090, que passou a 0,541 após a correção de Bonferroni. Em outras palavras, não há evidência de que algum modelo separe doentes de saudáveis melhor que os outros, e a complexidade adicional dos \textit{ensembles} não trouxe ganho comprovado em relação à Regressão Logística. Esse resultado é coerente com revisões que, em dados clínicos tabulares, não encontraram vantagem do aprendizado de máquina sobre a regressão logística \cite{Christodoulou2019Systematic, Nusinovici2020Logistic}.
@@ -208,7 +208,7 @@ Nenhuma das seis comparações pelo teste de DeLong foi estatisticamente signifi
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.6\textwidth]{figuras/cap5-resultados/roc_teste.png}
+\includegraphics[width=0.72\textwidth]{figuras/cap5-resultados/roc_teste.png}
 \caption{Curvas ROC dos quatro modelos no conjunto de teste. A diagonal tracejada representa um classificador aleatório.}
 \label{fig:res_roc}
 \end{figure}
@@ -224,8 +224,6 @@ Na prática, isso quer dizer que, usados para triagem, os modelos acrescentariam
 
 \begin{table}[htbp]
 \centering
-\caption{Desempenho no conjunto de teste com o limiar clínico (sensibilidade $\geq$ 90\% na validação cruzada).}
-\label{tab:res_limiares}
 \begin{tabular}{lcccc}
 \hline
 \textbf{Modelo} & \textbf{Limiar} & \textbf{Sens.} & \textbf{Espec.} & \textbf{Prec.} \\
@@ -236,6 +234,8 @@ XGBoost                & 0,361 & 0,840 & 0,313 & 0,756 \\
 LightGBM               & 0,360 & 0,901 & 0,281 & 0,760 \\
 \hline
 \end{tabular}
+\caption{Desempenho no conjunto de teste com o limiar clínico (sensibilidade $\geq$ 90\% na validação cruzada).}
+\label{tab:res_limiares}
 \end{table}
 
 As probabilidades produzidas pelos modelos também não devem ser lidas como riscos reais de doença. Como o SMOTE aumentou a proporção de saudáveis vista no treino, os modelos tendem a subestimar a chance de doença: no \textit{Random Forest}, por exemplo, a probabilidade média prevista no teste foi de 0,654, abaixo da proporção real de doentes, de 0,717. Estudos mostram que o balanceamento por reamostragem costuma produzir esse tipo de distorção sem melhorar a capacidade de separar as classes \cite{vandenGoorbergh2022Harm, Carriero2025Harms}. A calibração das probabilidades não foi avaliada formalmente neste trabalho.
@@ -253,8 +253,6 @@ A taxa de falsos negativos, que mede o risco de um doente não ser identificado,
 
 \begin{table}[htbp]
 \centering
-\caption{Desempenho no conjunto de teste por sexo (F: 32 pacientes, 17 doentes; M: 81 pacientes, 64 doentes).}
-\label{tab:res_sexo}
 \small
 \begin{tabular}{llcccccc}
 \hline
@@ -272,6 +270,8 @@ LightGBM               & F & 0,780 [0,618; 0,943] & 0,706 & 0,800 & 0,294 & 1,00
 \hline
 \multicolumn{8}{l}{\footnotesize Taxa FN: proporção de doentes classificados como saudáveis (1 $-$ sensibilidade).} \\
 \end{tabular}
+\caption{Desempenho no conjunto de teste por sexo (F: 32 pacientes, 17 doentes; M: 81 pacientes, 64 doentes).}
+\label{tab:res_sexo}
 \end{table}
 
 Esses resultados não reproduzem a disparidade relatada por \citeonline{investigatingbiashealth}, que encontraram, no mesmo ILPD, taxas de falsos negativos cerca de 20 pontos percentuais maiores nas mulheres. A explicação mais simples é o tamanho da amostra: com apenas 17 mulheres doentes no teste, este trabalho não tem como confirmar nem descartar diferenças dessa magnitude. Por isso, a ausência de disparidade observada aqui não deve ser lida como prova de que os modelos tratam homens e mulheres de forma igual \cite{Rajkomar2018Ensuring}.
@@ -292,8 +292,6 @@ A Tabela~\ref{tab:res_shap_imp} mostra a importância de cada variável nos trê
 
 \begin{table}[htbp]
 \centering
-\caption{Importância SHAP global (média dos valores SHAP absolutos no teste): posição no ranking e participação percentual na importância total.}
-\label{tab:res_shap_imp}
 \begin{tabular}{lcccccc}
 \hline
  & \multicolumn{2}{c}{\textbf{XGBoost}} & \multicolumn{2}{c}{\textbf{LightGBM}} & \multicolumn{2}{c}{\textbf{\textit{Random Forest}}} \\
@@ -312,6 +310,8 @@ Gender                      & 8--10 & 0,0  & 10 & 0,0  & 10 & 3,1 \\
 \hline
 \multicolumn{7}{l}{\footnotesize Variáveis não utilizadas por um modelo têm importância nula e empatam nas últimas posições.} \\
 \end{tabular}
+\caption{Importância SHAP global (média dos valores SHAP absolutos no teste): posição no ranking e participação percentual na importância total.}
+\label{tab:res_shap_imp}
 \end{table}
 
 No XGBoost, a importância é concentrada em poucos exames: a bilirrubina total e a fosfatase alcalina respondem juntas por 64\% do total. Três variáveis, a bilirrubina direta, a albumina e o sexo, têm importância zero, porque não aparecem em nenhuma árvore. Isso decorre da configuração simples escolhida para o modelo (Tabela~\ref{tab:res_hiper}): com poucas árvores e forte restrição a novas divisões, o XGBoost faz poucas perguntas e, entre exames que dizem praticamente a mesma coisa, usa apenas um. Assim, usou a bilirrubina total e ignorou a direta; e, no grupo das proteínas, usou as proteínas totais e a razão albumina/globulina, que juntas permitem calcular a albumina, e ignorou a própria albumina.
@@ -358,8 +358,6 @@ Esses sentidos são coerentes com o conhecimento clínico: bilirrubinas, enzimas
 
 \begin{table}[htbp]
 \centering
-\caption{Correlação de Pearson entre o valor de cada variável e seu valor SHAP no conjunto de teste.}
-\label{tab:res_direcao}
 \begin{tabular}{lccc}
 \hline
 \textbf{Variável} & \textbf{XGBoost} & \textbf{LightGBM} & \textbf{\textit{Random Forest}} \\
@@ -377,6 +375,8 @@ Gender                      & ---        & ---        & $-0{,}140$ \\
 \hline
 \multicolumn{4}{l}{\footnotesize ---: variável não utilizada pelo modelo (valores SHAP constantes).} \\
 \end{tabular}
+\caption{Correlação de Pearson entre o valor de cada variável e seu valor SHAP no conjunto de teste.}
+\label{tab:res_direcao}
 \end{table}
 
 Embora o sentido seja o mesmo, a forma dos efeitos difere entre os modelos, como mostram os gráficos de dependência (Figura~\ref{fig:res_dependencia}). No XGBoost, como cada exame participa de poucas divisões, o efeito é em degraus. Na bilirrubina total, todos os pacientes a partir de cerca de 1,8~mg/dL recebem a mesma contribuição para ``doente'' ($+0{,}86$ na escala do logaritmo da chance), enquanto um paciente com 1,6~mg/dL, um valor muito próximo, já recebe a contribuição mais forte para ``saudável'' ($-0{,}45$). Pequenas diferenças perto do ponto de corte mudam bastante a previsão.
@@ -486,7 +486,7 @@ A auditoria não encontrou, portanto, indícios de que os modelos usem o sexo co
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.55\textwidth]{figuras/cap5-resultados/shap_gender_por_sexo_rf.png}
+\includegraphics[width=0.7\textwidth]{figuras/cap5-resultados/shap_gender_por_sexo_rf.png}
 \caption{Contribuição SHAP da variável \textit{Gender} no \textit{Random Forest}, por sexo e classe real. Valores positivos aumentam a probabilidade prevista de doença.}
 \label{fig:res_shap_gender}
 \end{figure}
@@ -500,8 +500,6 @@ Essas discordâncias têm causas identificáveis. O ranking da Regressão Logís
 
 \begin{table}[htbp]
 \centering
-\caption{Posição de cada variável nos quatro rankings de importância (1 = mais importante).}
-\label{tab:res_rankings}
 \begin{tabular}{lcccc}
 \hline
  & \multicolumn{3}{c}{\textbf{SHAP}} & \textbf{$|$Coef.$|$} \\
@@ -522,6 +520,8 @@ Gender                      & 9 & 10 & 10 & 10 \\
 \multicolumn{5}{l}{\footnotesize Empates recebem o posto médio. Spearman: XGB--LGB $= 0{,}362$; XGB--RF $= 0{,}362$;} \\
 \multicolumn{5}{l}{\footnotesize LGB--RF $= 0{,}964$; XGB--RL $= -0{,}141$; LGB--RL $= -0{,}200$; RF--RL $= -0{,}164$.} \\
 \end{tabular}
+\caption{Posição de cada variável nos quatro rankings de importância (1 = mais importante).}
+\label{tab:res_rankings}
 \end{table}
 
 Apesar das diferenças, alguns resultados se repetem: pelo menos uma das bilirrubinas e a fosfatase alcalina estão sempre entre os exames mais importantes nos três \textit{ensembles}, e o sexo fica nas últimas posições nos quatro rankings. São esses resultados estáveis, e não a posição exata de cada exame, que podem ser afirmados com segurança.

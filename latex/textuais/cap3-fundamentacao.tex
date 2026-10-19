@@ -43,8 +43,6 @@ A Tabela~\ref{tab:fund_kdd} mostra como cada etapa desse processo corresponde ao
 
 \begin{table}[htbp]
 \centering
-\caption{Correspondência entre as etapas do processo de descoberta de conhecimento e os procedimentos deste trabalho.}
-\label{tab:fund_kdd}
 \begin{tabular}{>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{9.8cm}}
 \hline
 \textbf{Etapa} & \textbf{Procedimentos realizados} \\
@@ -56,6 +54,8 @@ Treinamento, validação e avaliação & Validação cruzada repetida; busca ale
 Interpretação dos modelos & Valores SHAP: importância das variáveis, sentido e forma dos efeitos, explicação de pacientes individuais, auditoria por sexo e comparação entre modelos. \\
 \hline
 \end{tabular}
+\caption{Correspondência entre as etapas do processo de descoberta de conhecimento e os procedimentos deste trabalho.}
+\label{tab:fund_kdd}
 \par\vspace{2pt}{\small Fonte: elaborado pelo autor.}
 \end{table}
 
@@ -236,8 +236,6 @@ Os modelos deste trabalho devolvem a probabilidade de doença, e não diretament
 
 \begin{table}[htbp]
 \centering
-\caption{Matriz de confusão, com ``doente'' como classe positiva.}
-\label{tab:matriz_confusao}
 \begin{tabular}{llcc}
 \hline
  & & \multicolumn{2}{c}{\textbf{Classe real}} \\
@@ -247,6 +245,8 @@ Os modelos deste trabalho devolvem a probabilidade de doença, e não diretament
  & \textbf{Saudável} & FN & VN \\
 \hline
 \end{tabular}
+\caption{Matriz de confusão, com ``doente'' como classe positiva.}
+\label{tab:matriz_confusao}
 \end{table}
 
 Dela derivam a acurácia (proporção de acertos), a sensibilidade (proporção de doentes encontrados, VP/(VP+FN)), a especificidade (proporção de saudáveis reconhecidos, VN/(VN+FP)) e a precisão (proporção de doentes entre os classificados como doentes, VP/(VP+FP)). Para tornar as métricas concretas, considere 100 pacientes, 70 doentes e 30 saudáveis, e um modelo que acerta 60 dos doentes (VP~=~60, FN~=~10) e 15 dos saudáveis (VN~=~15, FP~=~15):

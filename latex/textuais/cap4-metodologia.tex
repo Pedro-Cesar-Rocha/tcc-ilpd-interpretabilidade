@@ -14,8 +14,6 @@ Foi utilizado o \textit{Indian Liver Patient Dataset} (ILPD) \cite{ramana2022ilp
 
 \begin{table}[htbp]
 \centering
-\caption{Variáveis do ILPD: dez preditoras e a variável-alvo.}
-\label{tab:variaveis}
 \begin{tabular}{llp{8cm}}
 \hline
 \textbf{Variável} & \textbf{Tipo} & \textbf{Descrição} \\
@@ -33,6 +31,8 @@ AG\_Ratio                   & numérica    & razão albumina/globulina \\
 Diagnostico                 & binária     & variável-alvo: 1 = doente, 2 = saudável (\textit{Selector} na documentação da UCI) \\
 \hline
 \end{tabular}
+\caption{Variáveis do ILPD: dez preditoras e a variável-alvo.}
+\label{tab:variaveis}
 \end{table}
 
 O rótulo \textit{Diagnostico} = 2 indica apenas ausência de diagnóstico de doença hepática no momento da coleta; por simplicidade, esses pacientes são chamados de ``saudáveis'' ao longo do texto.
@@ -67,7 +67,7 @@ Também se cruzou o sexo dos pacientes com o diagnóstico, em uma tabela de cont
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.6\textwidth]{figuras/cap4-metodologia/eda_distribuicao_alvo.png}
+\includegraphics[width=0.7\textwidth]{figuras/cap4-metodologia/eda_distribuicao_alvo.png}
 \caption{Distribuição da variável-alvo (doentes \textit{vs.} saudáveis).}
 \label{fig:eda_distribuicao_alvo}
 \end{figure}
@@ -79,8 +79,6 @@ Para cada uma das nove variáveis numéricas, calcularam-se a média, o desvio-p
 
 \begin{table}[htbp]
 \centering
-\caption{Estatísticas descritivas das variáveis numéricas do ILPD (base original, $n = 583$).}
-\label{tab:descritivas}
 \begin{tabular}{lrrrrrr}
 \hline
 \textbf{Variável} & \textbf{Média} & \textbf{DP} & \textbf{Mín.} & \textbf{Mediana} & \textbf{Máx.} & \textbf{$b_1$} \\
@@ -98,6 +96,8 @@ AG\_Ratio\textsuperscript{a} & 0,95  & 0,32   & 0,3  & 0,93 & 2,8   & 0,99 \\
 \multicolumn{7}{l}{\footnotesize DP: desvio-padrão; $b_1$: coeficiente de assimetria (\textit{skewness}).} \\
 \multicolumn{7}{l}{\footnotesize \textsuperscript{a} Calculado sobre as 579 observações não ausentes.} \\
 \end{tabular}
+\caption{Estatísticas descritivas das variáveis numéricas do ILPD (base original, $n = 583$).}
+\label{tab:descritivas}
 \end{table}
 
 Adotou-se como critério de assimetria forte um coeficiente maior que 2 em valor absoluto, uma convenção usada na literatura \cite[p.~26]{curran1996robustness}. Cinco variáveis ultrapassaram esse valor: as duas bilirrubinas, a fosfatase alcalina e as duas aminotransferases, com coeficientes entre 3,20 e 10,49. As demais ficaram abaixo de 1,0. Como a separação entre os dois grupos é nítida, a escolha dessas cinco variáveis não depende do valor exato do critério.
@@ -113,8 +113,6 @@ Essa comparação olha um exame de cada vez e, por isso, serve apenas para descr
 
 \begin{table}[htbp]
 \centering
-\caption{Médias das variáveis numéricas por classe (base original, $n = 583$).}
-\label{tab:medias_classe}
 \begin{tabular}{lrr}
 \hline
 \textbf{Variável} & \textbf{Média Doente} & \textbf{Média Saudável} \\
@@ -130,11 +128,13 @@ Albumin                     & 3,06   & 3,34  \\
 AG\_Ratio                   & 0,91   & 1,03  \\
 \hline
 \end{tabular}
+\caption{Médias das variáveis numéricas por classe (base original, $n = 583$).}
+\label{tab:medias_classe}
 \end{table}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figuras/cap4-metodologia/eda_boxplots_por_classe.png}
+\includegraphics[width=0.95\textwidth]{figuras/cap4-metodologia/eda_boxplots_por_classe.png}
 \caption{Boxplots das variáveis numéricas, separados por classe (doente \textit{vs.} saudável). As variáveis com forte assimetria estão em escala logarítmica (base 10) apenas para visualização.}
 \label{fig:eda_boxplots}
 \end{figure}
@@ -148,7 +148,7 @@ Mesmo com pares fortemente correlacionados, todas as variáveis foram mantidas, 
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.7\textwidth]{figuras/cap4-metodologia/eda_correlacao.png}
+\includegraphics[width=0.85\textwidth, trim=50 35 55 12, clip]{figuras/cap4-metodologia/eda_correlacao.png}
 \caption{Matriz de correlação de Pearson entre as variáveis numéricas.}
 \label{fig:eda_correlacao}
 \end{figure}
@@ -167,8 +167,6 @@ Em seguida, aplicou-se a transformação logarítmica $x' = \ln(1 + x)$ às cinc
 
 \begin{table}[htbp]
 \centering
-\caption{Coeficiente de assimetria ($b_1$) antes e depois da transformação $\ln(1+x)$ ($n = 570$).}
-\label{tab:assimetria_log}
 \begin{tabular}{lrr}
 \hline
 \textbf{Variável} & \textbf{Antes} & \textbf{Depois} \\
@@ -180,6 +178,8 @@ Alamine\_Aminotransferase   & 6,66  & 1,46 \\
 Aspartate\_Aminotransferase & 10,50 & 1,24 \\
 \hline
 \end{tabular}
+\caption{Coeficiente de assimetria ($b_1$) antes e depois da transformação $\ln(1+x)$ ($n = 570$).}
+\label{tab:assimetria_log}
 \end{table}
 
 \subsection{Divisão Treino/Teste}
@@ -271,9 +271,6 @@ Como a mesma validação cruzada foi usada para escolher a melhor combinação e
 
 \begin{table}[htbp]
 \centering
-\caption{Espaço de busca dos hiperparâmetros na busca aleatória (30 sorteios por
-modelo).}
-\label{tab:espaco_busca}
 % Faixas do XGBoost e do Random Forest: função interna de busca aleatória do caret
 % (métodos "xgbTree" e "rf"), conferidas no código-fonte da versão 7.0-1; o log da
 % execução confirma as 10 combinações distintas de mtry testadas no Random Forest.
@@ -304,6 +301,9 @@ entre $a$ e $b$. Inteiros e conjuntos entre chaves:} \\
 \multicolumn{3}{l}{\footnotesize sorteio equiprovável. A Regressão Logística não
 possui hiperparâmetros a otimizar.} \\
 \end{tabular}
+\caption{Espaço de busca dos hiperparâmetros na busca aleatória (30 sorteios por
+modelo).}
+\label{tab:espaco_busca}
 \end{table}
 
 \subsection{Seleção e Comparação dos Modelos}
