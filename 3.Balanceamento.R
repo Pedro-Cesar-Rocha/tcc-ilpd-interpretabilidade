@@ -6,7 +6,7 @@
 # que as particoes de validacao nunca contenham amostras sinteticas. O conjunto
 # de teste permanece com a distribuicao real das classes.
 # =============================================================================
-# [Fundamentação Teórica - 2.3.4 Desbalanceamento de Classes e SMOTE (sec:fund_smote)] Etapa 2 da
+# [Fundamentação Teórica - 2.3.3 Desbalanceamento de Classes e SMOTE (sec:fund_smote)] Etapa 2 da
 # Figura 2.1 (ultimo item: SMOTE so no treino). A implementacao esta em
 # UtilsPipeline.R (aplicar_smote).
 # [Metodologia - 3.3.4 Reamostragem com SMOTE (sec:balanceamento)] diagnostico do SMOTE no
@@ -25,7 +25,7 @@ treino <- readRDS("data/df_proc.rds")
 log_info("Conjunto de treino carregado: %d x %d", nrow(treino), ncol(treino))
 
 # --- Distribuicao antes -------------------------------------------------------
-# [Fundamentação Teórica - 2.3.4] desbalanceamento: classe majoritaria x minoritaria.
+# [Fundamentação Teórica - 2.3.3] desbalanceamento: classe majoritaria x minoritaria.
 log_subsection("Distribuicao antes do SMOTE")
 tab_antes <- table(treino$Diagnostico)
 log_kv(paste0("Classe ", names(tab_antes)),
@@ -34,7 +34,7 @@ log_info("Razao majoritaria/minoritaria: %.2f : 1", max(tab_antes) / min(tab_ant
 
 # --- SMOTE --------------------------------------------------------------------
 # [Metodologia - 3.3.4 (sec:balanceamento)] K = 5 vizinhos; dup_size = 0 (balanceamento automatico).
-# [Fundamentação Teórica - 2.3.4] oversampling da classe minoritaria com k = 5 vizinhos mais proximos.
+# [Fundamentação Teórica - 2.3.3] oversampling da classe minoritaria com k = 5 vizinhos mais proximos.
 log_subsection("Executando SMOTE (K = 5, dup_size = 0 -> balanceamento automatico)")
 set.seed(PIPELINE_SEED)
 res <- aplicar_smote(treino %>% select(-Diagnostico), treino$Diagnostico, K = 5)
@@ -64,7 +64,7 @@ comp <- data.frame(
 )
 log_table(comp, digits = 3)
 log_info("Amostras sinteticas devem ter medias proximas as da classe minoritaria original ('%s').", minoritaria)
-# [Fundamentação Teórica - 2.3.4] variavel binaria Gender: valores intermediarios corrigidos,
+# [Fundamentação Teórica - 2.3.3] variavel binaria Gender: valores intermediarios corrigidos,
 #   mesma ideia da variante SMOTE-NC (exemplo do ILPD no texto).
 categorias_gender <- sort(unique(treino$Gender))   # valores padronizados: Feminino < 0 < Masculino
 log_info("Gender nas sinteticas: %d amostra(s) com valor intermediario (pacientes de origem de sexos diferentes) devolvida(s) a categoria mais proxima",

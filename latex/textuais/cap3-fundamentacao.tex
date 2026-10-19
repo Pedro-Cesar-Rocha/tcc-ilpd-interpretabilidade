@@ -72,17 +72,15 @@ O problema aparece quando se fazem vários testes. Com o limite de 5\%, cada tes
 \section{Preparação dos Dados}
 \label{sec:fund_preparacao}
 
-A preparação converte os dados brutos em uma forma adequada aos algoritmos e pode influenciar o resultado tanto quanto a escolha do modelo \cite{KAPOOR2023100804}.
+A preparação converte os dados brutos em uma forma adequada aos algoritmos e pode influenciar o resultado tanto quanto a escolha do modelo \cite{KAPOOR2023100804}. Ela envolve tratar valores ausentes e registros duplicados, ajustar a escala das variáveis e equilibrar as classes, sempre com o cuidado de não deixar que informação do conjunto de teste participe do treinamento.
 
-\subsection{Valores Ausentes e Imputação}
+\subsection{Valores Ausentes, Registros Duplicados e Vazamento de Dados}
 \label{sec:fund_ausentes}
-
-A imputação preenche valores não registrados com uma estimativa. A mediana é preferível à média por ser robusta aos valores extremos típicos de exames laboratoriais \cite{batistamonard2003}.
-
-\subsection{Registros Duplicados e Vazamento de Dados}
 \label{sec:fund_vazamento}
 
-O vazamento de dados (\textit{data leakage}) ocorre quando informação do conjunto de teste contamina o treinamento, tornando a avaliação otimista demais, como um aluno que vê a prova antes \cite{KaufmanScharRosset2012, KAPOOR2023100804}. Ele pode vir de registros duplicados que caem um no treino e outro no teste, de transformações cujos parâmetros (uma mediana, um desvio-padrão) são calculados com o teste e do balanceamento feito antes da divisão dos dados.
+Valores ausentes são exames que não foram registrados para alguns pacientes. Em vez de descartar esses pacientes, pode-se fazer a imputação, que preenche cada valor faltante com uma estimativa; a mediana é preferível à média por ser pouco afetada pelos valores extremos típicos dos exames laboratoriais \cite{batistamonard2003}. Registros duplicados, por sua vez, são linhas idênticas em todas as variáveis.
+
+Os dois casos se relacionam ao vazamento de dados (\textit{data leakage}), que ocorre quando informação do conjunto de teste chega, de alguma forma, ao treinamento. O teste deveria simular pacientes que o modelo nunca viu; se o modelo teve acesso a eles, a avaliação fica otimista demais, como a nota de um aluno que viu a prova antes de fazê-la \cite{KaufmanScharRosset2012, KAPOOR2023100804}. Isso pode acontecer quando um registro cai no treino e sua cópia no teste, quando valores como a mediana da imputação ou a média da padronização são calculados com todos os dados, inclusive os de teste, ou quando o balanceamento das classes é feito antes da divisão (Seção~\ref{sec:fund_smote}). Por isso, essas operações são ajustadas apenas no treino e só depois aplicadas ao teste.
 
 \subsection{Transformação Logarítmica e Padronização}
 \label{sec:fund_log}

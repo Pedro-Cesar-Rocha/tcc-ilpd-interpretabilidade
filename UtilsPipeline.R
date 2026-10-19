@@ -122,11 +122,11 @@ salvar_csv <- function(df, caminho) {
 # diferentes geraria valores intermediarios sem significado. Apos o SMOTE, cada
 # valor sintetico e substituido pela categoria valida mais proxima, ou seja, a
 # amostra sintetica herda o sexo de um dos dois pacientes que a originaram.
-# [Fundamentação Teórica - 2.3.4 Desbalanceamento de Classes e SMOTE (sec:fund_smote)]
+# [Fundamentação Teórica - 2.3.3 Desbalanceamento de Classes e SMOTE (sec:fund_smote)]
 #   - SMOTE: nova observacao sintetica em um ponto do segmento entre uma
 #     observacao da classe minoritaria e um de seus k vizinhos mais proximos (K = 5).
 #   - Correcao de Gender: mesma ideia da variante SMOTE-NC para variaveis binarias.
-# [Fundamentação Teórica - 2.3.2 Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
+# [Fundamentação Teórica - 2.3.1 Valores Ausentes, Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
 #   - SMOTE dentro de cada fold: a terceira origem de vazamento descrita no texto.
 # [Metodologia - 3.3.4 Reamostragem com SMOTE (sec:balanceamento)] SMOTE com K = 5 e
 #   correcao de Gender, usado por fold na validacao cruzada (Metodologia - 3.5.1).

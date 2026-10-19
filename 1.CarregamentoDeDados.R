@@ -67,7 +67,7 @@ log_table(tipos)
 # --- Valores ausentes --------------------------------------------------------
 # [Metodologia - 3.2.1 Qualidade dos Dados (sec:qualidade_dados)] valores ausentes por variavel.
 log_subsection("Valores ausentes")
-# [Fundamentação Teórica - 2.3.1 Valores Ausentes e Imputacao (sec:fund_ausentes)] aqui apenas
+# [Fundamentação Teórica - 2.3.1 Valores Ausentes, Registros Duplicados e Vazamento de Dados (sec:fund_ausentes)] aqui apenas
 #   identificados; a imputacao pela mediana ocorre na etapa 2.
 na_por_coluna <- colSums(is.na(df))
 if (sum(na_por_coluna) == 0) {
@@ -81,7 +81,7 @@ if (sum(na_por_coluna) == 0) {
 # --- Duplicatas --------------------------------------------------------------
 # [Metodologia - 3.2.1 Qualidade dos Dados (sec:qualidade_dados)] duplicatas apenas
 #   identificadas aqui; a remocao esta em 2.PreProcessamento.R (Metodologia - 3.3.1).
-# [Fundamentação Teórica - 2.3.2 Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
+# [Fundamentação Teórica - 2.3.1 Valores Ausentes, Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
 #   aqui apenas contados; a remocao ocorre na etapa 2.
 n_dup <- sum(duplicated(df))
 if (n_dup > 0) log_warn("%d linhas duplicadas detectadas (mantidas nesta etapa).", n_dup) else log_ok("Sem linhas duplicadas.")

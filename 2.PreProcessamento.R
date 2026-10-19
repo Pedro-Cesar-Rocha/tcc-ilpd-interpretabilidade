@@ -26,7 +26,7 @@ log_info("Dados brutos carregados: %d x %d", nrow(df), ncol(df))
 # --- Duplicatas --------------------------------------------------------------
 # [Metodologia - 3.3.1 Remocao de Duplicatas e Transformacao Logaritmica (sec:preproc_duplicatas)]
 #   remocao dos 13 registros duplicados (583 -> 570).
-# [Fundamentação Teórica - 2.3.2 Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
+# [Fundamentação Teórica - 2.3.1 Valores Ausentes, Registros Duplicados e Vazamento de Dados (sec:fund_vazamento)]
 #   primeira origem de vazamento: um registro no treino e sua copia no teste.
 log_subsection("Remocao de duplicatas")
 n_antes <- nrow(df)
@@ -50,7 +50,7 @@ log_kv(paste0("Classe ", levels(df$Diagnostico)), as.vector(table(df$Diagnostico
 # --- Transformacao log das variaveis assimetricas ---------------------------
 # [Metodologia - 3.3.1 (sec:preproc_duplicatas)] ln(1 + x) nas cinco variaveis assimetricas;
 #   a assimetria antes/depois impressa aqui e a da Tabela tab:assimetria_log.
-# [Fundamentação Teórica - 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_log)]
+# [Fundamentação Teórica - 2.3.2 Transformacao Logaritmica e Padronizacao (sec:fund_log)]
 #   log1p(x) = ln(1 + x), Eq. 2.2 (eq:log); o efeito e conferido pelo coeficiente
 #   de assimetria antes e depois. Nao usa parametros estimados dos dados,
 #   por isso pode vir antes da divisao treino/teste.
@@ -81,8 +81,8 @@ log_info("Proporcao 'doente' - treino: %.1f%%  |  teste: %.1f%%",
 
 # --- Imputacao (mediana estimada SOMENTE no treino) -------------------------
 # [Metodologia - 3.3.3 Imputacao e Padronizacao (sec:padronizacao)] mediana do treino.
-# [Fundamentação Teórica - 2.3.1 Valores Ausentes e Imputacao (sec:fund_ausentes)] mediana, robusta
-#   a assimetria; [Fundamentação Teórica - 2.3.2] estimada so no treino (segunda origem de vazamento).
+# [Fundamentação Teórica - 2.3.1 Valores Ausentes, Registros Duplicados e Vazamento de Dados (sec:fund_ausentes)] mediana, robusta
+#   a assimetria; [Fundamentação Teórica - 2.3.1] estimada so no treino (segunda origem de vazamento).
 log_subsection("Imputacao de valores ausentes (mediana do treino aplicada a treino e teste)")
 mediana_ag <- median(treino$AG_Ratio, na.rm = TRUE)
 na_treino  <- sum(is.na(treino$AG_Ratio)); na_teste <- sum(is.na(teste$AG_Ratio))
@@ -95,7 +95,7 @@ log_ok("Total de NAs restantes: treino = %d | teste = %d", sum(is.na(treino)), s
 # --- Normalizacao (ajustada SOMENTE no treino) ------------------------------
 # [Metodologia - 3.3.3 Imputacao e Padronizacao (sec:padronizacao)] z-score com media e
 #   desvio-padrao do treino, aplicados ao treino e ao teste.
-# [Fundamentação Teórica - 2.3.3 Transformacao Logaritmica e Padronizacao (sec:fund_padronizacao)]
+# [Fundamentação Teórica - 2.3.2 Transformacao Logaritmica e Padronizacao (sec:fund_padronizacao)]
 #   z-score z = (x - media) / desvio-padrao, com media e desvio estimados so no treino.
 log_subsection("Normalizacao (center + scale) ajustada no conjunto de treino")
 X_treino <- treino %>% select(-Diagnostico)

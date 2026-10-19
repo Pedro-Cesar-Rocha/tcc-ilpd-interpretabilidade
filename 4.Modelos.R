@@ -52,7 +52,7 @@ resumo_doente <- function(data, lev = NULL, model = NULL) {
 # [Fundamentação Teórica - 2.5.1 Validacao Cruzada (sec:fund_cv)] k-fold repetida (k = 5, 3 repeticoes);
 #   savePredictions guarda as previsoes fora da particao (out-of-fold).
 # [Fundamentação Teórica - 2.5.4 Curva ROC e AUC (sec:fund_roc)] selecao pela AUC-ROC (metric = "ROC").
-# [Fundamentação Teórica - 2.3.4 SMOTE] sampling = smote_caret: SMOTE dentro de cada fold.
+# [Fundamentação Teórica - 2.3.3 SMOTE] sampling = smote_caret: SMOTE dentro de cada fold.
 ctrl <- trainControl(
   method          = "repeatedcv",
   number          = 5,
