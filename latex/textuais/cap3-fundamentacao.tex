@@ -65,7 +65,9 @@ A correlação de Pearson ($r$) mede o quanto duas variáveis variam juntas em l
 \subsection{Testes de Hipótese e Comparações Múltiplas}
 \label{sec:fund_bonferroni}
 
-Um teste de hipótese verifica se os dados trazem evidência contra uma hipótese nula, em geral a de que não há diferença. O valor-$p$ é a probabilidade de observar uma diferença tão grande quanto a obtida se a hipótese nula fosse verdadeira; abaixo de 0,05, ela costuma ser rejeitada. Quando se fazem vários testes, cresce a chance de algum dar significativo por acaso, e a correção de Bonferroni compensa isso multiplicando cada valor-$p$ pelo número de comparações \cite{Demsar2006Statistical}.
+Um teste de hipótese verifica se os dados trazem evidência contra uma hipótese nula, que em geral afirma que não há diferença ou efeito. Imagine que se queira saber se uma moeda é viciada: a hipótese nula é que ela é honesta. Se, em 10 lançamentos, saírem 9 caras, cabe perguntar com que frequência uma moeda honesta produziria um resultado tão extremo. Essa probabilidade é o valor-$p$, e aqui ela é de cerca de 1\%. Como é muito pequena, conclui-se que a moeda provavelmente é viciada; por convenção, rejeita-se a hipótese nula quando o valor-$p$ fica abaixo de 0,05 (5\%). Neste trabalho, os testes verificam, por exemplo, se a diferença de AUC entre dois modelos poderia ter surgido apenas por acaso.
+
+O problema aparece quando se fazem vários testes. Com o limite de 5\%, cada teste tem uma chance em vinte de dar ``significativo'' por puro acaso; testando vinte moedas honestas, espera-se que uma delas pareça viciada. A correção de Bonferroni compensa isso multiplicando cada valor-$p$ pelo número de comparações \cite{Demsar2006Statistical}. Neste trabalho, os quatro modelos formam seis pares; um valor-$p$ de 0,02, que isoladamente seria significativo, passa a 0,12 após a correção e deixa de sê-lo. A correção é conservadora: reduz os falsos alarmes, mas pode deixar passar diferenças reais.
 
 \section{Preparação dos Dados}
 \label{sec:fund_preparacao}
