@@ -455,7 +455,7 @@ A importância das variáveis foi muito semelhante entre os sexos (Figura~\ref{f
 
 Quanto à própria variável sexo, o XGBoost e o LightGBM não a utilizam, de modo que o sexo do paciente não tem efeito direto sobre suas previsões. No \textit{Random Forest}, o sexo é a variável menos importante, e sua contribuição média foi de $+0{,}0030$ entre as mulheres e de $-0{,}0015$ entre os homens (Figura~\ref{fig:res_shap_gender}). O sentido é o mesmo do coeficiente da Regressão Logística, mas a magnitude é inferior a meio ponto percentual de probabilidade, muito menor que as contribuições dos exames laboratoriais.
 
-A auditoria não identificou, portanto, indícios de que os modelos utilizem o sexo como atalho para a previsão ou se apoiem em variáveis distintas para cada grupo. Essa conclusão refere-se ao conjunto de teste deste trabalho e está sujeita às mesmas limitações de tamanho amostral discutidas anteriormente.
+A auditoria não identificou, portanto, indícios de que os modelos utilizem o sexo como determinante direto da previsão ou se apoiem em variáveis distintas para cada grupo. Essa conclusão refere-se ao conjunto de teste deste trabalho e está sujeita às mesmas limitações de tamanho amostral discutidas anteriormente.
 
 \begin{figure}[htbp]
 \centering
@@ -541,11 +541,11 @@ Os principais resultados deste capítulo podem ser sintetizados nos seguintes po
     \item \textit{Explicações locais}: a análise dos falsos negativos permitiu distinguir erros decorrentes das escolhas do modelo, como o descarte das proteínas pelo XGBoost e pelo LightGBM, de erros inevitáveis com os atributos disponíveis.
 \end{enumerate}
 
-Esses resultados devem ser interpretados à luz de algumas limitações. O conjunto de teste é pequeno e resulta de uma única divisão dos dados, o que torna as estimativas imprecisas \cite{Vergouwe2005Substantial}; a calibração das probabilidades e a utilidade clínica dos modelos não foram avaliadas \cite{Vickers2006Decision}; e os valores SHAP do \textit{Random Forest} são aproximações obtidas por amostragem.
+A interpretação desses resultados deve considerar as seguintes limitações. O conjunto de teste é pequeno e resulta de uma única divisão dos dados, o que torna as estimativas imprecisas \cite{Vergouwe2005Substantial}; a calibração das probabilidades e a utilidade clínica dos modelos não foram avaliadas \cite{Vickers2006Decision}; e os valores SHAP do \textit{Random Forest} são aproximações obtidas por amostragem.
 
 \section{Considerações Finais do Capítulo}
 \label{sec:res_consideracoes}
 
 Este capítulo mostrou que, no ILPD, a complexidade dos modelos de caixa-preta não se traduziu em ganho de desempenho comprovado em relação à Regressão Logística e que, no regime de alta sensibilidade exigido pela triagem, todos os modelos apresentam utilidade limitada. A análise de interpretabilidade evidenciou que os modelos se apoiam em variáveis clinicamente coerentes, mas que a importância atribuída a cada variável varia conforme o algoritmo e sua configuração, e que a explicação de casos individuais contribui para a compreensão da origem dos erros mais graves.
 
-A Conclusão retoma esses resultados à luz dos objetivos do trabalho, discute suas limitações e aponta possibilidades de trabalhos futuros.
+A Conclusão relaciona esses resultados aos objetivos do trabalho, discute suas limitações e aponta possibilidades de trabalhos futuros.
