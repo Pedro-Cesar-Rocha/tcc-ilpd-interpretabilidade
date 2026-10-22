@@ -1,41 +1,41 @@
 \chapter{Resultados} \label{cap:resultados}
 
-Este capítulo apresenta e discute os resultados obtidos em cada etapa do \textit{pipeline} descrito no Capítulo~\ref{metodologia}, na mesma ordem em que foram executadas. Inicialmente, apresentam-se a análise exploratória (Seção~\ref{sec:res_aed}) e o pré-processamento (Seção~\ref{sec:res_preproc}). Em seguida, vêm os resultados do treinamento com validação cruzada (Seção~\ref{sec:res_cv}), da avaliação no conjunto de teste (Seção~\ref{sec:res_teste}) e da avaliação por sexo (Seção~\ref{sec:res_sexo}). Por fim, apresenta-se a análise de interpretabilidade com SHAP (Seção~\ref{sec:res_shap}), seguida de uma síntese dos principais achados.
+Este capítulo apresenta e discute os resultados obtidos em cada etapa do \textit{pipeline} descrito no Capítulo~\ref{metodologia}, na ordem em que foram executadas. Inicialmente, apresentam-se a análise exploratória (Seção~\ref{sec:res_aed}) e o pré-processamento (Seção~\ref{sec:res_preproc}). Em seguida, são apresentados os resultados do treinamento com validação cruzada (Seção~\ref{sec:res_cv}), da avaliação no conjunto de teste (Seção~\ref{sec:res_teste}) e da avaliação estratificada por sexo (Seção~\ref{sec:res_sexo}). Por fim, apresenta-se a análise de interpretabilidade com SHAP (Seção~\ref{sec:res_shap}), seguida de uma síntese dos principais resultados.
 
-Todos os números foram extraídos dos arquivos gerados pela execução do \textit{pipeline} com semente 42 e podem ser reproduzidos com o código disponibilizado. Como o conjunto de teste tem apenas 113 pacientes, as diferenças entre modelos são sempre interpretadas junto com sua incerteza.
+Todos os valores foram extraídos dos arquivos gerados pela execução do \textit{pipeline} com semente aleatória 42 e podem ser reproduzidos a partir do código disponibilizado. Como o conjunto de teste contém apenas 113 pacientes, as diferenças entre modelos são interpretadas considerando a incerteza das estimativas.
 
 % =============================================================================
 \section{Análise Exploratória dos Dados}
 \label{sec:res_aed}
 % =============================================================================
 
-A base mostrou boa qualidade geral. Apenas a razão albumina/globulina (\textit{AG\_Ratio}) teve valores ausentes, em 4 registros (0,69\% da base), e foram encontrados 13 registros exatamente duplicados.
+A base apresentou qualidade geral satisfatória. Apenas a razão albumina/globulina (\textit{AG\_Ratio}) apresentou valores ausentes, em 4 registros (0,69\% da base), e foram identificados 13 registros duplicados.
 
-Dos 583 pacientes, 416 são doentes (71,4\%) e 167 saudáveis (Figura~\ref{fig:eda_distribuicao_alvo}); quanto ao sexo, 441 são homens (75,6\%) e 142 mulheres. A proporção de doentes é maior entre os homens (73,5\%) do que entre as mulheres (64,8\%). Isso significa que, ao comparar os sexos mais adiante, métricas que dependem da proporção de doentes, como a precisão, não podem ser comparadas diretamente.
+Dos 583 pacientes, 416 são doentes (71,4\%) e 167 saudáveis (Figura~\ref{fig:eda_distribuicao_alvo}); quanto ao sexo, 441 são do sexo masculino (75,6\%) e 142 do sexo feminino. A proporção de doentes é maior entre os homens (73,5\%) do que entre as mulheres (64,8\%), de modo que métricas dependentes da prevalência, como a precisão, não podem ser comparadas diretamente entre os sexos.
 
-As maiores diferenças entre doentes e saudáveis (Tabela~\ref{tab:medias_classe}) aparecem nas bilirrubinas, com média da bilirrubina direta cerca de 4,9 vezes maior nos doentes e da total cerca de 3,6 vezes maior, e nas aminotransferases, cerca de três vezes maiores. Já as proteínas totais quase não diferem entre os grupos (6,46 contra 6,54~g/dL).
+As maiores diferenças entre as classes (Tabela~\ref{tab:medias_classe}) foram observadas nas bilirrubinas, com média cerca de 4,9 vezes maior nos doentes para a bilirrubina direta e 3,6 vezes maior para a total, e nas aminotransferases, com médias cerca de três vezes maiores. As proteínas totais apresentaram médias praticamente iguais nos dois grupos (6,46 e 6,54~g/dL).
 
-Os \textit{boxplots} (Figura~\ref{fig:eda_boxplots}), no entanto, mostram que as caixas de doentes e saudáveis se sobrepõem em todos os exames. Em outras palavras, embora os doentes tenham valores mais altos em média, muitos saudáveis têm valores parecidos com os deles, e nenhum exame sozinho separa bem os dois grupos. Isso justifica o uso de modelos que combinam vários exames ao mesmo tempo.
+Os \textit{boxplots} (Figura~\ref{fig:eda_boxplots}), entretanto, evidenciam ampla sobreposição entre as distribuições de doentes e saudáveis em todas as variáveis. Embora os doentes apresentem valores mais elevados em média, nenhum exame isolado é capaz de separar adequadamente as classes, o que justifica o emprego de modelos multivariados.
 
-Houve correlação forte em três pares de exames (Figura~\ref{fig:eda_correlacao}): bilirrubina total e direta ($r = 0{,}874$), ALT e AST ($r = 0{,}792$) e proteínas totais e albumina ($r = 0{,}783$). Todas têm explicação fisiológica (Seção~\ref{sec:fund_figado}): a bilirrubina direta faz parte da total, a ALT e a AST sobem juntas quando as células do fígado são lesadas, e a albumina é a maior parte das proteínas do sangue.
+Observou-se correlação forte em três pares de variáveis (Figura~\ref{fig:eda_correlacao}): bilirrubina total e direta ($r = 0{,}874$), ALT e AST ($r = 0{,}792$) e proteínas totais e albumina ($r = 0{,}783$). Essas correlações têm explicação fisiológica (Seção~\ref{sec:fund_figado}): a bilirrubina direta é uma fração da bilirrubina total, a ALT e a AST elevam-se conjuntamente na lesão hepatocelular, e a albumina constitui a maior parte das proteínas plasmáticas.
 
-Há ainda uma redundância mais forte entre as proteínas totais, a albumina e a razão albumina/globulina. Como a globulina é a diferença entre as proteínas totais e a albumina, conhecendo quaisquer duas dessas variáveis é possível calcular a terceira. Essa redundância reaparece na interpretação dos modelos (Seções~\ref{sec:res_coef_lr} e~\ref{sec:res_shap_global}).
+Verificou-se, ainda, uma redundância entre as proteínas totais, a albumina e a razão albumina/globulina: como a globulina corresponde à diferença entre as proteínas totais e a albumina, quaisquer duas dessas variáveis determinam a terceira. Essa redundância é retomada na interpretação dos modelos (Seções~\ref{sec:res_coef_lr} e~\ref{sec:res_shap_global}).
 
 % =============================================================================
 \section{Pré-processamento}
 \label{sec:res_preproc}
 % =============================================================================
 
-Após a remoção das duplicatas, a base ficou com 570 pacientes, 406 doentes e 164 saudáveis. A transformação logarítmica reduziu o coeficiente de assimetria das cinco variáveis de valores entre 3,17 e 10,50 para valores entre 1,24 e 1,72 (Tabela~\ref{tab:assimetria_log}), ou seja, todas ficaram abaixo do critério de assimetria forte, embora ainda com uma cauda moderada.
+Após a remoção das duplicatas, a base passou a conter 570 pacientes, dos quais 406 doentes e 164 saudáveis. A transformação logarítmica reduziu os coeficientes de assimetria das cinco variáveis transformadas de valores entre 3,17 e 10,50 para valores entre 1,24 e 1,72 (Tabela~\ref{tab:assimetria_log}), todos inferiores ao critério de assimetria acentuada, embora ainda indicativos de assimetria moderada.
 
-A divisão resultou em 457 pacientes no treino e 113 no teste, com proporções de doentes praticamente iguais (71,1\% e 71,7\%), o que confirma que a estratificação funcionou. O teste ficou com 32 mulheres e 81 homens. Os quatro valores ausentes caíram no treino e foram preenchidos com a mediana, de 1,00.
+A divisão resultou em 457 pacientes no conjunto de treino e 113 no conjunto de teste, com proporções de doentes de 71,1\% e 71,7\%, respectivamente, o que confirma a efetividade da estratificação. O conjunto de teste contém 32 pacientes do sexo feminino e 81 do sexo masculino. Os quatro valores ausentes foram alocados no conjunto de treino e imputados com a mediana, igual a 1,00.
 
 \subsection{Reamostragem com SMOTE}
 \label{sec:res_smote}
 
-No conjunto de treino completo, o SMOTE criou 132 pacientes saudáveis sintéticos, um para cada saudável real. Com isso, a proporção passou de cerca de 2,5 doentes por saudável (325 doentes e 132 saudáveis) para 1,2 (325 doentes e 264 saudáveis), como mostra a Figura~\ref{fig:res_smote}. O desbalanceamento foi reduzido, mas não eliminado.
+No conjunto de treino completo, o SMOTE gerou 132 observações sintéticas da classe minoritária. A razão entre as classes passou de aproximadamente 2,5:1 (325 doentes e 132 saudáveis) para 1,2:1 (325 doentes e 264 saudáveis), conforme a Figura~\ref{fig:res_smote}; o desbalanceamento foi, portanto, reduzido, mas não eliminado.
 
-Os pacientes sintéticos ficaram parecidos com os saudáveis reais: suas médias diferiram menos de 0,05 desvio-padrão das médias dos saudáveis originais. Apenas um deles recebeu um valor intermediário de sexo e precisou ser corrigido, o que mostra que a correção raramente foi necessária.
+As médias das observações sintéticas diferiram em menos de 0,05 desvio-padrão das médias dos pacientes saudáveis originais, o que indica que as amostras geradas permanecem na região do espaço ocupada pela classe minoritária. Apenas uma observação sintética apresentou valor intermediário para a variável sexo e foi corrigida.
 
 \begin{figure}[htbp]
 \centering
@@ -51,15 +51,15 @@ Os pacientes sintéticos ficaram parecidos com os saudáveis reais: suas médias
 
 \subsection{Hiperparâmetros Selecionados}
 
-A Tabela~\ref{tab:res_hiper} mostra as configurações escolhidas pela busca aleatória. Em comum, elas correspondem a modelos simples e cautelosos:
+A Tabela~\ref{tab:res_hiper} apresenta as combinações de hiperparâmetros selecionadas pela busca aleatória, que correspondem, em todos os casos, a modelos de baixa complexidade:
 
 \begin{itemize}
-    \item no \textit{Random Forest}, venceu \texttt{mtry} = 1, isto é, cada divisão de cada árvore considera uma única variável, sorteada ao acaso;
-    \item o XGBoost usa apenas 24 árvores, cada uma com acesso a cerca de um terço das variáveis, e um valor alto de \texttt{gamma} (7,33), que só aceita divisões que reduzam bastante o erro;
-    \item o LightGBM usa 200 árvores muito pequenas, com no máximo quatro folhas, e uma taxa de aprendizado baixa, de modo que cada árvore corrige apenas um pouco do erro.
+    \item no \textit{Random Forest}, foi selecionado \texttt{mtry} = 1, de modo que cada divisão considera uma única variável sorteada;
+    \item no XGBoost, foram selecionadas apenas 24 árvores, cada uma com acesso a cerca de um terço das variáveis, e um valor elevado de \texttt{gamma} (7,33), que restringe as divisões àquelas que reduzem substancialmente a função de perda;
+    \item no LightGBM, foram selecionadas 200 árvores com no máximo quatro folhas e taxa de aprendizado reduzida.
 \end{itemize}
 
-Em uma base pequena e com doentes e saudáveis muito parecidos, a validação cruzada favoreceu modelos que aprendem poucos padrões, mais robustos, em vez de modelos capazes de decorar detalhes do treino. Essa simplicidade tem consequências para a interpretabilidade, discutidas na Seção~\ref{sec:res_shap_global}.
+Em uma base pequena e com classes sobrepostas, a validação cruzada favoreceu modelos que capturam poucos padrões, mais robustos, em detrimento de modelos capazes de se ajustar a particularidades do conjunto de treino. Essa característica tem implicações para a interpretabilidade, discutidas na Seção~\ref{sec:res_shap_global}.
 
 \begin{table}[htbp]
 \centering
@@ -91,9 +91,9 @@ LightGBM & \texttt{num\_leaves} & 4 \\
 
 \subsection{Desempenho na Validação Cruzada}
 
-Na validação cruzada, a Regressão Logística obteve a maior AUC-ROC média (0,753), e os três \textit{ensembles} ficaram praticamente empatados, entre 0,720 e 0,725 (Tabela~\ref{tab:res_cv} e Figura~\ref{fig:res_cv}). Ou seja, o modelo mais simples foi, em média, ligeiramente melhor que os mais complexos.
+Na validação cruzada, a Regressão Logística obteve a maior AUC-ROC média (0,753), e os três modelos de \textit{ensemble} apresentaram valores muito próximos entre si, entre 0,720 e 0,725 (Tabela~\ref{tab:res_cv} e Figura~\ref{fig:res_cv}).
 
-Essa diferença, porém, deve ser vista com cautela. A variação entre as 15 partições foi muito maior que a diferença entre os modelos: no \textit{Random Forest}, a AUC foi de 0,581 na pior partição a 0,810 na melhor. Dependendo de quais pacientes caem em cada partição, a ordem dos modelos pode mudar, e por isso a comparação estatística foi feita no conjunto de teste (Seção~\ref{sec:res_teste}).
+A variabilidade entre as partições, entretanto, foi consideravelmente superior às diferenças entre as médias dos modelos: no \textit{Random Forest}, a AUC-ROC variou de 0,581 a 0,810. Como a ordenação dos modelos pode variar conforme a composição das partições, a comparação estatística foi realizada no conjunto de teste (Seção~\ref{sec:res_teste}).
 
 \begin{table}[htbp]
 \centering
@@ -122,13 +122,13 @@ LightGBM               & 0,720 & 0,064 & 0,607 & 0,792 & 0,685 & 0,659 \\
 \subsection{Coeficientes da Regressão Logística}
 \label{sec:res_coef_lr}
 
-Sete variáveis tiveram coeficiente significativo ao nível de 5\% (Tabela~\ref{tab:res_coef_lr}). Idade, fosfatase alcalina e ALT aumentam a chance de doença, como era esperado. Por exemplo, a razão de chances de 1,79 da ALT indica que cada aumento de um desvio-padrão nesse exame multiplica a chance de doença por cerca de 1,8.
+Sete variáveis apresentaram coeficiente significativo ao nível de 5\% (Tabela~\ref{tab:res_coef_lr}). A idade, a fosfatase alcalina e a ALT associaram-se ao aumento da chance de doença, conforme esperado; a razão de chances de 1,79 da ALT, por exemplo, indica que o aumento de um desvio-padrão nesse exame multiplica a chance de doença por aproximadamente 1,8.
 
-Chama a atenção, porém, que as duas bilirrubinas e a AST não tenham sido significativas, embora estejam entre os exames que mais diferem entre doentes e saudáveis. A explicação é a correlação: como as duas bilirrubinas carregam quase a mesma informação, assim como a ALT e a AST, o modelo não consegue separar o efeito de cada uma, e a incerteza de seus coeficientes aumenta \cite{Dormann2013Collinearity}.
+As duas bilirrubinas e a AST, embora estejam entre as variáveis com maiores diferenças de média entre as classes, não apresentaram coeficientes significativos. Esse resultado é característico de preditores fortemente correlacionados: como cada par carrega informação semelhante, o modelo não consegue separar o efeito individual de cada variável, e a variância das estimativas aumenta \cite{Dormann2013Collinearity}.
 
-O mesmo fenômeno explica os coeficientes das proteínas. As proteínas totais e a albumina receberam os maiores coeficientes da tabela, com sinais opostos (razões de chances de 7,85 e 0,058), e a razão albumina/globulina aparece aumentando a chance de doença (3,81), embora seja menor nos doentes. Como essas três variáveis são redundantes, seus coeficientes se compensam uns aos outros e só fazem sentido em conjunto. Em outras palavras, mesmo o modelo considerado ``interpretável'' exige cautela: lidos isoladamente, esses coeficientes levariam a conclusões clinicamente incoerentes.
+O mesmo fenômeno explica os coeficientes das proteínas. As proteínas totais e a albumina receberam os maiores coeficientes em valor absoluto, com sinais opostos (razões de chances de 7,85 e 0,058), e a razão albumina/globulina apresentou razão de chances de 3,81, indicando aumento da chance de doença, embora seja menor nos doentes (Tabela~\ref{tab:medias_classe}). Como essas três variáveis são redundantes, seus coeficientes compensam-se mutuamente e somente sua combinação possui interpretação clara. Esse resultado evidencia que mesmo o modelo considerado interpretável exige cautela: a leitura isolada dos coeficientes, sem considerar a estrutura de correlação dos dados, conduziria a conclusões clinicamente incoerentes.
 
-Por fim, o coeficiente do sexo foi negativo (razão de chances de 0,81; $p = 0{,}037$). Isso significa que, entre pacientes com os mesmos exames, a chance estimada de doença é um pouco menor para os homens. Não há contradição com o fato de haver proporcionalmente mais doentes entre os homens na base: o coeficiente compara pacientes com exames iguais, enquanto a proporção geral não leva os exames em conta.
+Por fim, o coeficiente do sexo foi negativo (razão de chances de 0,81; $p = 0{,}037$), indicando que, entre pacientes com os mesmos valores de exames, a chance estimada de doença é ligeiramente menor para os homens. Esse resultado não contradiz a maior proporção de doentes entre os homens na base, uma vez que o coeficiente é condicional aos demais preditores, ao passo que a proporção geral não o é.
 
 \begin{table}[htbp]
 \centering
@@ -162,11 +162,11 @@ AG\_Ratio                   & 1,338  & 3,809 & 0,002 \\
 
 \subsection{Métricas no Limiar Padrão}
 
-As Tabelas~\ref{tab:res_teste} e~\ref{tab:res_confusao} apresentam o desempenho dos modelos no conjunto de teste. O \textit{Random Forest} teve a maior AUC-ROC (0,787), seguido do LightGBM (0,761), do XGBoost (0,745) e da Regressão Logística (0,736). Uma AUC de 0,79 significa que, sorteando-se um doente e um saudável, o \textit{Random Forest} atribui maior probabilidade de doença ao doente em cerca de 79\% das vezes \cite{Hanley1982Meaning}.
+As Tabelas~\ref{tab:res_teste} e~\ref{tab:res_confusao} apresentam o desempenho dos modelos no conjunto de teste. O \textit{Random Forest} obteve a maior AUC-ROC (0,787), seguido do LightGBM (0,761), do XGBoost (0,745) e da Regressão Logística (0,736). Uma AUC-ROC de 0,79 indica que, em um par formado por um paciente doente e um saudável sorteados ao acaso, o \textit{Random Forest} atribui maior probabilidade de doença ao paciente doente em cerca de 79\% dos casos \cite{Hanley1982Meaning}.
 
-Essa ordem é praticamente a inversa da observada na validação cruzada, em que a Regressão Logística ficou em primeiro lugar. A inversão já sugere que as diferenças entre os modelos são pequenas diante da incerteza. De fato, os intervalos de confiança das quatro AUCs se sobrepõem amplamente e têm largura de cerca de 0,18, reflexo do pequeno número de saudáveis no teste (apenas 32).
+Essa ordenação é praticamente inversa à observada na validação cruzada, na qual a Regressão Logística apresentou o melhor desempenho, o que sugere que as diferenças entre os modelos são pequenas em relação à incerteza das estimativas. De fato, os intervalos de confiança das quatro AUC-ROC sobrepõem-se amplamente e apresentam amplitude de cerca de 0,18, reflexo do reduzido número de pacientes saudáveis no conjunto de teste (32).
 
-As demais métricas mostram as limitações práticas dos modelos. A acurácia, entre 0,68 e 0,73, quase não supera a do classificador que declara todos doentes (0,717), o que ilustra por que ela não deve ser usada sozinha \cite{FAWCETT2006861}. Além disso, os modelos deixaram de identificar entre 19 e 25 dos 81 doentes, ou seja, cerca de um em cada quatro pacientes doentes seria mandado para casa como saudável.
+As demais métricas evidenciam as limitações práticas dos modelos. A acurácia, entre 0,68 e 0,73, praticamente não supera a do classificador trivial que atribui a classe ``doente'' a todos os pacientes (0,717), o que confirma sua inadequação como métrica isolada \cite{FAWCETT2006861}. Além disso, os modelos deixaram de identificar entre 19 e 25 dos 81 doentes, o que corresponde a aproximadamente um em cada quatro pacientes doentes classificado como saudável.
 
 \begin{table}[htbp]
 \centering
@@ -202,9 +202,9 @@ LightGBM               & 56 & 25 & 21 & 11 \\
 \label{tab:res_confusao}
 \end{table}
 
-Nenhuma das seis comparações pelo teste de DeLong foi estatisticamente significativa. A maior diferença, de 0,051 entre o \textit{Random Forest} e a Regressão Logística, teve valor-$p$ de 0,090, que passou a 0,541 após a correção de Bonferroni. Em outras palavras, não há evidência de que algum modelo separe doentes de saudáveis melhor que os outros, e a complexidade adicional dos \textit{ensembles} não trouxe ganho comprovado em relação à Regressão Logística. Esse resultado é coerente com revisões que, em dados clínicos tabulares, não encontraram vantagem do aprendizado de máquina sobre a regressão logística \cite{Christodoulou2019Systematic, Nusinovici2020Logistic}.
+Nenhuma das seis comparações pelo teste de DeLong foi estatisticamente significativa. A maior diferença, de 0,051 entre o \textit{Random Forest} e a Regressão Logística, apresentou valor-$p$ de 0,090, que passou a 0,541 após a correção de Bonferroni. Não há, portanto, evidência de que algum modelo apresente capacidade de discriminação superior à dos demais, e a complexidade adicional dos modelos de \textit{ensemble} não resultou em ganho comprovado em relação à Regressão Logística. Esse resultado é coerente com revisões sistemáticas que, em dados clínicos tabulares, não identificaram vantagem dos métodos de aprendizado de máquina sobre a regressão logística \cite{Christodoulou2019Systematic, Nusinovici2020Logistic}.
 
-É importante, porém, não ler esse resultado como prova de que os modelos são equivalentes. Com 81 doentes e 32 saudáveis, o teste está abaixo dos cerca de 100 doentes e 100 saudáveis sugeridos para estudos de validação \cite{Vergouwe2005Substantial}, e diferenças de 0,01 a 0,05 na AUC dificilmente seriam detectadas. As curvas ROC (Figura~\ref{fig:res_roc}) reforçam essa leitura: elas se cruzam várias vezes, sem que nenhum modelo fique acima dos demais em toda a faixa de limiares.
+Esse resultado não deve, contudo, ser interpretado como evidência de equivalência entre os modelos. Com 81 doentes e 32 saudáveis, o conjunto de teste está abaixo do mínimo de aproximadamente 100 eventos e 100 não eventos recomendado para estudos de validação \cite{Vergouwe2005Substantial}, e diferenças de AUC-ROC entre 0,01 e 0,05, como as observadas, dificilmente seriam detectadas. As curvas ROC (Figura~\ref{fig:res_roc}) cruzam-se em diversos pontos, sem que nenhum modelo apresente desempenho superior em toda a faixa de limiares.
 
 \begin{figure}[htbp]
 \centering
@@ -216,11 +216,11 @@ Nenhuma das seis comparações pelo teste de DeLong foi estatisticamente signifi
 \subsection{Análise do Limiar de Decisão}
 \label{sec:res_limiar}
 
-Os limiares clínicos, escolhidos na validação cruzada para encontrar pelo menos 90\% dos doentes, ficaram entre 0,320 e 0,375 (Tabela~\ref{tab:res_limiares}), bem abaixo de 0,5. Isso significa que, para não deixar doentes passarem, é preciso classificar como doentes até pacientes com probabilidade prevista relativamente baixa.
+Os limiares clínicos, definidos na validação cruzada para assegurar sensibilidade mínima de 90\%, situaram-se entre 0,320 e 0,375 (Tabela~\ref{tab:res_limiares}), valores consideravelmente inferiores a 0,5. Isso indica que a priorização da sensibilidade exige classificar como doentes pacientes com probabilidade prevista relativamente baixa.
 
-A meta de 90\% se manteve no teste para a Regressão Logística, o \textit{Random Forest} e o LightGBM, que identificaram 73 dos 81 doentes, mas não para o XGBoost, que ficou em 84\%. O custo dessa sensibilidade, no entanto, é alto: a especificidade cai para valores entre 0,19 e 0,31, ou seja, apenas 6 a 10 dos 32 pacientes saudáveis seriam reconhecidos como tal.
+A meta de 90\% de sensibilidade manteve-se no conjunto de teste para a Regressão Logística, o \textit{Random Forest} e o LightGBM, que identificaram 73 dos 81 doentes, mas não para o XGBoost, cuja sensibilidade foi de 0,840. O custo dessa sensibilidade, entretanto, é elevado: a especificidade reduziu-se para valores entre 0,19 e 0,31, o que corresponde ao reconhecimento de apenas 6 a 10 dos 32 pacientes saudáveis.
 
-Na prática, isso quer dizer que, usados para triagem, os modelos acrescentariam pouco em relação a simplesmente encaminhar todos os pacientes para investigação. A precisão, entre 0,74 e 0,77, fica apenas 2 a 5 pontos acima de 0,717, que seria a precisão de declarar todos doentes. Essa constatação, que a AUC sozinha não revela, mostra por que a avaliação de um modelo clínico não deve se limitar a uma única métrica \cite{VanCalster2025Evaluation}.
+Nesse regime de alta sensibilidade, característico da triagem, os modelos acrescentam pouca informação em relação ao encaminhamento de todos os pacientes para investigação. A precisão, entre 0,74 e 0,77, supera em apenas 2 a 5 pontos percentuais a prevalência de 0,717, que corresponderia à precisão do classificador trivial. Essa constatação, não evidenciada pelas métricas resumidas da Tabela~\ref{tab:res_teste}, reforça que a avaliação de modelos clínicos não deve restringir-se à AUC-ROC ou à acurácia \cite{VanCalster2025Evaluation}.
 
 \begin{table}[htbp]
 \centering
@@ -238,18 +238,18 @@ LightGBM               & 0,360 & 0,901 & 0,281 & 0,760 \\
 \label{tab:res_limiares}
 \end{table}
 
-As probabilidades produzidas pelos modelos também não devem ser lidas como riscos reais de doença. Como o SMOTE aumentou a proporção de saudáveis vista no treino, os modelos tendem a subestimar a chance de doença: no \textit{Random Forest}, por exemplo, a probabilidade média prevista no teste foi de 0,654, abaixo da proporção real de doentes, de 0,717. Estudos mostram que o balanceamento por reamostragem costuma produzir esse tipo de distorção sem melhorar a capacidade de separar as classes \cite{vandenGoorbergh2022Harm, Carriero2025Harms}. A calibração das probabilidades não foi avaliada formalmente neste trabalho.
+As probabilidades produzidas pelos modelos também não devem ser interpretadas como riscos reais de doença. Como o SMOTE aumentou a proporção de pacientes saudáveis apresentada aos modelos durante o treinamento, as probabilidades tendem a subestimar a chance de doença: no \textit{Random Forest}, a probabilidade média prevista no conjunto de teste foi de 0,654, inferior à proporção real de doentes, de 0,717. Estudos de simulação indicam que o balanceamento por reamostragem tende a comprometer a calibração dos modelos sem melhorar sua capacidade de discriminação \cite{vandenGoorbergh2022Harm, Carriero2025Harms}. A calibração das probabilidades não foi avaliada formalmente neste trabalho.
 
 % =============================================================================
 \section{Avaliação Estratificada por Sexo}
 \label{sec:res_sexo}
 % =============================================================================
 
-No conjunto de teste, a proporção de doentes foi bem diferente entre os sexos: 17 das 32 mulheres (53,1\%) e 64 dos 81 homens (79,0\%). A Tabela~\ref{tab:res_sexo} apresenta o desempenho de cada modelo em cada grupo.
+No conjunto de teste, a prevalência de doença diferiu substancialmente entre os sexos: 17 das 32 mulheres (53,1\%) e 64 dos 81 homens (79,0\%) eram doentes. A Tabela~\ref{tab:res_sexo} apresenta o desempenho de cada modelo em cada grupo.
 
-As diferenças de AUC entre homens e mulheres foram pequenas, variando de $-0{,}043$ a $+0{,}019$. Os intervalos de confiança das mulheres, porém, têm o dobro da largura dos do conjunto completo, o que mostra o quanto um grupo de 32 pacientes é pouco informativo.
+As diferenças de AUC-ROC entre os sexos foram pequenas, variando de $-0{,}043$ a $+0{,}019$. Os intervalos de confiança das AUC-ROC no grupo feminino, contudo, apresentam amplitude aproximadamente duas vezes maior que no conjunto completo, o que evidencia a baixa precisão das estimativas em um subgrupo de 32 pacientes.
 
-A taxa de falsos negativos, que mede o risco de um doente não ser identificado, foi maior entre as mulheres apenas no XGBoost (0,353 contra 0,266), uma diferença de cerca de dois pacientes; nos outros três modelos, foi menor entre elas. No limiar clínico, a meta de 90\% nem sempre foi atingida nos dois grupos: na Regressão Logística e no LightGBM, todas as mulheres doentes foram identificadas, mas a sensibilidade nos homens ficou em 0,875. Ou seja, uma meta cumprida no conjunto todo não garante que ela seja cumprida em cada grupo.
+A taxa de falsos negativos foi maior entre as mulheres apenas no XGBoost (0,353 contra 0,266), diferença correspondente a cerca de dois pacientes, e menor entre elas nos demais modelos. No limiar clínico, a meta de 90\% de sensibilidade não foi atingida em ambos os grupos simultaneamente: na Regressão Logística e no LightGBM, todas as mulheres doentes foram identificadas, mas a sensibilidade entre os homens foi de 0,875. Assim, o cumprimento da meta no conjunto completo não assegura seu cumprimento em cada subgrupo.
 
 \begin{table}[htbp]
 \centering
@@ -274,21 +274,21 @@ LightGBM               & F & 0,780 [0,618; 0,943] & 0,706 & 0,800 & 0,294 & 1,00
 \label{tab:res_sexo}
 \end{table}
 
-Esses resultados não reproduzem a disparidade relatada por \citeonline{investigatingbiashealth}, que encontraram, no mesmo ILPD, taxas de falsos negativos cerca de 20 pontos percentuais maiores nas mulheres. A explicação mais simples é o tamanho da amostra: com apenas 17 mulheres doentes no teste, este trabalho não tem como confirmar nem descartar diferenças dessa magnitude. Por isso, a ausência de disparidade observada aqui não deve ser lida como prova de que os modelos tratam homens e mulheres de forma igual \cite{Rajkomar2018Ensuring}.
+Esses resultados não reproduzem a disparidade relatada por \citeonline{investigatingbiashealth}, que observaram, na mesma base, taxas de falsos negativos cerca de 20 pontos percentuais maiores entre as mulheres. A explicação mais provável é o tamanho amostral: com apenas 17 mulheres doentes no conjunto de teste, este trabalho não dispõe de poder estatístico para confirmar ou descartar diferenças dessa magnitude. Por essa razão, a ausência de disparidade observada não deve ser interpretada como evidência de equidade entre os sexos \cite{Rajkomar2018Ensuring}.
 
 % =============================================================================
 \section{Interpretabilidade com SHAP}
 \label{sec:res_shap}
 % =============================================================================
 
-Esta seção apresenta como os três modelos de caixa-preta chegam às suas previsões. Os resultados são apresentados do geral para o particular: primeiro, quais exames cada modelo mais usa; depois, em que sentido e de que forma eles influenciam a previsão; em seguida, a explicação de pacientes específicos; e, por fim, a comparação entre sexos e entre modelos.
+Esta seção apresenta os resultados da análise de interpretabilidade dos três modelos de caixa-preta, organizados do nível global ao individual: a importância das variáveis, o sentido e a forma de seus efeitos, as explicações de pacientes específicos e, por fim, as comparações entre sexos e entre modelos.
 
-O ponto de partida de toda explicação SHAP é o valor base, a previsão média do modelo no conjunto de teste, à qual as contribuições de cada exame são somadas. Ele foi de 0,167 na escala do logaritmo da chance no XGBoost, o que equivale a uma probabilidade de cerca de 0,54; de 0,304 no LightGBM, cerca de 0,58; e de 0,654, já em probabilidade, no \textit{Random Forest}.
+O valor base, correspondente à previsão média de cada modelo no conjunto de teste, foi de 0,167 na escala do logaritmo da chance no XGBoost (probabilidade de aproximadamente 0,54), de 0,304 no LightGBM (aproximadamente 0,58) e de 0,654, na escala de probabilidade, no \textit{Random Forest}.
 
 \subsection{Importância Global}
 \label{sec:res_shap_global}
 
-A Tabela~\ref{tab:res_shap_imp} mostra a importância de cada variável nos três modelos. Eles concordam em dois pontos: as bilirrubinas, a fosfatase alcalina e as aminotransferases estão entre os exames mais relevantes, e o sexo é pouco relevante. Mas diferem muito na forma como distribuem a importância entre as variáveis.
+A Tabela~\ref{tab:res_shap_imp} apresenta a importância global das variáveis nos três modelos. Os modelos concordam quanto à relevância das bilirrubinas, da fosfatase alcalina e das aminotransferases e quanto à baixa relevância do sexo, mas diferem substancialmente na distribuição da importância entre as variáveis.
 
 \begin{table}[htbp]
 \centering
@@ -314,22 +314,20 @@ Gender                      & 8--10 & 0,0  & 10 & 0,0  & 10 & 3,1 \\
 \label{tab:res_shap_imp}
 \end{table}
 
-No XGBoost, a importância é concentrada em poucos exames: a bilirrubina total e a fosfatase alcalina respondem juntas por 64\% do total. Três variáveis, a bilirrubina direta, a albumina e o sexo, têm importância zero, porque não aparecem em nenhuma árvore. Isso decorre da configuração simples escolhida para o modelo (Tabela~\ref{tab:res_hiper}): com poucas árvores e forte restrição a novas divisões, o XGBoost faz poucas perguntas e, entre exames que dizem praticamente a mesma coisa, usa apenas um. Assim, usou a bilirrubina total e ignorou a direta; e, no grupo das proteínas, usou as proteínas totais e a razão albumina/globulina, que juntas permitem calcular a albumina, e ignorou a própria albumina.
+No XGBoost, a importância é concentrada: a bilirrubina total e a fosfatase alcalina respondem conjuntamente por 64\% do total, e três variáveis (bilirrubina direta, albumina e sexo) apresentam importância nula, por não serem utilizadas em nenhuma divisão. Esse comportamento decorre da configuração selecionada (Tabela~\ref{tab:res_hiper}): com poucas árvores e forte restrição a novas divisões, o modelo realiza poucas divisões e, entre variáveis redundantes, utiliza apenas uma. Assim, o XGBoost utilizou a bilirrubina total em detrimento da direta e, no grupo das proteínas, utilizou as proteínas totais e a razão albumina/globulina, que conjuntamente determinam a albumina.
 
-No \textit{Random Forest}, ao contrário, a importância é distribuída: as cinco variáveis mais importantes têm participações parecidas, entre 11,8\% e 18,4\%. Como cada divisão das árvores considera uma única variável sorteada (\texttt{mtry} = 1), o modelo acaba usando todos os exames e alterna entre os que são correlacionados, dividindo o crédito entre eles. Esse comportamento é conhecido tanto para o \textit{Random Forest} \cite{Strobl2008Conditional} quanto para o SHAP \cite{Aas2021Explaining}.
+No \textit{Random Forest}, ao contrário, a importância é distribuída: as cinco variáveis mais importantes apresentam participações semelhantes, entre 11,8\% e 18,4\%. Com \texttt{mtry} = 1, cada divisão considera uma única variável sorteada, e o modelo alterna entre variáveis correlacionadas, repartindo a importância entre elas. Esse comportamento é conhecido tanto para as medidas de importância do \textit{Random Forest} \cite{Strobl2008Conditional} quanto para os valores SHAP \cite{Aas2021Explaining}.
 
-O LightGBM fica entre os dois, mas se parece mais com o \textit{Random Forest}, embora seja, como o XGBoost, um modelo de \textit{boosting}. Suas 200 árvores pequenas acabam usando os dois exames de cada par correlacionado, como as duas bilirrubinas e as duas aminotransferases. A exceção são as proteínas, que ele praticamente não usa, assim como o sexo.
+O LightGBM, embora seja, como o XGBoost, um modelo de \textit{boosting}, apresentou distribuição de importância mais próxima à do \textit{Random Forest}. Suas 200 árvores de pequeno porte utilizam as duas variáveis de cada par correlacionado, como as bilirrubinas e as aminotransferases, com exceção das proteínas, praticamente não utilizadas, e do sexo, não utilizado.
 
-A comparação com as médias por classe (Tabela~\ref{tab:medias_classe}) ajuda a entender esses padrões. No \textit{Random Forest} e no LightGBM, as cinco variáveis mais importantes são exatamente as cinco que mais diferem entre doentes e saudáveis. No XGBoost, as proteínas totais, que quase não diferem entre os grupos, ficaram em terceiro lugar, o que indica que seu papel depende da combinação com outros exames.
-
-Nenhum desses retratos está errado: cada um descreve corretamente o modelo que explica. Juntos, porém, mostram que a importância atribuída a um exame não depende apenas dos dados, mas também do algoritmo e da configuração escolhida.
+A comparação com as médias por classe (Tabela~\ref{tab:medias_classe}) contribui para a interpretação desses padrões. No \textit{Random Forest} e no LightGBM, as cinco variáveis mais importantes coincidem com as cinco de maior diferença de média entre doentes e saudáveis. No XGBoost, as proteínas totais, cuja média é praticamente igual nos dois grupos, ocuparam a terceira posição, o que indica um papel condicional às demais variáveis. Cada resultado descreve adequadamente o modelo correspondente, mas, em conjunto, demonstram que a importância atribuída a uma variável depende não apenas dos dados, mas também do algoritmo e de seus hiperparâmetros.
 
 \subsection{Direção e Forma dos Efeitos}
 \label{sec:res_shap_direcao}
 
-Se a importância diz quanto um exame pesa, os gráficos \textit{beeswarm} (Figura~\ref{fig:res_beeswarm}) e as correlações da Tabela~\ref{tab:res_direcao} dizem em que sentido ele pesa. Nos três modelos, os sentidos são os mesmos: valores altos de bilirrubinas, fosfatase alcalina, aminotransferases e idade aumentam a previsão de doença, enquanto valores altos da razão albumina/globulina, e da albumina no \textit{Random Forest}, a reduzem.
+Os gráficos \textit{beeswarm} (Figura~\ref{fig:res_beeswarm}) e as correlações entre o valor de cada variável e seu valor SHAP (Tabela~\ref{tab:res_direcao}) indicam efeitos no mesmo sentido nos três modelos. Valores elevados de bilirrubinas, fosfatase alcalina, aminotransferases e idade aumentam a probabilidade prevista de doença, enquanto valores elevados da razão albumina/globulina, e da albumina no \textit{Random Forest}, a reduzem.
 
-Esses sentidos são coerentes com o conhecimento clínico: bilirrubinas, enzimas e fosfatase elevadas indicam lesão ou obstrução, e albumina baixa indica perda da capacidade de produção do fígado \cite{Kwo2016ACG, Trebicka2025Controversies}. Essa coerência não prova que os modelos aprenderam relações de causa e efeito, mas é um bom sinal de que não estão se apoiando em padrões sem sentido.
+Esses sentidos são coerentes com o conhecimento clínico: a elevação das aminotransferases indica lesão hepatocelular, a elevação da fosfatase alcalina indica colestase, a bilirrubina pode elevar-se em ambas as situações, e a redução da albumina indica comprometimento da função de síntese hepática \cite{Kwo2016ACG, Trebicka2025Controversies}. Essa coerência não demonstra que os modelos tenham aprendido relações causais, mas constitui indício de que não se apoiam em padrões espúrios.
 
 \begin{figure}[htbp]
 \centering
@@ -379,11 +377,11 @@ Gender                      & ---        & ---        & $-0{,}140$ \\
 \label{tab:res_direcao}
 \end{table}
 
-Embora o sentido seja o mesmo, a forma dos efeitos difere entre os modelos, como mostram os gráficos de dependência (Figura~\ref{fig:res_dependencia}). No XGBoost, como cada exame participa de poucas divisões, o efeito é em degraus. Na bilirrubina total, todos os pacientes a partir de cerca de 1,8~mg/dL recebem a mesma contribuição para ``doente'' ($+0{,}86$ na escala do logaritmo da chance), enquanto um paciente com 1,6~mg/dL, um valor muito próximo, já recebe a contribuição mais forte para ``saudável'' ($-0{,}45$). Pequenas diferenças perto do ponto de corte mudam bastante a previsão.
+A forma dos efeitos, entretanto, difere entre os modelos, como evidenciam os gráficos de dependência (Figura~\ref{fig:res_dependencia}). No XGBoost, como cada variável participa de poucas divisões, os efeitos assumem a forma de degraus. Na bilirrubina total, todos os pacientes com valores a partir de aproximadamente 1,8~mg/dL recebem a mesma contribuição positiva ($+0{,}86$ na escala do logaritmo da chance), enquanto um paciente com 1,6~mg/dL recebe a contribuição mais negativa ($-0{,}45$), de modo que pequenas diferenças próximas ao ponto de corte alteram substancialmente a previsão.
 
-Nas proteínas totais, o efeito do XGBoost é ainda menos intuitivo: valores intermediários aumentam a previsão de doença, e valores mais baixos ou mais altos a reduzem. Provavelmente, essa forma irregular funciona como substituta da albumina, que o modelo não usa, mas é difícil de traduzir em uma regra clínica.
+Nas proteínas totais, o efeito estimado pelo XGBoost não é monotônico: valores intermediários aumentam a previsão de doença, e valores inferiores ou superiores a reduzem. É provável que esse comportamento funcione como substituto da informação da albumina, não utilizada pelo modelo, mas uma forma tão irregular dificilmente se traduz em uma regra clinicamente interpretável.
 
-No LightGBM e no \textit{Random Forest}, cuja variável mais importante é a fosfatase alcalina, a curva tem forma de ``S'': valores baixos contribuem para ``saudável'', a contribuição sobe rapidamente perto da média e se estabiliza nos valores mais altos. A diferença é que, no LightGBM, a subida é quase um degrau, e, no \textit{Random Forest}, é mais gradual.
+No LightGBM e no \textit{Random Forest}, cuja variável mais importante é a fosfatase alcalina, a relação apresenta forma sigmoide: valores inferiores à média contribuem para a classe ``saudável'', a contribuição aumenta rapidamente nas proximidades da média e estabiliza-se nos valores mais elevados. No LightGBM, a transição aproxima-se de um degrau, ao passo que, no \textit{Random Forest}, é mais gradual.
 
 \begin{figure}[htbp]
 \centering
@@ -413,13 +411,13 @@ No LightGBM e no \textit{Random Forest}, cuja variável mais importante é a fos
 \subsection{Explicações Locais}
 \label{sec:res_shap_local}
 
-As explicações locais mostram, para um paciente específico, como cada exame empurrou a previsão para ``doente'' ou para ``saudável''. Para facilitar a leitura, os valores dos exames citados nesta seção foram convertidos para as unidades originais.
+As explicações locais decompõem a previsão de pacientes específicos, selecionados conforme a Seção~\ref{sec:analises_shap}. Os valores dos exames citados nesta seção foram convertidos para as unidades originais.
 
-Nos doentes que os modelos identificaram com mais confiança, os três se apoiaram no mesmo tipo de informação: exames hepáticos muito acima das medianas da base. No LightGBM, por exemplo, um homem de 66 anos com AST de 4.929~IU/L, o maior valor de toda a base, recebeu probabilidade de doença de 0,92.
+Nos verdadeiros positivos de maior confiança, os três modelos apoiaram-se no mesmo tipo de informação: exames hepáticos muito acima das medianas da base. No LightGBM, o paciente correspondente, do sexo masculino e com 66 anos, apresentava AST de 4.929~IU/L, o maior valor da base, e recebeu probabilidade de doença de 0,92.
 
-Mais reveladores são os falsos negativos de pior erro, isto é, os pacientes doentes que cada modelo classificou com mais confiança como saudáveis (Figura~\ref{fig:res_waterfall_fn}). No XGBoost, esse paciente foi um homem de 35 anos que recebeu probabilidade de doença de apenas 0,224. Sua bilirrubina total, de 1,6~mg/dL, ficou logo abaixo do degrau de 1,8~mg/dL descrito na seção anterior e gerou a maior contribuição para ``saudável''. Ao mesmo tempo, sua albumina estava baixa (2,5~g/dL), um possível sinal de doença, mas não teve nenhum efeito, porque o XGBoost não usa essa variável.
+Os falsos negativos de pior erro, isto é, os pacientes doentes classificados com maior confiança como saudáveis (Figura~\ref{fig:res_waterfall_fn}), são mais informativos. No XGBoost, o paciente correspondente, do sexo masculino e com 35 anos, recebeu probabilidade de doença de apenas 0,224. Sua bilirrubina total, de 1,6~mg/dL, situava-se imediatamente abaixo do ponto de corte de aproximadamente 1,8~mg/dL descrito anteriormente e produziu a maior contribuição para a classe ``saudável''. Sua albumina, de 2,5~g/dL, inferior ao primeiro quartil da base, constituía possível indicativo de doença, mas não teve efeito sobre a previsão, uma vez que o XGBoost não utiliza essa variável.
 
-No LightGBM, o caso foi parecido: um homem de 30 anos, com probabilidade de 0,334, também tinha albumina (2,3~g/dL) e proteínas totais (4,6~g/dL) baixas, sinais que esse modelo praticamente ignora. Os dois casos mostram, de forma concreta, um risco de concentrar a importância em poucos exames: um modelo que deixa de usar uma variável \emph{em média} pode descartar justamente a informação que seria decisiva para um paciente específico.
+No LightGBM, o falso negativo de pior erro, do sexo masculino e com 30 anos, recebeu probabilidade de 0,334 e também apresentava albumina (2,3~g/dL) e proteínas totais (4,6~g/dL) reduzidas, variáveis praticamente não utilizadas por esse modelo. Os dois casos ilustram uma consequência da concentração da importância em poucas variáveis: um modelo que deixa de utilizar uma variável \emph{em média} pode desconsiderar justamente a informação determinante para um paciente específico.
 
 \begin{figure}[htbp]
 \centering
@@ -446,18 +444,18 @@ No LightGBM, o caso foi parecido: um homem de 30 anos, com probabilidade de 0,33
 \label{fig:res_waterfall_fn}
 \end{figure}
 
-No \textit{Random Forest}, o falso negativo de pior erro foi um homem de 31 anos, com probabilidade de 0,248, cujos exames eram compatíveis com os de uma pessoa saudável: a ALT, por exemplo, era de 29~IU/L, abaixo do limite de 42~IU/L proposto para homens saudáveis por \citeonline{Valenti2021Definition}. Nesse caso, o erro não parece ser do modelo, mas da própria informação disponível, já que a doença hepática pode estar presente mesmo com exames normais \cite{Lominadze2018Misconception}. Nenhum modelo baseado apenas nesses dez atributos seria capaz de identificar esse paciente.
+No \textit{Random Forest}, o falso negativo de pior erro, do sexo masculino e com 31 anos, recebeu probabilidade de 0,248 e apresentava exames compatíveis com os de um indivíduo saudável, como ALT de 29~IU/L, inferior ao limite superior de 42~IU/L proposto para homens por \citeonline{Valenti2021Definition}. Nesse caso, o erro decorre aparentemente da própria informação disponível, uma vez que a doença hepática pode estar presente mesmo com exames laboratoriais normais \cite{Lominadze2018Misconception}, e nenhum modelo baseado exclusivamente nesses atributos seria capaz de identificar esse paciente.
 
-As explicações locais permitem, assim, separar dois tipos de erro: os causados pelas escolhas do modelo, como no XGBoost e no LightGBM, e os que nenhum modelo evitaria com esses dados, como no \textit{Random Forest}. As métricas de desempenho não fazem essa distinção. Uma ressalva técnica: como os valores SHAP do \textit{Random Forest} são estimados por sorteio, sua soma não reproduz exatamente a previsão (0,295 contra 0,248 nesse paciente), e contribuições pequenas desse modelo devem ser lidas com cautela.
+As explicações locais permitem, assim, distinguir erros decorrentes das escolhas do modelo, como no XGBoost e no LightGBM, de erros que nenhum modelo evitaria com os atributos disponíveis, como no \textit{Random Forest}, distinção que as métricas de desempenho não possibilitam. Cabe ressaltar que, como os valores SHAP do \textit{Random Forest} foram estimados por amostragem, sua soma não reproduz exatamente a previsão do modelo (0,295 contra 0,248 no paciente citado), e contribuições de pequena magnitude devem ser interpretadas com cautela \cite{Strumbelj2014Explaining}.
 
 \subsection{Auditoria de Viés por Sexo}
 \label{sec:res_shap_sexo}
 
-A importância dos exames foi muito semelhante entre homens e mulheres (Figura~\ref{fig:res_shap_sexo}). A correlação de Spearman entre os rankings dos dois grupos foi de 0,988 nos três modelos, e as poucas diferenças foram trocas de posição entre variáveis vizinhas. Ou seja, os modelos se apoiam essencialmente nos mesmos exames para os dois sexos.
+A importância das variáveis foi muito semelhante entre os sexos (Figura~\ref{fig:res_shap_sexo}). A correlação de Spearman entre os rankings de homens e mulheres foi de 0,988 nos três modelos, e as diferenças limitaram-se a trocas de posição entre variáveis adjacentes, o que indica que os modelos se apoiam essencialmente nas mesmas variáveis para ambos os sexos.
 
-Quanto ao uso do próprio sexo, o XGBoost e o LightGBM simplesmente não usam essa variável, de modo que o sexo do paciente não tem nenhum efeito direto em suas previsões. No \textit{Random Forest}, o sexo é a variável menos importante, e sua contribuição média foi de $+0{,}0030$ nas mulheres e $-0{,}0015$ nos homens (Figura~\ref{fig:res_shap_gender}). O sentido é o mesmo do coeficiente da Regressão Logística, mas o efeito é menor que meio ponto percentual de probabilidade, muito pequeno diante das contribuições dos exames.
+Quanto à própria variável sexo, o XGBoost e o LightGBM não a utilizam, de modo que o sexo do paciente não tem efeito direto sobre suas previsões. No \textit{Random Forest}, o sexo é a variável menos importante, e sua contribuição média foi de $+0{,}0030$ entre as mulheres e de $-0{,}0015$ entre os homens (Figura~\ref{fig:res_shap_gender}). O sentido é o mesmo do coeficiente da Regressão Logística, mas a magnitude é inferior a meio ponto percentual de probabilidade, muito menor que as contribuições dos exames laboratoriais.
 
-A auditoria não encontrou, portanto, indícios de que os modelos usem o sexo como atalho ou se apoiem em exames diferentes para cada grupo. Essa conclusão vale para o conjunto de teste deste trabalho e tem as mesmas limitações de tamanho amostral já discutidas.
+A auditoria não identificou, portanto, indícios de que os modelos utilizem o sexo como atalho para a previsão ou se apoiem em variáveis distintas para cada grupo. Essa conclusão refere-se ao conjunto de teste deste trabalho e está sujeita às mesmas limitações de tamanho amostral discutidas anteriormente.
 
 \begin{figure}[htbp]
 \centering
@@ -494,9 +492,9 @@ A auditoria não encontrou, portanto, indícios de que os modelos usem o sexo co
 \subsection{Comparação das Importâncias entre os Modelos}
 \label{sec:res_comparacao_importancias}
 
-A Tabela~\ref{tab:res_rankings} reúne os quatro rankings de importância. Os do LightGBM e do \textit{Random Forest} foram quase idênticos (correlação de Spearman de 0,96), embora um use \textit{boosting} e o outro \textit{bagging}. O do XGBoost concordou pouco com ambos (0,36), e o da Regressão Logística teve correlação negativa com todos.
+A Tabela~\ref{tab:res_rankings} reúne os quatro rankings de importância. Os rankings do LightGBM e do \textit{Random Forest} foram praticamente idênticos (correlação de Spearman de 0,96), embora o primeiro utilize \textit{boosting} e o segundo, \textit{bagging}. O ranking do XGBoost apresentou baixa concordância com ambos (0,36), e o da Regressão Logística apresentou correlação negativa com todos.
 
-Essas discordâncias têm causas identificáveis. O ranking da Regressão Logística é dominado pelas proteínas, cujos coeficientes são grandes porque se compensam uns aos outros (Seção~\ref{sec:res_coef_lr}), e não por serem os exames mais informativos \cite{Dormann2013Collinearity}. O XGBoost se afasta dos outros dois \textit{ensembles} porque escolheu um exame de cada par redundante, enquanto o LightGBM e o \textit{Random Forest} dividiram o crédito entre eles. Em outras palavras, a forma como a importância se distribui depende mais da configuração de cada modelo do que do tipo de \textit{ensemble}.
+As discordâncias têm causas identificáveis. O ranking da Regressão Logística é dominado pelas proteínas, cujos coeficientes são elevados por se compensarem mutuamente (Seção~\ref{sec:res_coef_lr}), e não por serem as variáveis mais informativas, o que torna o valor absoluto dos coeficientes uma medida de importância pouco confiável na presença de multicolinearidade \cite{Dormann2013Collinearity}. O XGBoost diverge dos demais modelos de \textit{ensemble} por ter selecionado uma variável de cada par redundante, enquanto o LightGBM e o \textit{Random Forest} repartiram a importância entre elas. A distribuição da importância depende, portanto, mais da configuração de cada modelo do que da estratégia de \textit{ensemble}.
 
 \begin{table}[htbp]
 \centering
@@ -524,30 +522,30 @@ Gender                      & 9 & 10 & 10 & 10 \\
 \label{tab:res_rankings}
 \end{table}
 
-Apesar das diferenças, alguns resultados se repetem: pelo menos uma das bilirrubinas e a fosfatase alcalina estão sempre entre os exames mais importantes nos três \textit{ensembles}, e o sexo fica nas últimas posições nos quatro rankings. São esses resultados estáveis, e não a posição exata de cada exame, que podem ser afirmados com segurança.
+Apesar das diferenças, alguns resultados repetem-se em todos os modelos: ao menos uma das bilirrubinas e a fosfatase alcalina figuram entre as variáveis mais importantes nos três modelos de \textit{ensemble}, e o sexo ocupa as últimas posições nos quatro rankings. São esses resultados estáveis, e não a posição exata de cada variável, que podem ser afirmados com maior segurança.
 
-De modo mais geral, esta seção mostra que modelos com desempenho estatisticamente igual podem oferecer explicações bem diferentes para os mesmos dados, fenômeno conhecido como efeito Rashomon \cite{Biecek2024Performance}. Escolher um modelo apenas pela métrica de desempenho significa, portanto, escolher também, sem perceber, uma entre várias explicações possíveis, e a interpretação de um único modelo não deve ser tomada como a descrição definitiva da relação entre os exames e a doença.
+De modo geral, os resultados desta seção mostram que modelos com desempenho estatisticamente indistinguível podem oferecer explicações substancialmente diferentes para os mesmos dados, fenômeno descrito na literatura como efeito Rashomon \cite{Biecek2024Performance}. A seleção de um modelo exclusivamente pela métrica de desempenho implica, portanto, a escolha implícita de uma entre várias explicações possíveis, e a interpretação de um único modelo não deve ser tomada como descrição definitiva da relação entre os exames e a doença.
 
 % =============================================================================
 \section{Síntese dos Resultados}
 \label{sec:res_sintese}
 % =============================================================================
 
-Os principais resultados deste capítulo podem ser resumidos em cinco pontos:
+Os principais resultados deste capítulo podem ser sintetizados nos seguintes pontos:
 
 \begin{enumerate}
-    \item \textit{Desempenho}: nenhum \textit{ensemble} superou a Regressão Logística de forma significativa; as AUCs (0,74 a 0,79) indicam discriminação moderada, com intervalos largos.
-    \item \textit{Limiar}: exigir 90\% de sensibilidade reduz a especificidade a 0,19--0,31, e os modelos acrescentam pouco à triagem de todos os pacientes.
-    \item \textit{Sexo}: não houve disparidade consistente de desempenho nem de uso das variáveis, mas o subgrupo feminino é pequeno demais para descartá-la.
-    \item \textit{Interpretabilidade}: os efeitos estimados pelo SHAP são coerentes com a clínica, mas a importância das variáveis depende do modelo e dos hiperparâmetros, sobretudo entre variáveis correlacionadas.
-    \item \textit{Explicações locais}: os falsos negativos permitiram distinguir erros causados pelo modelo (descarte das proteínas no XGBoost e no LightGBM) de erros inevitáveis com esses atributos.
+    \item \textit{Desempenho}: nenhum modelo de \textit{ensemble} superou a Regressão Logística de forma estatisticamente significativa; as AUC-ROC, entre 0,74 e 0,79, indicam capacidade de discriminação moderada, com intervalos de confiança amplos.
+    \item \textit{Limiar}: a exigência de 90\% de sensibilidade reduz a especificidade a valores entre 0,19 e 0,31, e, nesse regime, os modelos acrescentam pouca informação em relação ao encaminhamento de todos os pacientes para investigação.
+    \item \textit{Sexo}: não foram observadas disparidades consistentes de desempenho nem de utilização das variáveis entre os sexos, mas o subgrupo feminino é pequeno demais para descartá-las.
+    \item \textit{Interpretabilidade}: os efeitos estimados pelo SHAP são coerentes com o conhecimento clínico, mas a importância atribuída a cada variável depende do modelo e de seus hiperparâmetros, sobretudo entre variáveis correlacionadas.
+    \item \textit{Explicações locais}: a análise dos falsos negativos permitiu distinguir erros decorrentes das escolhas do modelo, como o descarte das proteínas pelo XGBoost e pelo LightGBM, de erros inevitáveis com os atributos disponíveis.
 \end{enumerate}
 
-Esses resultados devem ser lidos à luz de algumas limitações. O conjunto de teste é pequeno e resulta de uma única divisão dos dados, o que torna as estimativas imprecisas \cite{Vergouwe2005Substantial}; a calibração das probabilidades e a utilidade clínica dos modelos não foram avaliadas \cite{Vickers2006Decision}; e os valores SHAP do \textit{Random Forest} são aproximações obtidas por sorteio.
+Esses resultados devem ser interpretados à luz de algumas limitações. O conjunto de teste é pequeno e resulta de uma única divisão dos dados, o que torna as estimativas imprecisas \cite{Vergouwe2005Substantial}; a calibração das probabilidades e a utilidade clínica dos modelos não foram avaliadas \cite{Vickers2006Decision}; e os valores SHAP do \textit{Random Forest} são aproximações obtidas por amostragem.
 
 \section{Considerações Finais do Capítulo}
 \label{sec:res_consideracoes}
 
-Este capítulo mostrou que, no ILPD, a complexidade dos modelos de caixa-preta não se traduziu em ganho de desempenho comprovado em relação à Regressão Logística, e que, no regime de alta sensibilidade exigido por uma triagem, todos os modelos têm utilidade limitada. A análise de interpretabilidade, por sua vez, mostrou que os modelos se apoiam em exames clinicamente coerentes, mas que a importância atribuída a cada exame muda conforme o algoritmo e sua configuração, e que a explicação de casos individuais ajuda a entender a origem dos erros mais graves.
+Este capítulo mostrou que, no ILPD, a complexidade dos modelos de caixa-preta não se traduziu em ganho de desempenho comprovado em relação à Regressão Logística e que, no regime de alta sensibilidade exigido pela triagem, todos os modelos apresentam utilidade limitada. A análise de interpretabilidade evidenciou que os modelos se apoiam em variáveis clinicamente coerentes, mas que a importância atribuída a cada variável varia conforme o algoritmo e sua configuração, e que a explicação de casos individuais contribui para a compreensão da origem dos erros mais graves.
 
-A Conclusão retoma esses achados à luz dos objetivos do trabalho, discute suas limitações e aponta possibilidades de trabalhos futuros.
+A Conclusão retoma esses resultados à luz dos objetivos do trabalho, discute suas limitações e aponta possibilidades de trabalhos futuros.
